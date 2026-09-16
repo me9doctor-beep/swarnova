@@ -1,5 +1,5 @@
 import PropTypes from "prop-types";
-import { Heart } from "lucide-react";
+import { Heart, Sparkles } from "lucide-react";
 import Badge from "../ui/Badge.jsx";
 import Button from "../ui/Button.jsx";
 import Eyebrow from "../ui/Eyebrow.jsx";
@@ -64,6 +64,19 @@ export default function ProductSummary({ product, category, collection }) {
 
       <ProductActions product={product} className="mt-8" />
 
+      {/* The piece carries into the shared fitting room — only where the
+          catalogue contract says it is eligible, never a misleading CTA. */}
+      {product.tryOnAvailable && (
+        <Button
+          variant="outline"
+          href={`/virtual-try-on?product=${product.id}`}
+          className="mt-4 w-full sm:w-auto"
+        >
+          <Sparkles size={13} strokeWidth={1.5} aria-hidden="true" />
+          Try It On
+        </Button>
+      )}
+
       <Button
         variant="ghost"
         onClick={() => toggle(product.id)}
@@ -92,6 +105,7 @@ ProductSummary.propTypes = {
     weight: PropTypes.string,
     sku: PropTypes.string,
     availability: PropTypes.string,
+    tryOnAvailable: PropTypes.bool,
     rating: PropTypes.shape({
       average: PropTypes.number,
       count: PropTypes.number,

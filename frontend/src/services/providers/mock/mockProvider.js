@@ -24,6 +24,14 @@
  *   generateAiDesign(request)
  *   createAiVariations(conceptId)
  *   refineAiDesign(request)
+ *   getTryOnRoom()
+ *   getTryOnSource(source)
+ *   createTryOn(request)
+ *
+ * The virtual try-on methods are the shared fitting-room contract (Phase 6)
+ * a future AI/virtual-try-on backend fulfils one-to-one:
+ *   getTryOnSource({ sourceType, sourceId })     → source summary or null
+ *   createTryOn({ sourceType, sourceId, photo }) → try-on result
  *
  * getProducts(query) is the catalogue query contract — the same parameters a
  * future API provider will accept, one-to-one:
@@ -104,6 +112,71 @@ function matchDesign(request) {
     }
   }
   return best;
+}
+
+/* --------------------------------------------------------------------------
+ * Virtual try-on — mock fitting room
+ * --------------------------------------------------------------------------
+ * The mock "dresses" a portrait by resolving a prepared wearing plate for
+ * the curated sample portraits; an uploaded photograph resolves to itself —
+ * exactly the shape a future try-on backend's render replaces. Source
+ * resolution runs through the same db the rest of the provider reads, so an
+ * ineligible or unknown piece resolves to null, exactly as a 404 would.
+ * ------------------------------------------------------------------------ */
+const TRYON_RENDER_DELAY = 1400;
+/* The fitting room occasionally cannot prepare a preview, so the failure
+   path behaves as it will against a real backend: photo and jewellery stay
+   put, and Try Again re-renders. */
+const TRYON_FAILURE_RATE = 0.08;
+
+function categoryLabel(categoryKey) {
+  const category = db.categories.find(
+    (item) => item.id === categoryKey || item.slug === categoryKey
+  );
+  return category?.name;
+}
+
+/** An atelier concept, summarised as the jewellery the room dresses. */
+function jewelleryFromDesign(design) {
+  return {
+    id: design.id,
+    name: design.title,
+    category: categoryLabel(design.category),
+    purity: design.purity,
+    images: [{ ...design.image }],
+  };
+}
+
+/** A catalogue piece, summarised as the jewellery the room dresses. Carries
+ *  the commerce fields only a purchasable product owns. */
+function jewelleryFromProduct(product) {
+  return {
+    id: product.id,
+    name: product.name,
+    category: categoryLabel(product.categoryId),
+    purity: product.purity,
+    images: product.images.map((image) => ({ ...image })),
+    price: product.price,
+    currency: product.currency,
+    availability: product.availability,
+    href: product.href,
+  };
+}
+
+function resolveTryOnSource(sourceType, sourceId) {
+  if (sourceType === "ai-design") {
+    const design = db.aiDesigns.find((item) => item.id === sourceId);
+    if (!design) return null;
+    return { sourceType, sourceId, jewellery: jewelleryFromDesign(design) };
+  }
+  if (sourceType === "product") {
+    const product = db.products.find((item) => item.id === sourceId);
+    /* Only genuinely eligible pieces enter the room — an ineligible product
+       resolves to null exactly like an unknown one. */
+    if (!product || !product.tryOnAvailable) return null;
+    return { sourceType, sourceId, jewellery: jewelleryFromProduct(product) };
+  }
+  return null;
 }
 
 /** Product orderings the contract supports. "featured" is the default. */
@@ -245,6 +318,67 @@ export const mockProvider = {
        latest words become the concept's prompt summary. */
     const plate = design.variationPlates[0] ?? design.image;
     return emit({ ...buildConcept(design, feedback, request.purity), images: [{ ...plate }] });
+  },
+
+  getTryOnRoom() {
+    return Promise.resolve(emit({ ...db.tryOnRoom, samples: db.tryOnSamples }));
+  },
+
+  getTryOnSource(source = {}) {
+    return Promise.resolve(
+      emit(resolveTryOnSource(source.sourceType, source.sourceId))
+    );
+  },
+
+  async createTryOn(request = {}) {
+    const { sourceType, sourceId } = request;
+    const photo = request.photo;
+
+    const source = resolveTryOnSource(sourceType, sourceId);
+    if (!source) {
+      return Promise.reject(
+        new Error(
+          "This jewellery is no longer available for virtual try-on. Please choose another piece."
+        )
+      );
+    }
+    if (!photo?.image?.src) {
+      return Promise.reject(
+        new Error("Add a photograph before trying the jewellery on.")
+      );
+    }
+
+    await wait(TRYON_RENDER_DELAY);
+
+    if (Math.random() < TRYON_FAILURE_RATE) {
+      return Promise.reject(
+        new Error(
+          "The fitting room could not prepare your preview just now. Your photo and jewellery are waiting — please try again."
+        )
+      );
+    }
+
+    /* Sample portraits ship a prepared wearing plate; an uploaded photograph
+       resolves to itself in the mock — a real backend returns its render. */
+    const sample =
+      photo.origin === "sample"
+        ? db.tryOnSamples.find((item) => item.id === photo.sampleId)
+        : null;
+    const wearing = sample?.resultImage ?? photo.image;
+
+    return emit({
+      id: `TRYON-${sourceId}-${Date.now()}`,
+      status: "completed",
+      createdAt: new Date().toISOString(),
+      source,
+      photo: {
+        origin: photo.origin,
+        sampleId: sample?.id ?? null,
+        name: photo.name ?? sample?.name ?? null,
+        image: { ...photo.image },
+      },
+      image: { ...wearing },
+    });
   },
 };
 

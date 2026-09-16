@@ -1,5 +1,5 @@
 import PropTypes from "prop-types";
-import { Check } from "lucide-react";
+import { Check, Sparkles } from "lucide-react";
 import Button from "../ui/Button.jsx";
 
 /**
@@ -15,6 +15,7 @@ export default function AiStudioActions({
   error,
   note,
   isSaved = false,
+  tryOnHref,
   onOpenRefine,
   onVary,
   onSave,
@@ -32,6 +33,18 @@ export default function AiStudioActions({
         <Button variant="outline" disabled={disabled} onClick={onVary}>
           {copy.actions.vary}
         </Button>
+        {/* The generated concept carries straight into the shared fitting
+            room — the studio never duplicates the try-on experience. */}
+        {tryOnHref && (
+          <Button
+            variant="outline"
+            disabled={disabled}
+            {...(disabled ? {} : { href: tryOnHref })}
+          >
+            <Sparkles size={13} strokeWidth={1.6} aria-hidden="true" />
+            {copy.actions.tryOn}
+          </Button>
+        )}
         <Button
           variant={isSaved ? "secondary" : "primary"}
           disabled={disabled || isSaved}
@@ -88,6 +101,8 @@ AiStudioActions.propTypes = {
   /** Quiet confirmation (save / share). */
   note: PropTypes.string,
   isSaved: PropTypes.bool,
+  /** Where "Try It On" carries the concept — the shared fitting room. */
+  tryOnHref: PropTypes.string,
   onOpenRefine: PropTypes.func.isRequired,
   onVary: PropTypes.func.isRequired,
   onSave: PropTypes.func.isRequired,

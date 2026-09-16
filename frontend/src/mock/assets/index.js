@@ -29,6 +29,16 @@ import braceletsCategory from "./images/categories/bracelets.jpg";
 import aiTriptych from "./images/ai/triptych.jpg";
 import wearAi from "./images/ai/wear_ai.avif";
 
+/* Virtual Try-On — sample customer portraits and the mock fitting results a
+   future try-on backend would render. They stay inside the mock boundary;
+   the room UI receives them through the provider like any other media. */
+import tryOnSampleMeera from "./images/try-on/sample-meera.jpg";
+import tryOnSampleMeeraResult from "./images/try-on/result-meera.jpg";
+import tryOnSampleAnanya from "./images/try-on/sample-ananya.jpg";
+import tryOnSampleAnanyaResult from "./images/try-on/result-ananya.jpg";
+import tryOnSampleIshita from "./images/try-on/sample-ishita.jpg";
+import tryOnSampleIshitaResult from "./images/try-on/result-ishita.jpg";
+
 /* Boutique network */
 import boutiqueBhubaneswar from "./images/branches/branch1.avif";
 import boutiqueCuttackImg from "./images/branches/branch2.avif";
@@ -77,6 +87,12 @@ export const media = {
 
   /* Virtual Try-On */
   tryOnAtelier: wearAi,
+  tryOnSampleMeera,
+  tryOnSampleMeeraResult,
+  tryOnSampleAnanya,
+  tryOnSampleAnanyaResult,
+  tryOnSampleIshita,
+  tryOnSampleIshitaResult,
 
   /* Journal */
   journalBridal: bridalEditorial,
