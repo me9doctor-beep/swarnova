@@ -2,7 +2,7 @@ import { Phone, Mail } from "lucide-react";
 import BrandMark from "../ui/BrandMark.jsx";
 import SocialIcon from "../ui/SocialIcon.jsx";
 import NewsletterForm from "../forms/NewsletterForm.jsx";
-import { useSite } from "../../hooks/useContent.js";
+import { useSite } from "../../hooks/useSite.js";
 
 function FooterColumn({ title, links }) {
   return (

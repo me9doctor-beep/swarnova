@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Search, Heart, User, ShoppingBag, Menu, X } from "lucide-react";
 import BrandMark from "../ui/BrandMark.jsx";
-import { useSite } from "../../hooks/useContent.js";
+import { useSite } from "../../hooks/useSite.js";
 import { useWishlist } from "../../state/WishlistContext.jsx";
 import { cn } from "../../utils/cn.js";
 
