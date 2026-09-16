@@ -6,6 +6,9 @@ import SuperAdminLayout from "../layouts/super-admin/SuperAdminLayout.jsx";
 import EmployeeLayout from "../layouts/employee/EmployeeLayout.jsx";
 
 import HomePage from "../pages/customer/home/HomePage.jsx";
+import CollectionsPage from "../pages/customer/catalogue/CollectionsPage.jsx";
+import CatalogueDetailPage from "../pages/customer/catalogue/CatalogueDetailPage.jsx";
+import ProductsPage from "../pages/customer/catalogue/ProductsPage.jsx";
 import AdminDashboardPage from "../pages/admin/dashboard/AdminDashboardPage.jsx";
 import SuperAdminDashboardPage from "../pages/super-admin/dashboard/SuperAdminDashboardPage.jsx";
 import EmployeeDashboardPage from "../pages/employee/dashboard/EmployeeDashboardPage.jsx";
@@ -21,8 +24,10 @@ import { ROLES } from "../features/authentication/roles.js";
  * (for the management experiences) in a RoleBoundary. Child routes are relative
  * and are added as their phases land — no route exists before its screen does.
  *
- *   Customer      /            /collections  /product/:id  /ai-studio
- *                 /virtual-try-on  /stores   /cart  /checkout  /account
+ *   Customer      /            /collections  /collections/:slug
+ *                 /category/:slug  /products
+ *                 (planned: /product/:id  /ai-studio  /virtual-try-on
+ *                  /stores  /cart  /checkout  /account)
  *   Admin         /admin       /admin/products   /admin/inventory
  *                 /admin/orders    /admin/customers
  *   Super Admin   /super-admin /super-admin/users /super-admin/roles
@@ -30,20 +35,22 @@ import { ROLES } from "../features/authentication/roles.js";
  *   Employee      /employee    /employee/sales   /employee/customers
  *                 /employee/inventory
  *
- * The `/products`, `/inventory`, … children above are planned: only the routes
- * required to prove the layout architecture are registered so far.
+ * Only the routes whose screens exist are registered.
  *
  * Each console route also declares `handle.crumb`, the label the shared console
  * topbar shows as the breadcrumb — the place in the hierarchy is defined next
  * to the route instead of being pushed into the shell from the page.
  */
-const router = createBrowserRouter([
+export const routeTree = [
   {
     path: "/",
     element: <CustomerLayout />,
     children: [
       { index: true, element: <HomePage /> },
-      /* Future customer routes nest here: collections, product/:id, cart, … */
+      { path: "collections", element: <CollectionsPage /> },
+      { path: "collections/:slug", element: <CatalogueDetailPage scope="collection" /> },
+      { path: "category/:slug", element: <CatalogueDetailPage scope="category" /> },
+      { path: "products", element: <ProductsPage /> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },
@@ -84,6 +91,8 @@ const router = createBrowserRouter([
       { index: true, element: <EmployeeDashboardPage />, handle: { crumb: "Overview" } },
     ],
   },
-]);
+];
+
+const router = createBrowserRouter(routeTree);
 
 export default router;

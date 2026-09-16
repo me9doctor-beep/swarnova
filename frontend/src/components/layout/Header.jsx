@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { Search, Heart, User, ShoppingBag, Menu, X } from "lucide-react";
 import BrandMark from "../ui/BrandMark.jsx";
 import Button from "../ui/Button.jsx";
@@ -101,6 +102,7 @@ function MobileMenu({ open, onClose, navigation }) {
 }
 
 export default function Header() {
+  const { pathname } = useLocation();
   const { data: site } = useSite();
   const { count } = useWishlist();
   const [scrolled, setScrolled] = useState(false);
@@ -115,7 +117,12 @@ export default function Header() {
 
   if (!site) return null;
 
-  const actionVariant = scrolled ? "plain" : "inverse";
+  /* The transparent, light-tinted chrome is designed to sit over the hero
+     photograph — the only customer route with a dark backdrop. Every other
+     storefront page has a light background, so it keeps the solid chrome from
+     the first pixel (the homepage keeps its exact scroll behaviour). */
+  const solid = pathname === "/" ? scrolled : true;
+  const actionVariant = solid ? "plain" : "inverse";
 
   return (
     <>
@@ -141,14 +148,14 @@ export default function Header() {
         <div
           className={cn(
             "border-b transition-colors duration-200",
-            scrolled
+            solid
               ? "border-border-default bg-surface-primary/95 backdrop-blur-sm"
               : "border-transparent bg-transparent"
           )}
         >
           <Container className="flex h-[72px] items-center justify-between gap-6">
             <a href="#top" aria-label="Swarnova — home" className="shrink-0">
-              <BrandMark tone={scrolled ? "dark" : "light"} />
+              <BrandMark tone={solid ? "dark" : "light"} />
             </a>
 
             <nav aria-label="Primary" className="hidden xl:block">
@@ -162,7 +169,7 @@ export default function Header() {
                       href={item.href}
                       className={cn(
                         "whitespace-nowrap font-sans text-nav font-medium uppercase transition-colors duration-200",
-                        scrolled
+                        solid
                           ? "text-text-primary/80 hover:text-brand-accent-strong"
                           : "text-white/90 hover:text-white"
                       )}
@@ -201,7 +208,7 @@ export default function Header() {
                   /* `plain` supplies the shape; the hover tone is neutralised
                      here because the trigger sits alone on the hero photograph
                      and reads as chrome, not as content. */
-                  scrolled
+                  solid
                     ? "text-text-primary hover:text-text-primary"
                     : "text-white hover:text-white"
                 )}

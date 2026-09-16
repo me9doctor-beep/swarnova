@@ -19,6 +19,11 @@
  *   getActiveCampaign()
  *   getGoldRateBoard()
  *   getAiStudio()
+ *
+ * getProducts(query) is the catalogue query contract — the same parameters a
+ * future API provider will accept, one-to-one:
+ *   { categoryId, collectionId, featured, bestseller, tryOnAvailable,
+ *     availability, priceMin, priceMax, search, sort, limit }
  */
 import * as db from "../../../mock/data/index.js";
 
@@ -31,6 +36,16 @@ function emit(value) {
 function byOrder(a, b) {
   return (a.order ?? 0) - (b.order ?? 0);
 }
+
+/** Product orderings the contract supports. "featured" is the default. */
+const PRODUCT_SORTS = {
+  featured: (a, b) =>
+    Number(b.bestseller) - Number(a.bestseller) ||
+    Number(b.featured) - Number(a.featured) ||
+    a.name.localeCompare(b.name),
+  "price-asc": (a, b) => a.price - b.price || a.name.localeCompare(b.name),
+  "price-desc": (a, b) => b.price - a.price || a.name.localeCompare(b.name),
+};
 
 export const mockProvider = {
   name: "mock",
@@ -66,13 +81,16 @@ export const mockProvider = {
     if (query.bestseller) list = list.filter((p) => p.bestseller);
     if (query.tryOnAvailable) list = list.filter((p) => p.tryOnAvailable);
     if (query.availability) list = list.filter((p) => p.availability === query.availability);
+    if (query.priceMin != null) list = list.filter((p) => p.price >= query.priceMin);
+    if (query.priceMax != null) list = list.filter((p) => p.price <= query.priceMax);
+    if (query.search) {
+      const term = String(query.search).toLowerCase();
+      list = list.filter(
+        (p) => p.name.toLowerCase().includes(term) || p.sku.toLowerCase().includes(term)
+      );
+    }
 
-    list.sort((a, b) => {
-      if (Number(b.bestseller) !== Number(a.bestseller)) {
-        return Number(b.bestseller) - Number(a.bestseller);
-      }
-      return a.name.localeCompare(b.name);
-    });
+    list.sort(PRODUCT_SORTS[query.sort] ?? PRODUCT_SORTS.featured);
 
     if (typeof query.limit === "number") list = list.slice(0, query.limit);
     return Promise.resolve(emit(list));

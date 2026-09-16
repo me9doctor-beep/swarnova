@@ -126,7 +126,7 @@ export const homepage = {
         eyebrow: "Bestsellers",
         title: "Customer Favourites",
         query: { bestseller: true, limit: 4 },
-        cta: { label: "Shop Bestsellers", href: "/jewellery" },
+        cta: { label: "Shop Bestsellers", href: "/products" },
         emptyMessage:
           "Our bestsellers are being prepared. Please revisit us shortly.",
       },

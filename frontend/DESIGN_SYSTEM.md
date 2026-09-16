@@ -390,3 +390,77 @@ media block.
 | Tokens | every migrated utility verified present in the compiled CSS (a missing token would silently emit nothing) |
 | Mock architecture | untouched; only `services/providers/mock` reads `src/mock` |
 | Animation / TypeScript | none introduced |
+
+---
+
+## 8. Phase 3 delivery notes — customer collections + product catalogue
+
+Phase 3 extends the customer storefront into a premium catalogue: collection
+index, collection detail, category detail and the full jewellery listing with
+search, filtering, sorting and URL-backed state. The console experiences, the
+homepage, the data architecture and the mock boundary are preserved.
+
+**Routes** (customer, under `CustomerLayout`):
+
+| Route | Screen |
+| --- | --- |
+| `/collections` | Collections index — curated collections + browse-by-category (reuses `CollectionCard`) |
+| `/collections/:slug` | Collection detail; a category slug also resolves here (links that predate the dedicated route keep working) |
+| `/category/:slug` | Category detail — the same listing implementation as collections (`CatalogueDetailPage` with a `scope`) |
+| `/products` | All Jewellery — search + category + price filters + sort |
+
+Product detail links (`/jewellery/…`) remain Phase 4 and resolve through
+`NotFoundPage` until then.
+
+**Catalogue components** (new, under `src/components/catalogue`):
+
+| Component | Responsibility | Key API |
+| --- | --- | --- |
+| `CatalogueHeader` | page masthead: eyebrow, the page's single serif H1, house ornament, description, quiet result count | `eyebrow` `title` `description` `count` |
+| `CatalogueControls` | the discovery toolbar: optional search field, category / price selects, sort select, active-filter chips, reset. Fully controlled (state lives in the URL) | `value` `onChange` `onReset` `showSearch` `showCategory` `showPrice` |
+| `ProductGrid` | responsive grid of the shared `ProductCard` — 2 / 3 / 4 columns at base / `lg` / `xl` | `products` |
+| `config.js` | discovery vocabulary: the three price bands (derived from the real ₹49,600–₹1,42,000 spread) and the sort options the product contract supports | `PRICE_RANGES` `SORT_OPTIONS` `DEFAULT_SORT` |
+
+No per-experience card, button or modal was created: `ProductCard`,
+`CollectionCard`, `Input`, `Select`, `Button`, `EmptyState` and `AsyncBoundary`
+are reused as-is. The mobile filter experience is the toolbar itself
+(two-up native selects) — no drawer, in keeping with Phase 1's decision to
+defer a modal framework until a screen genuinely needs one.
+
+**Data flow.** Filtering and sorting live in the provider query contract, so
+the future API provider consumes the same parameters one-to-one:
+`getProducts({ categoryId, collectionId, priceMin, priceMax, search, sort,
+limit, … })`. Pages mirror browsing state in the URL (`?q= &category=
+&price= &sort=` — slugs in the URL, backend-friendly bounds/keys in the
+provider query); `useSearchParams` is the whole state layer. Sorts:
+`featured` (default: bestseller → featured → name), `price-asc`,
+`price-desc`. There is deliberately no "Newest" — the product model carries no
+date. Filters exist only where the data varies: category, price and name
+search. Purity ("22K") and availability ("available") are uniform across the
+catalogue, so no filter is offered for them.
+
+**Mock data.** No new mock entities. Two link corrections: category CTAs now
+point at their canonical `/category/:slug` routes, and the homepage
+"Shop Bestsellers" CTA points at the new `/products` route.
+
+**Header (shared component, backward compatible).** The transparent,
+light-tinted header chrome is designed to sit over the hero photograph — the
+only customer route with a dark backdrop. Every other storefront page has a
+light background, so the chrome is solid there from the first pixel
+(`pathname === "/" ? scrolled : true`). The homepage renders exactly as before.
+
+**Validation snapshot** (build + jsdom client renders, zero console errors):
+
+| Check | Result |
+| --- | --- |
+| Production build | passes — single-file bundle 3,174 kB (Phase 2: 3,156 kB), no new dependencies |
+| Routes | `/`, `/collections`, `/collections/:slug`, `/category/:slug`, `/products` (incl. filtered URLs), `/admin`, `/super-admin`, `/employee`, unknown path — all render, one `h1` each |
+| Catalogue data | all listings render through hooks → services → provider; provider query contract verified against every filter/sort/search combination (28 checks) |
+| Catalogue behaviour | result counts, active-filter chips + remove + reset, zero-result empty states, unknown-slug states, single-product singular "1 piece", slug fallback, search focus via header `#search` link — 78 jsdom checks passed |
+| Mock architecture | untouched boundary; no page/component/layout imports `src/mock` |
+| Animation / TypeScript | none introduced |
+
+**Deliberately deferred** (later phases): product detail, cart/checkout,
+pagination (the catalogue is intentionally small — the provider already
+supports `limit`), pagination of results, a filter drawer (no screen needs
+one yet).

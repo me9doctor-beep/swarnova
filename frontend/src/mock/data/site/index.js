@@ -23,7 +23,7 @@ export const site = {
   navigation: [
     { label: "Home", href: "#top" },
     { label: "Collections", href: "#collections" },
-    { label: "Jewellery", href: "#bestsellers" },
+    { label: "Jewellery", href: "/collections" },
     { label: "AI Studio", href: "#ai-studio" },
     { label: "Virtual Try-On", href: "#try-on" },
     { label: "Our Story", href: "#our-story" },
@@ -33,7 +33,7 @@ export const site = {
   quickLinks: [
     { label: "Home", href: "#top" },
     { label: "Collections", href: "#collections" },
-    { label: "Jewellery", href: "#bestsellers" },
+    { label: "Jewellery", href: "/collections" },
     { label: "AI Studio", href: "#ai-studio" },
     { label: "Virtual Try-On", href: "#try-on" },
     { label: "Our Story", href: "#our-story" },
