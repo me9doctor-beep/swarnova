@@ -10,7 +10,10 @@ export default function CampaignSection({ content }) {
   const { status, data: campaign, error, retry } = useActiveCampaign();
 
   return (
-    <section aria-label="Current campaign" className="relative overflow-hidden bg-cream h-[340px]">
+    <section
+      aria-label="Current campaign"
+      className="relative overflow-hidden bg-cream py-14 sm:py-16 lg:h-[340px] lg:py-0"
+    >
       <AsyncBoundary
         status={status}
         error={error}
@@ -26,11 +29,11 @@ export default function CampaignSection({ content }) {
                 src={campaign.image.src}
                 alt={campaign.image.alt}
                 loading="lazy"
-                className="h-full w-full object-cover object-[72%_center]"
+                className="h-full w-full object-cover object-[82%_center] lg:object-[72%_center]"
               />
-              <div className="absolute inset-0 bg-gradient-to-r from-cream via-cream/90 to-cream/25 lg:via-cream/70" />
+              <div className="absolute inset-0 bg-gradient-to-r from-cream via-cream/95 to-cream/45 lg:via-cream/70 lg:to-cream/25" />
             </div>
-            <div className="shell relative h-full flex items-center">
+            <div className="shell relative flex items-center lg:h-full">
               <div className="max-w-lg">
                 <Eyebrow>{campaign.eyebrow}</Eyebrow>
                 <h2 className="mt-4 font-serif text-[34px] font-medium leading-[1.15] text-ink sm:text-[42px]">

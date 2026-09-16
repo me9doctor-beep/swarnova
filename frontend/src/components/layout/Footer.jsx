@@ -15,7 +15,7 @@ function FooterColumn({ title, links }) {
           <li key={link.label + link.href}>
             <a
               href={link.href}
-              className="font-sans text-[13px] text-cream/65 transition-colors duration-200 hover:text-cream"
+              className="font-sans text-[12.5px] text-cream/65 transition-colors duration-200 hover:text-cream sm:text-[13px]"
             >
               {link.label}
             </a>
@@ -32,10 +32,10 @@ export default function Footer() {
 
   return (
     <footer className="bg-wine text-cream/75">
-      <div className="shell py-16 lg:py-20">
-        <div className="grid grid-cols-1 gap-12 sm:grid-cols-2 lg:grid-cols-12 lg:gap-8">
+      <div className="shell py-14 sm:py-16 lg:py-20">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-2 sm:gap-12 lg:grid-cols-12 lg:gap-8">
           {/* Brand */}
-          <div className="lg:col-span-3">
+          <div className="col-span-2 sm:col-span-1 lg:col-span-3">
             <a href="#top" aria-label="Swarnova — home" className="inline-block">
               <BrandMark tone="light" />
             </a>
@@ -84,7 +84,7 @@ export default function Footer() {
           </div>
 
           {/* Newsletter */}
-          <div className="lg:col-span-3">
+          <div className="col-span-2 sm:col-span-1 lg:col-span-3">
             <h3 className="text-[10px] font-medium uppercase tracking-[0.32em] text-champagne">
               Newsletter
             </h3>

@@ -118,3 +118,77 @@
     text-wrap: balance;
   }
 }
+
+/* ===========================================================================
+   HERO COMPOSITION — responsive treatment
+   ---------------------------------------------------------------------------
+   ≥1280px keeps the original editorial layout: the campaign photograph drives
+   the section height and the copy floats in its negative space.
+
+   Below that, the photograph is proportionally too short to hold the copy
+   (a 1801×873 frame is only ~190px tall on a 390px phone), which clipped the
+   headline, body and CTAs. Those viewports instead use a full-bleed cover crop
+   with a portrait-friendly focal point, and the copy is anchored to the bottom
+   over a vertical veil. A minimum height guarantees the whole copy block is
+   always visible, including on short landscape phones.
+   =========================================================================== */
+@media (max-width: 1279px) {
+  /* Tall enough for the whole copy block on any phone (including short
+     landscape screens, where the floor keeps every CTA visible), capped so it
+     never becomes an oversized banner on a tall display. `svh` avoids the
+     mobile URL-bar resize jump; the `vh` line is the fallback. */
+  .hero {
+    min-height: clamp(700px, 92vh, 940px);
+    min-height: clamp(700px, 92svh, 940px);
+  }
+
+  .hero__media {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: 64% 26%;
+  }
+
+  .hero__veil {
+    background-image: linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--color-ink) 66%, transparent) 0%,
+      color-mix(in srgb, var(--color-ink) 40%, transparent) 34%,
+      color-mix(in srgb, var(--color-ink) 90%, transparent) 100%
+    );
+  }
+
+  .hero__copy {
+    align-items: flex-end;
+  }
+
+  .hero__copy-inner {
+    padding-top: 8rem;
+    padding-bottom: 3rem;
+  }
+}
+
+@media (max-width: 899px) {
+  .hero__copy-inner {
+    padding-top: 7rem;
+    padding-bottom: 2.75rem;
+  }
+
+  .hero__title {
+    font-size: 2.125rem; /* 34px — matches the other mobile section headings */
+    line-height: 1.1;
+  }
+
+  .hero__body {
+    font-size: 0.875rem;
+    line-height: 1.85;
+  }
+
+  .hero__micro {
+    font-size: 0.5625rem;
+    line-height: 1.75;
+    letter-spacing: 0.22em;
+  }
+}

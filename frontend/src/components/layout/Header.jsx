@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Search, Heart, User, ShoppingBag, Menu, X } from "lucide-react";
 import BrandMark from "../ui/BrandMark.jsx";
+import Button from "../ui/Button.jsx";
 import { useSite } from "../../hooks/useSite.js";
 import { useWishlist } from "../../state/WishlistContext.jsx";
 import { cn } from "../../utils/cn.js";
@@ -52,9 +53,9 @@ function MobileMenu({ open, onClose, navigation }) {
       role="dialog"
       aria-modal="true"
       aria-label="Primary menu"
-      className="fixed inset-0 z-[70] overflow-y-auto bg-paper"
+      className="fixed inset-0 z-[70] flex flex-col overscroll-contain bg-paper"
     >
-      <div className="shell flex h-[72px] items-center justify-between">
+      <div className="shell flex h-[72px] shrink-0 items-center justify-between">
         <BrandMark />
         <button
           type="button"
@@ -65,21 +66,42 @@ function MobileMenu({ open, onClose, navigation }) {
           <X size={22} strokeWidth={1.4} />
         </button>
       </div>
-      <nav className="shell pb-12 pt-4" aria-label="Mobile primary">
-        <ul className="divide-y divide-line border-y border-line">
+
+      {/* Navigation scrolls inside the panel so every destination stays
+          reachable on a short phone; two-up keeps the list compact. */}
+      <nav
+        className="shell flex-1 overflow-y-auto pb-10 pt-2"
+        aria-label="Mobile primary"
+      >
+        <ul className="grid grid-cols-2 gap-x-4 border-t border-line">
           {navigation.map((item) => (
-            <li key={item.href + item.label}>
+            <li key={item.href + item.label} className="border-b border-line">
               <a
                 href={item.href}
                 onClick={onClose}
-                className="block py-4 font-serif text-[26px] text-ink transition-colors duration-200 hover:text-wine"
+                className="flex min-h-[52px] items-center py-3 font-serif text-[19px] leading-tight text-ink transition-colors duration-200 hover:text-wine"
               >
                 {item.label}
               </a>
             </li>
           ))}
         </ul>
-        <div className="mt-8 flex items-center gap-2 text-ink/70">
+
+        <div className="mt-8 flex flex-col gap-3">
+          <Button href="#collections" className="w-full" onClick={onClose}>
+            Explore Collections
+          </Button>
+          <Button
+            href="#ai-studio"
+            variant="outline"
+            className="w-full"
+            onClick={onClose}
+          >
+            Create with AI
+          </Button>
+        </div>
+
+        <div className="mt-8 flex items-center gap-2 border-t border-line pt-6 text-ink/70">
           <HeaderAction label="Search" href="#search">
             <Search size={19} strokeWidth={1.5} />
           </HeaderAction>

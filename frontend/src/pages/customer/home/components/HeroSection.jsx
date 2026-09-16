@@ -5,6 +5,12 @@ import Eyebrow from "../../../../components/ui/Eyebrow.jsx";
 /**
  * Campaign-led hero — large model imagery dominates the frame, copy lives
  * in the negative space on the left, CTA treatment matches the reference.
+ *
+ * Two compositions share this markup (the `hero__*` hooks in index.css):
+ *   ≥1280px  image-led — the photograph sets the section height and the copy
+ *            floats in its negative space (the original editorial layout)
+ *   <1280px  full-bleed cover crop with the copy anchored to the bottom, so
+ *            no line is ever clipped on a phone or tablet
  */
 export default function HeroSection({ content }) {
   const { title, eyebrow, body, primaryCta, secondaryCta, image } = content;
@@ -12,20 +18,21 @@ export default function HeroSection({ content }) {
   return (
     <section
       aria-label="Featured campaign"
-      className="relative overflow-hidden bg-ink"
+      className="hero relative overflow-hidden bg-ink"
     >
-      {/* Image drives the section height — no cropping, no letterbox gaps */}
+      {/* ≥1280px: the image drives the section height (no cropping, no
+          letterbox gaps). Below that it becomes a full-bleed cover crop. */}
       <img
         src={image.src}
         alt={image.alt}
-        className="block w-full h-auto"
+        className="hero__media block w-full h-auto"
         fetchPriority="high"
         aria-hidden="true"
       />
 
       {/* Gradient veil over the image so copy stays legible */}
       <div
-        className="absolute inset-0 bg-gradient-to-r from-ink/80 via-ink/40 to-transparent"
+        className="hero__veil absolute inset-0 bg-gradient-to-r from-ink/80 via-ink/40 to-transparent"
         aria-hidden="true"
       />
       {/* Subtle top fade for nav readability */}
@@ -35,8 +42,8 @@ export default function HeroSection({ content }) {
       />
 
       {/* Copy block — overlaid on the image */}
-      <div className="absolute inset-0 flex items-center">
-        <div className="shell relative w-full pb-20 pt-[160px] sm:pt-[180px]">
+      <div className="hero__copy absolute inset-0 flex items-center">
+        <div className="hero__copy-inner shell relative w-full pb-20 pt-[160px] sm:pt-[180px]">
           <div className="max-w-[520px]">
 
             {/* Ornamental top rule */}
@@ -51,7 +58,7 @@ export default function HeroSection({ content }) {
               </Eyebrow>
             )}
 
-            <h1 className="mt-4 font-serif text-[52px] font-medium leading-[1.04] text-cream sm:text-[64px] lg:text-[76px]">
+            <h1 className="hero__title mt-4 font-serif text-[52px] font-medium leading-[1.04] text-cream sm:text-[64px] lg:text-[76px]">
               {title.lines.map((line, index) => (
                 <span key={`${line.text}-${index}`} className="block">
                   <span className={line.emphasis ? "italic text-gold" : undefined}>
@@ -67,7 +74,7 @@ export default function HeroSection({ content }) {
               <div className="h-px flex-1 max-w-[200px] bg-cream/10" />
             </div>
 
-            <p className="max-w-sm text-[14.5px] leading-[1.9] text-cream/65 font-light tracking-wide">
+            <p className="hero__body max-w-sm text-[14.5px] leading-[1.9] text-cream/65 font-light tracking-wide">
               {body}
             </p>
 
@@ -79,7 +86,7 @@ export default function HeroSection({ content }) {
             </div>
 
             {/* Bottom badge / trust micro-copy */}
-            <p className="mt-10 text-[10px] font-sans uppercase tracking-[0.3em] text-cream/35">
+            <p className="hero__micro mt-10 text-[10px] font-sans uppercase tracking-[0.3em] text-cream/35">
               BIS Hallmarked &nbsp;·&nbsp; Lifetime Exchange &nbsp;·&nbsp; Free Shipping
             </p>
           </div>
