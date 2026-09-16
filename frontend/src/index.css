@@ -98,7 +98,10 @@
     content: "";
     height: 1px;
     width: 3.25rem;
-    background: color-mix(in srgb, var(--color-gold) 55%, transparent);
+    /* Explicit rgba rather than color-mix(): identical to
+       `color-mix(in srgb, var(--color-gold) 55%, transparent)`, but it also
+       renders on Safari < 16.2, where color-mix() is unsupported. */
+    background: rgba(178, 138, 69, 0.55);
   }
   .ornament > span {
     width: 7px;
@@ -109,12 +112,149 @@
 
   .ornament-wine::before,
   .ornament-wine::after {
-    background: color-mix(in srgb, var(--color-champagne) 45%, transparent);
+    background: rgba(216, 191, 147, 0.45);
   }
 }
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+}
+
+/* ===========================================================================
+   HERO COMPOSITION
+   ---------------------------------------------------------------------------
+   The campaign photograph is 1801×873 (≈2.06:1) while the hero copy needs
+   ~923px of height — the photograph only supplies that from ~1900px of viewport
+   width. Everywhere narrower the original image-led layout produced a section
+   shorter than its own copy, and `overflow-hidden` then cut it off: the trust
+   line from 1366px laptops, both CTAs at 1280px, the top 72px of the copy on a
+   320px phone, and 132px on an iPad in landscape.
+
+   The hero is therefore one composition at every width rather than a desktop
+   layout with patches bolted on below a breakpoint:
+
+     · the section is a flex column whose floor is the photograph's own aspect
+       ratio — so a wide display still shows the full, uncropped frame — with a
+       screen-filling floor so a phone hero behaves like a hero;
+     · the photograph is a full-bleed cover layer behind the copy;
+     · the copy sits in normal flow, so the section grows to whatever the copy
+       needs and no headline, CTA or trust line can ever be clipped.
+
+   Only the crop focal point changes across breakpoints: ≤1279px the copy spans
+   the full width, so the crop tracks the model; from 1280px the copy is a 520px
+   left column, so the crop keeps the photograph's negative space behind it.
+   =========================================================================== */
+.hero {
+  display: flex;
+  flex-direction: column;
+  /* `vh` first as the fallback for browsers without small-viewport units. */
+  min-height: max(calc(100vw * 873 / 1801), 78vh);
+  min-height: max(calc(100vw * 873 / 1801), 78svh);
+}
+
+.hero__media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 64% 26%;
+}
+
+.hero__copy {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+}
+
+@media (max-width: 1279px) {
+  /* The copy spans the full width here, so the veil darkens top and bottom
+     instead of the desktop's left-to-right wash. Written with rgba so the veil
+     still renders on Safari < 16.2 (no color-mix() support) — without it the
+     cream copy would sit unreadable on the photograph. */
+  .hero__veil {
+    background-image: linear-gradient(
+      to bottom,
+      rgba(47, 42, 37, 0.66) 0%,
+      rgba(47, 42, 37, 0.4) 34%,
+      rgba(47, 42, 37, 0.9) 100%
+    );
+  }
+
+  .hero__copy-inner {
+    padding-top: 8rem;
+    padding-bottom: 3rem;
+  }
+}
+
+@media (max-width: 899px) {
+  .hero__copy-inner {
+    padding-top: 7rem;
+    padding-bottom: 2.75rem;
+  }
+
+  .hero__title {
+    font-size: 2.125rem; /* 34px — matches the other mobile section headings */
+    line-height: 1.1;
+  }
+
+  .hero__body {
+    font-size: 0.875rem;
+    line-height: 1.85;
+  }
+
+  .hero__micro {
+    font-size: 0.5625rem;
+    line-height: 1.75;
+    letter-spacing: 0.22em;
+  }
+}
+
+@media (min-width: 1280px) {
+  /* Keep the photograph's left-hand negative space under the copy. */
+  .hero__media {
+    object-position: 18% 30%;
+  }
+}
+
+/* ===========================================================================
+   PHONE ERGONOMICS
+   ---------------------------------------------------------------------------
+   Scoped below the tablet breakpoints so larger screens render exactly as
+   before.
+   =========================================================================== */
+@media (max-width: 639px) {
+  /* Footer link columns: full-width rows with a comfortable thumb target
+     instead of 13px text with a 10px gap. */
+  footer nav li > a {
+    display: block;
+    padding-block: 5px;
+  }
+}
+
+/* A phone in landscape has ~375px of height, where the hero's portrait padding
+   (104px, under a 112px fixed header) plus display type pushed both CTAs below
+   the fold. Tighten the composition and drop the decorative trust micro-line —
+   eyebrow, headline, body and CTAs all stay. */
+@media (max-width: 1023px) and (max-height: 540px) and (orientation: landscape) {
+  .hero__copy-inner {
+    padding-top: 6.5rem;
+    padding-bottom: 1.75rem;
+  }
+
+  .hero__title {
+    font-size: 1.75rem;
+    line-height: 1.08;
+  }
+
+  .hero__body {
+    font-size: 0.8125rem;
+    line-height: 1.75;
+  }
+
+  .hero__micro {
+    display: none;
   }
 }

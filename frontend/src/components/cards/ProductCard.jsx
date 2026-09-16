@@ -34,7 +34,7 @@ export default function ProductCard({ product }) {
           onClick={() => toggle(product.id)}
           aria-pressed={wished}
           aria-label={wished ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
-          className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center border border-line bg-paper/90 text-ash transition-colors duration-200 hover:border-gold/50 hover:text-wine"
+          className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center border border-line bg-paper/90 text-ash transition-colors duration-200 hover:border-gold/50 hover:text-wine sm:h-9 sm:w-9"
         >
           <Heart
             size={15}

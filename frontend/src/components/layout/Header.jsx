@@ -1,13 +1,15 @@
 import { useEffect, useState } from "react";
 import { Search, Heart, User, ShoppingBag, Menu, X } from "lucide-react";
 import BrandMark from "../ui/BrandMark.jsx";
-import { useSite } from "../../hooks/useContent.js";
+import Button from "../ui/Button.jsx";
+import { useSite } from "../../hooks/useSite.js";
 import { useWishlist } from "../../state/WishlistContext.jsx";
 import { cn } from "../../utils/cn.js";
 
 function HeaderAction({ label, children, href, onClick, badge, transparent }) {
+  // 44px on phones (thumb-friendly target), the original 40px from `sm` up.
   const classes = cn(
-    "relative flex h-10 w-10 items-center justify-center transition-colors duration-200",
+    "relative flex h-11 w-11 items-center justify-center transition-colors duration-200 sm:h-10 sm:w-10",
     transparent
       ? "text-white/90 hover:text-white"
       : "text-ink/75 hover:text-wine"
@@ -52,34 +54,55 @@ function MobileMenu({ open, onClose, navigation }) {
       role="dialog"
       aria-modal="true"
       aria-label="Primary menu"
-      className="fixed inset-0 z-[70] overflow-y-auto bg-paper"
+      className="fixed inset-0 z-[70] flex flex-col overscroll-contain bg-paper"
     >
-      <div className="shell flex h-[72px] items-center justify-between">
+      <div className="shell flex h-[72px] shrink-0 items-center justify-between">
         <BrandMark />
         <button
           type="button"
           onClick={onClose}
           aria-label="Close menu"
-          className="flex h-10 w-10 items-center justify-center text-ink hover:text-wine"
+          className="flex h-11 w-11 items-center justify-center text-ink hover:text-wine sm:h-10 sm:w-10"
         >
           <X size={22} strokeWidth={1.4} />
         </button>
       </div>
-      <nav className="shell pb-12 pt-4" aria-label="Mobile primary">
-        <ul className="divide-y divide-line border-y border-line">
+
+      {/* Navigation scrolls inside the panel so every destination stays
+          reachable on a short phone; two-up keeps the list compact. */}
+      <nav
+        className="shell flex-1 overflow-y-auto pb-10 pt-2"
+        aria-label="Mobile primary"
+      >
+        <ul className="grid grid-cols-2 gap-x-4 border-t border-line">
           {navigation.map((item) => (
-            <li key={item.href + item.label}>
+            <li key={item.href + item.label} className="border-b border-line">
               <a
                 href={item.href}
                 onClick={onClose}
-                className="block py-4 font-serif text-[26px] text-ink transition-colors duration-200 hover:text-wine"
+                className="flex min-h-[52px] items-center py-3 font-serif text-[19px] leading-tight text-ink transition-colors duration-200 hover:text-wine"
               >
                 {item.label}
               </a>
             </li>
           ))}
         </ul>
-        <div className="mt-8 flex items-center gap-2 text-ink/70">
+
+        <div className="mt-8 flex flex-col gap-3">
+          <Button href="#collections" className="w-full" onClick={onClose}>
+            Explore Collections
+          </Button>
+          <Button
+            href="#ai-studio"
+            variant="outline"
+            className="w-full"
+            onClick={onClose}
+          >
+            Create with AI
+          </Button>
+        </div>
+
+        <div className="mt-8 flex items-center gap-2 border-t border-line pt-6 text-ink/70">
           <HeaderAction label="Search" href="#search">
             <Search size={19} strokeWidth={1.5} />
           </HeaderAction>
@@ -118,8 +141,16 @@ export default function Header() {
       <header className="fixed inset-x-0 top-0 z-50">
         {site.announcement?.enabled && (
           <div className="bg-wine-deep text-cream/85">
-            <div className="shell flex h-9 items-center justify-center">
-              <p className="truncate text-center text-[9px] font-light uppercase tracking-[0.22em] sm:text-[10px]">
+            {/* On phones the message was cut mid-word by `truncate`. The data
+                layer's shorter variant now wraps to at most two tighter-set
+                lines (≤42px tall, so the fixed header never exceeds the 112px
+                section scroll margin). From `sm` up the full message and the
+                original single-line truncation are unchanged. */}
+            <div className="shell flex items-center justify-center py-1 sm:h-9 sm:py-0">
+              <p className="line-clamp-2 text-center text-[10px] font-light uppercase leading-[1.45] tracking-[0.1em] sm:hidden">
+                {site.announcement.shortMessage ?? site.announcement.message}
+              </p>
+              <p className="hidden text-center text-[10px] font-light uppercase tracking-[0.22em] sm:block sm:truncate">
                 {site.announcement.message}
               </p>
             </div>
@@ -140,7 +171,10 @@ export default function Header() {
             </a>
 
             <nav aria-label="Primary" className="hidden xl:block">
-              <ul className="flex items-center gap-7 2xl:gap-9">
+              {/* gap-5 rather than gap-7 at the 1280–1535 breakpoint: the eight
+                  links plus the four header actions overflowed the row by 18px
+                  at exactly 1280px, clipping the shopping-bag icon. */}
+              <ul className="flex items-center gap-5 2xl:gap-9">
                 {site.navigation.map((item) => (
                   <li key={item.href + item.label}>
                     <a
@@ -177,7 +211,7 @@ export default function Header() {
               <button
                 type="button"
                 className={cn(
-                  "flex h-10 w-10 items-center justify-center xl:hidden",
+                  "flex h-11 w-11 items-center justify-center xl:hidden sm:h-10 sm:w-10",
                   !scrolled ? "text-white" : "text-ink"
                 )}
                 aria-label="Open menu"
