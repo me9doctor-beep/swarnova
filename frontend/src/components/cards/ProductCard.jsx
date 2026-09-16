@@ -1,5 +1,7 @@
 import PropTypes from "prop-types";
 import { Heart } from "lucide-react";
+import Card from "../ui/Card.jsx";
+import IconButton from "../ui/IconButton.jsx";
 import Price from "../ui/Price.jsx";
 import Rating from "../ui/Rating.jsx";
 import { useWishlist } from "../../state/WishlistContext.jsx";
@@ -7,7 +9,7 @@ import { cn } from "../../utils/cn.js";
 
 /**
  * Premium catalogue product card — dominant image, quiet type, hairline
- * border, single wishlist action. No badges, no heavy shadows, no overlays.
+ * border, single wishlist action. Composed from the shared Card foundation.
  */
 export default function ProductCard({ product }) {
   const { has, toggle } = useWishlist();
@@ -16,35 +18,43 @@ export default function ProductCard({ product }) {
 
   return (
     <article className="group flex h-full flex-col">
-      <div className="relative overflow-hidden border border-line bg-ivory transition-colors duration-200 group-hover:border-gold/45">
-        <a
-          href={product.href}
-          aria-label={`View ${product.name}`}
-          className="block aspect-[4/3] overflow-hidden"
-        >
-          <img
-            src={image?.src}
-            alt={image?.alt ?? product.name}
-            loading="lazy"
-            className="h-full w-full object-cover"
-          />
-        </a>
-        <button
-          type="button"
-          onClick={() => toggle(product.id)}
-          aria-pressed={wished}
-          aria-label={wished ? `Remove ${product.name} from wishlist` : `Add ${product.name} to wishlist`}
-          className="absolute right-3 top-3 flex h-11 w-11 items-center justify-center border border-line bg-paper/90 text-ash transition-colors duration-200 hover:border-gold/50 hover:text-wine sm:h-9 sm:w-9"
-        >
-          <Heart
-            size={15}
-            strokeWidth={1.5}
-            className={cn(wished && "fill-wine text-wine")}
-          />
-        </button>
-      </div>
+      {/* The wishlist action is the shared IconButton, anchored beside the
+          image link rather than nested inside it. */}
+      <Card.Media
+        ratio="4/3"
+        href={product.href}
+        ariaLabel={`View ${product.name}`}
+        className="border border-border-default transition-colors duration-200 group-hover:border-brand-accent/45"
+        overlay={
+          <IconButton
+            label={
+              wished
+                ? `Remove ${product.name} from wishlist`
+                : `Add ${product.name} to wishlist`
+            }
+            aria-pressed={wished}
+            variant="outline"
+            size="touch"
+            onClick={() => toggle(product.id)}
+            className="absolute right-3 top-3 bg-surface-primary/90 sm:h-9 sm:w-9"
+          >
+            <Heart
+              size={15}
+              strokeWidth={1.5}
+              className={cn(wished && "fill-wine text-wine")}
+            />
+          </IconButton>
+        }
+      >
+        <img
+          src={image?.src}
+          alt={image?.alt ?? product.name}
+          loading="lazy"
+          className="h-full w-full object-cover"
+        />
+      </Card.Media>
 
-      <div className="flex flex-1 flex-col items-center pt-4 text-center">
+      <Card.Body className="items-center pt-4 text-center">
         <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-gold-deep">
           {product.purity} Gold
         </p>
@@ -55,13 +65,9 @@ export default function ProductCard({ product }) {
         </h3>
         <Price amount={product.price} className="mt-1.5" />
         {product.rating && (
-          <Rating
-            average={product.rating.average}
-            className="mt-2.5"
-            size={11}
-          />
+          <Rating average={product.rating.average} className="mt-2.5" size={11} />
         )}
-      </div>
+      </Card.Body>
     </article>
   );
 }

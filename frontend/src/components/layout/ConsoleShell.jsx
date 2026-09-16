@@ -1,81 +1,56 @@
 import { useEffect, useState } from "react";
 import PropTypes from "prop-types";
-import { Link, NavLink } from "react-router-dom";
-import { Menu, X } from "lucide-react";
-import BrandMark from "../ui/BrandMark.jsx";
-import { cn } from "../../utils/cn.js";
+import Container from "../ui/Container.jsx";
+import SkipLink from "../ui/SkipLink.jsx";
+import ConsoleSidebar from "./ConsoleSidebar.jsx";
+import ConsoleTopbar from "./ConsoleTopbar.jsx";
+import { useBodyScrollLock } from "../../hooks/useBodyScrollLock.js";
 
 /**
  * CONSOLE SHELL — the shared structural shell for the three management
  * experiences (Super Admin, Admin, Employee).
  *
  *   ConsoleShell
- *   ├── Sidebar   (brand, experience, navigation)
- *   ├── Topbar    (navigation trigger, experience title, session meta)
- *   └── Main      (the route's page content)
+ *   ├── ConsoleSidebar   (brand, experience, navigation groups, utility area)
+ *   ├── ConsoleTopbar    (breadcrumb, actions, identity)
+ *   └── Main             (the route's page content)
  *
- * Each experience owns its own layout (its own navigation, permissions and
- * information density) and stays deliberately separate, but they all render
- * through this one shell so the enterprise chrome and design tokens are shared.
- * Design direction: premium enterprise — calm surfaces, champagne rules, wine
- * accents, no storefront atmosphere.
+ * Everything an experience needs to differ in arrives as configuration — brand
+ * label, navigation data, role, session, topbar actions and content — so this
+ * is the only shell implementation in the codebase. Design direction: premium
+ * enterprise — calm surfaces, hairlines, wine accents, compact rhythm.
  */
-function ConsoleNavItem({ item, onNavigate }) {
-  const Glyph = item.icon;
-
-  return (
-    <li>
-      <NavLink
-        to={item.to}
-        end={item.end}
-        onClick={onNavigate}
-        className={({ isActive }) =>
-          cn(
-            "flex items-center gap-3 border-l-2 py-3 pl-5 pr-4 font-sans text-[11px] font-medium uppercase tracking-[0.18em] transition-colors duration-200",
-            isActive
-              ? "border-wine bg-cream/50 text-wine"
-              : "border-transparent text-ink/70 hover:border-gold/45 hover:text-ink"
-          )
-        }
-      >
-        {Glyph ? <Glyph size={16} strokeWidth={1.5} aria-hidden="true" /> : null}
-        {item.label}
-      </NavLink>
-    </li>
-  );
-}
-
-ConsoleNavItem.propTypes = {
-  item: PropTypes.shape({
-    label: PropTypes.string.isRequired,
-    to: PropTypes.string.isRequired,
-    end: PropTypes.bool,
-    icon: PropTypes.elementType,
-  }).isRequired,
-  onNavigate: PropTypes.func,
-};
-
 export default function ConsoleShell({
   experience,
-  navLabel,
-  items,
   homePath = "/",
-  meta = [],
+  navigation,
+  role,
+  user,
+  onSignOut,
+  actions,
   children,
 }) {
   const [navOpen, setNavOpen] = useState(false);
-
-  useEffect(() => {
-    document.body.style.overflow = navOpen ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [navOpen]);
+  useBodyScrollLock(navOpen);
 
   const closeNav = () => setNavOpen(false);
 
+  /* The drawer is a dialog: Escape closes it, like the backdrop does. */
+  useEffect(() => {
+    if (!navOpen) return undefined;
+
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") closeNav();
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [navOpen]);
+
   return (
-    <div className="min-h-screen bg-ivory">
+    <div className="min-h-screen bg-surface-secondary">
+      <SkipLink href="#console-main">Skip to workspace</SkipLink>
+
       {navOpen && (
         <button
           type="button"
@@ -85,113 +60,60 @@ export default function ConsoleShell({
         />
       )}
 
-      <aside
-        className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-[264px] flex-col border-r border-line bg-paper transition-transform duration-200 lg:translate-x-0",
-          navOpen ? "translate-x-0" : "-translate-x-full"
-        )}
-      >
-        <div className="flex h-[72px] shrink-0 items-center justify-between gap-4 border-b border-line px-5">
-          <Link
-            to={homePath}
-            onClick={closeNav}
-            aria-label={`Swarnova ${experience} — home`}
-          >
-            <BrandMark compact />
-          </Link>
-          <button
-            type="button"
-            onClick={closeNav}
-            aria-label="Close navigation"
-            className="flex h-9 w-9 items-center justify-center text-ink/70 transition-colors duration-200 hover:text-wine lg:hidden"
-          >
-            <X size={18} strokeWidth={1.5} aria-hidden="true" />
-          </button>
-        </div>
-
-        <p className="shrink-0 px-5 pt-6 font-sans text-[10px] font-medium uppercase tracking-[0.32em] text-gold-deep">
-          {experience}
-        </p>
-
-        <nav aria-label={navLabel} className="mt-4 flex-1 overflow-y-auto pb-6">
-          <ul>
-            {items.map((item) => (
-              <ConsoleNavItem
-                key={item.to + item.label}
-                item={item}
-                onNavigate={closeNav}
-              />
-            ))}
-          </ul>
-        </nav>
-
-        <div className="shrink-0 border-t border-line px-5 py-4">
-          <Link
-            to="/"
-            className="font-sans text-[10px] font-medium uppercase tracking-[0.24em] text-ash transition-colors duration-200 hover:text-wine"
-          >
-            View Storefront
-          </Link>
-        </div>
-      </aside>
+      <ConsoleSidebar
+        experience={experience}
+        homePath={homePath}
+        navigation={navigation}
+        open={navOpen}
+        onClose={closeNav}
+      />
 
       <div className="lg:pl-[264px]">
-        <header className="sticky top-0 z-30 border-b border-line bg-paper/95 backdrop-blur-sm">
-          <div className="flex min-h-[72px] flex-wrap items-center gap-x-6 gap-y-2 px-5 py-3 lg:px-8">
-            <button
-              type="button"
-              onClick={() => setNavOpen(true)}
-              aria-label="Open navigation"
-              className="flex h-10 w-10 items-center justify-center text-ink/80 transition-colors duration-200 hover:text-wine lg:hidden"
-            >
-              <Menu size={20} strokeWidth={1.5} aria-hidden="true" />
-            </button>
+        <ConsoleTopbar
+          experience={experience}
+          homePath={homePath}
+          role={role}
+          user={user}
+          onSignOut={onSignOut}
+          actions={actions}
+          onOpenNav={() => setNavOpen(true)}
+        />
 
-            <p className="font-serif text-[20px] leading-none text-ink">
-              {experience}
-            </p>
-
-            {meta.length > 0 && (
-              <dl className="flex flex-wrap items-center gap-x-6 gap-y-1 lg:ml-auto">
-                {meta.map((entry) => (
-                  <div key={entry.label} className="flex items-center gap-2">
-                    <dt className="font-sans text-[9px] font-medium uppercase tracking-[0.22em] text-mist">
-                      {entry.label}
-                    </dt>
-                    <dd className="font-sans text-[11px] font-medium uppercase tracking-[0.16em] text-ink/80">
-                      {entry.value}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            )}
-          </div>
-        </header>
-
-        <main className="px-5 py-8 lg:px-8 lg:py-10">{children}</main>
+        <main id="console-main">
+          <Container size="wide" className="px-gutter py-8 lg:px-8 lg:py-10">
+            {children}
+          </Container>
+        </main>
       </div>
     </div>
   );
 }
 
 ConsoleShell.propTypes = {
+  /** Experience label, e.g. "Super Admin". */
   experience: PropTypes.string.isRequired,
-  navLabel: PropTypes.string.isRequired,
-  items: PropTypes.arrayOf(
+  /** The console's own root route. */
+  homePath: PropTypes.string,
+  /** Navigation groups: [{ label?, items: [{ label, to, end?, icon }] }]. */
+  navigation: PropTypes.arrayOf(
     PropTypes.shape({
-      label: PropTypes.string.isRequired,
-      to: PropTypes.string.isRequired,
-      end: PropTypes.bool,
-      icon: PropTypes.elementType,
+      label: PropTypes.string,
+      items: PropTypes.arrayOf(
+        PropTypes.shape({
+          label: PropTypes.string.isRequired,
+          to: PropTypes.string.isRequired,
+          end: PropTypes.bool,
+          icon: PropTypes.elementType,
+        })
+      ).isRequired,
     })
   ).isRequired,
-  /** The console's own root route, used by the sidebar brand link. */
-  homePath: PropTypes.string,
-  meta: PropTypes.arrayOf(
-    PropTypes.shape({
-      label: PropTypes.string.isRequired,
-      value: PropTypes.node,
-    })
-  ),
+  role: PropTypes.string,
+  user: PropTypes.shape({
+    name: PropTypes.string,
+    email: PropTypes.string,
+  }),
+  onSignOut: PropTypes.func,
+  actions: PropTypes.node,
   children: PropTypes.node,
 };

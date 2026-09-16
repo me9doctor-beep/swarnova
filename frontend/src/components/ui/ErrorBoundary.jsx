@@ -1,5 +1,6 @@
 import { Component } from "react";
 import PropTypes from "prop-types";
+import Button from "./Button.jsx";
 
 /**
  * Catches render-time failures so the page never shows a blank screen.
@@ -66,13 +67,9 @@ export default class ErrorBoundary extends Component {
               {error.message}
             </p>
           )}
-          <button
-            type="button"
-            onClick={this.handleReload}
-            className="mt-7 inline-flex items-center justify-center rounded-[2px] border border-wine bg-wine px-8 py-3.5 text-[11px] font-medium uppercase tracking-[0.22em] text-cream transition-colors duration-200 hover:bg-wine-deep"
-          >
+          <Button className="mt-7" onClick={this.handleReload}>
             Reload Page
-          </button>
+          </Button>
         </div>
       </div>
     );

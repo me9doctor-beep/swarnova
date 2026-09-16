@@ -1,5 +1,7 @@
 import { Phone, Mail } from "lucide-react";
 import BrandMark from "../ui/BrandMark.jsx";
+import Container from "../ui/Container.jsx";
+import Eyebrow from "../ui/Eyebrow.jsx";
 import SocialIcon from "../ui/SocialIcon.jsx";
 import NewsletterForm from "../forms/NewsletterForm.jsx";
 import { useSite } from "../../hooks/useSite.js";
@@ -7,9 +9,9 @@ import { useSite } from "../../hooks/useSite.js";
 function FooterColumn({ title, links }) {
   return (
     <nav aria-label={title}>
-      <h3 className="text-[10px] font-medium uppercase tracking-[0.32em] text-champagne">
+      <Eyebrow as="h3" tone="wine" className="text-[10px] tracking-[0.32em]">
         {title}
-      </h3>
+      </Eyebrow>
       <ul className="mt-5 space-y-2.5">
         {links.map((link) => (
           <li key={link.label + link.href}>
@@ -32,7 +34,7 @@ export default function Footer() {
 
   return (
     <footer className="bg-wine text-cream/75">
-      <div className="shell py-14 sm:py-16 lg:py-20">
+      <Container className="py-14 sm:py-16 lg:py-20">
         <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-2 sm:gap-12 lg:grid-cols-12 lg:gap-8">
           {/* Brand */}
           <div className="col-span-2 sm:col-span-1 lg:col-span-3">
@@ -85,9 +87,9 @@ export default function Footer() {
 
           {/* Newsletter */}
           <div className="col-span-2 sm:col-span-1 lg:col-span-3">
-            <h3 className="text-[10px] font-medium uppercase tracking-[0.32em] text-champagne">
+            <Eyebrow as="h3" tone="wine" className="text-[10px] tracking-[0.32em]">
               Newsletter
-            </h3>
+            </Eyebrow>
             <p className="mt-5 text-[13px] leading-relaxed text-cream/60">
               Subscribe for special offers, private previews and once-in-a-season
               stories from the atelier.
@@ -99,10 +101,10 @@ export default function Footer() {
             />
           </div>
         </div>
-      </div>
+      </Container>
 
       <div className="border-t border-cream/10">
-        <div className="shell flex flex-col items-center justify-between gap-3 py-6 text-center sm:flex-row sm:text-left">
+        <Container className="flex flex-col items-center justify-between gap-3 py-6 text-center sm:flex-row sm:text-left">
           <p className="text-[12px] tracking-wide text-cream/50">{site.copyright}</p>
           <ul className="flex items-center gap-6">
             {site.legal.map((link) => (
@@ -116,7 +118,7 @@ export default function Footer() {
               </li>
             ))}
           </ul>
-        </div>
+        </Container>
       </div>
     </footer>
   );
