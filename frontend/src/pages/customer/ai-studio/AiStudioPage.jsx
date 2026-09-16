@@ -112,10 +112,13 @@ export default function AiStudioPage() {
   const isSaved = concept ? has(concept.id) : false;
 
   /* A generated concept points at the catalogue's own category, so the
-     onward CTA deep-links into the existing product listing. */
+     onward CTA deep-links into the existing product listing. The same
+     concept also carries into the shared fitting room — one try-on
+     experience, never a second implementation inside the studio. */
   const catalogueHref = concept?.category
     ? `/products?category=${concept.category}`
     : nextSteps.cta.href;
+  const tryOnHref = concept ? `/virtual-try-on?design=${concept.id}` : undefined;
 
   return (
     <>
@@ -153,6 +156,7 @@ export default function AiStudioPage() {
                     error={studio.error}
                     note={noteMessage}
                     isSaved={isSaved}
+                    tryOnHref={tryOnHref}
                     onRefine={studio.refine}
                     onVary={studio.createVariations}
                     onSave={handleSave}

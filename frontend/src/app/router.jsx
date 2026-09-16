@@ -11,6 +11,7 @@ import CatalogueDetailPage from "../pages/customer/catalogue/CatalogueDetailPage
 import ProductsPage from "../pages/customer/catalogue/ProductsPage.jsx";
 import ProductDetailPage from "../pages/customer/product/ProductDetailPage.jsx";
 import AiStudioPage from "../pages/customer/ai-studio/AiStudioPage.jsx";
+import VirtualTryOnPage from "../pages/customer/virtual-try-on/VirtualTryOnPage.jsx";
 import AdminDashboardPage from "../pages/admin/dashboard/AdminDashboardPage.jsx";
 import SuperAdminDashboardPage from "../pages/super-admin/dashboard/SuperAdminDashboardPage.jsx";
 import EmployeeDashboardPage from "../pages/employee/dashboard/EmployeeDashboardPage.jsx";
@@ -28,8 +29,8 @@ import { ROLES } from "../features/authentication/roles.js";
  *
  *   Customer      /            /collections  /collections/:slug
  *                 /category/:slug  /products  /product/:id  /ai-studio
- *                 (planned: /virtual-try-on  /stores  /cart
- *                  /checkout  /account)
+ *                 /virtual-try-on
+ *                 (planned: /stores  /cart  /checkout  /account)
  *   Admin         /admin       /admin/products   /admin/inventory
  *                 /admin/orders    /admin/customers
  *   Super Admin   /super-admin /super-admin/users /super-admin/roles
@@ -55,6 +56,7 @@ export const routeTree = [
       { path: "products", element: <ProductsPage /> },
       { path: "product/:id", element: <ProductDetailPage /> },
       { path: "ai-studio", element: <AiStudioPage /> },
+      { path: "virtual-try-on", element: <VirtualTryOnPage /> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },

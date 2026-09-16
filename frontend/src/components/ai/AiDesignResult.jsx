@@ -24,6 +24,7 @@ export default function AiDesignResult({
   error,
   note,
   isSaved = false,
+  tryOnHref,
   onRefine,
   onVary,
   onSave,
@@ -114,6 +115,7 @@ export default function AiDesignResult({
           error={error}
           note={note}
           isSaved={isSaved}
+          tryOnHref={tryOnHref}
           onOpenRefine={() => setRefining(true)}
           onVary={onVary}
           onSave={onSave}
@@ -193,6 +195,8 @@ AiDesignResult.propTypes = {
   error: PropTypes.shape({ message: PropTypes.string }),
   note: PropTypes.string,
   isSaved: PropTypes.bool,
+  /** Where "Try It On" carries the concept — the shared fitting room. */
+  tryOnHref: PropTypes.string,
   onRefine: PropTypes.func.isRequired,
   onVary: PropTypes.func.isRequired,
   onSave: PropTypes.func.isRequired,

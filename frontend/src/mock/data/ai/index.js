@@ -178,6 +178,7 @@ export const aiAtelier = {
   actions: {
     refine: "Refine",
     vary: "Create Variation",
+    tryOn: "Try It On",
     save: "Save Design",
     saved: "Design Saved",
     share: "Share",

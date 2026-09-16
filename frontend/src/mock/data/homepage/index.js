@@ -150,7 +150,7 @@ export const homepage = {
           "Try pieces from any device, anywhere",
           "Save and compare your favourites",
         ],
-        cta: { label: "Try Jewellery On", href: "/try-on" },
+        cta: { label: "Try Jewellery On", href: "/virtual-try-on" },
         secondaryCta: { label: "Book a Fitting", href: "#stores" },
         image: {
           src: media.tryOnAtelier,

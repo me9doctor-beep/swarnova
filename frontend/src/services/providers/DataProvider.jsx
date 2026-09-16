@@ -22,6 +22,8 @@ import mockProvider from "./mock/mockProvider.js";
  *   getActiveCampaign()          getGoldRateBoard() getAiStudio()
  *   getAiAtelier()               generateAiDesign(request)
  *   createAiVariations(id)       refineAiDesign(request)
+ *   getTryOnRoom()               getTryOnSource(source)
+ *   createTryOn(request)
  */
 const DataContext = createContext(mockProvider);
 
@@ -46,6 +48,9 @@ DataProvider.propTypes = {
     generateAiDesign: PropTypes.func.isRequired,
     createAiVariations: PropTypes.func.isRequired,
     refineAiDesign: PropTypes.func.isRequired,
+    getTryOnRoom: PropTypes.func.isRequired,
+    getTryOnSource: PropTypes.func.isRequired,
+    createTryOn: PropTypes.func.isRequired,
   }),
   children: PropTypes.node.isRequired,
 };
