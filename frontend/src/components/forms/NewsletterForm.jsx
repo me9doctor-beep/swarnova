@@ -76,7 +76,9 @@ export default function NewsletterForm({
           aria-invalid={Boolean(error)}
           aria-describedby={error ? `newsletter-error-${variant}` : undefined}
           className={cn(
-            "min-w-0 flex-1 bg-transparent font-sans text-sm tracking-wide outline-none placeholder:text-mist",
+            // 16px on phones: iOS Safari zooms the whole page when a field
+            // smaller than that receives focus, which broke the mobile layout.
+            "min-w-0 flex-1 bg-transparent font-sans text-[16px] tracking-wide outline-none placeholder:text-mist sm:text-sm",
             isCompact
               ? "px-1 py-3 text-cream placeholder:text-cream/45"
               : "px-5 py-3.5 text-ink"

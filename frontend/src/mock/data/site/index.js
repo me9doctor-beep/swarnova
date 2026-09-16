@@ -14,6 +14,11 @@ export const site = {
     enabled: true,
     message:
       "BIS HALLMARKED 22K GOLD  ·  COMPLIMENTARY INSURED DELIVERY ACROSS INDIA  ·  LIFETIME JEWELLERY CARE",
+    /* Phone-width variant of the same three promises — the full message needs
+       three lines under ~360px, which would push the fixed header past the
+       section scroll margin. Optional: the storefront falls back to `message`. */
+    shortMessage:
+      "BIS HALLMARKED 22K GOLD  ·  FREE INSURED DELIVERY  ·  LIFETIME CARE",
   },
   navigation: [
     { label: "Home", href: "#top" },
