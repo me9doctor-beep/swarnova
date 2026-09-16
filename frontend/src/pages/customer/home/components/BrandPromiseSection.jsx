@@ -6,14 +6,14 @@ import Eyebrow from "../../../../components/ui/Eyebrow.jsx";
 /** Split editorial — copy on the left, full-height lifestyle image right. */
 export default function BrandPromiseSection({ content }) {
   return (
-    <section id="our-story" aria-labelledby="promise-title" className="scroll-mt-28 bg-paper">
+    <section id="our-story" aria-labelledby="promise-title" className="scroll-mt-28 bg-surface-primary">
       <div className="grid lg:grid-cols-2">
         <div className="flex items-center py-16 lg:py-24">
-          <div className="mx-auto w-full max-w-2xl px-5 sm:px-8 lg:mx-0 lg:pl-12 lg:pr-14 xl:pl-16">
+          <div className="mx-auto w-full max-w-2xl px-5 sm:px-8 lg:mx-0 lg:pl-12 lg:pr-12 xl:pl-16">
             <Eyebrow>{content.eyebrow}</Eyebrow>
             <h2
               id="promise-title"
-              className="mt-5 font-serif text-[34px] font-medium leading-[1.14] text-ink sm:text-[40px]"
+              className="mt-5 font-serif text-h1 font-medium leading-[1.14] text-text-primary sm:text-display"
             >
               {content.title.lines.map((line, index) => (
                 <span key={`${line.text}-${index}`} className="block">
@@ -21,15 +21,15 @@ export default function BrandPromiseSection({ content }) {
                 </span>
               ))}
             </h2>
-            <p className="mt-5 text-[15px] leading-relaxed text-ash">{content.body}</p>
+            <p className="mt-5 text-body-lg text-text-secondary">{content.body}</p>
 
-            <ul className="mt-8 space-y-3.5">
+            <ul className="mt-8 space-y-3">
               {content.points.map((point) => (
-                <li key={point} className="flex items-start gap-3 text-[14px] text-ink/85">
+                <li key={point} className="flex items-start gap-3 text-body text-text-primary/85">
                   <Check
                     size={17}
                     strokeWidth={1.6}
-                    className="mt-0.5 shrink-0 text-gold-deep"
+                    className="mt-0.5 shrink-0 text-brand-accent-strong"
                     aria-hidden="true"
                   />
                   {point}
@@ -37,7 +37,7 @@ export default function BrandPromiseSection({ content }) {
               ))}
             </ul>
 
-            <div className="mt-9">
+            <div className="mt-10">
               <Button href={content.cta.href}>{content.cta.label}</Button>
             </div>
           </div>

@@ -31,27 +31,27 @@ export default function AiStudioSection() {
                 <Eyebrow>{studio.eyebrow}</Eyebrow>
                 <h2
                   id="ai-studio-title"
-                  className="mt-5 font-serif text-[34px] font-medium leading-[1.14] sm:text-[42px]"
+                  className="mt-5 font-serif text-h1 font-medium leading-[1.14] sm:text-display"
                 >
                   {studio.titleLines.map((line, index) => (
                     <span key={line} className="block">
-                      <span className={index === studio.titleLines.length - 1 ? "italic text-gold-deep" : undefined}>
+                      <span className={index === studio.titleLines.length - 1 ? "italic text-brand-accent-strong" : undefined}>
                         {line}
                       </span>
                     </span>
                   ))}
                 </h2>
-                <p className="mt-5 max-w-lg text-[15px] leading-relaxed text-ash">
+                <p className="mt-5 max-w-lg text-body-lg text-text-secondary">
                   {studio.body}
                 </p>
 
-                <ul className="mt-8 space-y-3.5">
+                <ul className="mt-8 space-y-3">
                   {studio.points.map((point) => (
-                    <li key={point} className="flex items-start gap-3 text-[14px] text-ink/85">
+                    <li key={point} className="flex items-start gap-3 text-body text-text-primary/85">
                       <Diamond
                         size={13}
                         strokeWidth={1.5}
-                        className="mt-1.5 shrink-0 rotate-90 text-gold"
+                        className="mt-1.5 shrink-0 rotate-90 text-brand-accent"
                         aria-hidden="true"
                       />
                       {point}
@@ -59,7 +59,7 @@ export default function AiStudioSection() {
                   ))}
                 </ul>
 
-                <div className="mt-9 flex flex-wrap items-center gap-x-6 gap-y-4">
+                <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-4">
                   <Button href={studio.cta.href}>{studio.cta.label}</Button>
                   <TextLink href={studio.secondaryCta.href} tone="gold">
                     {studio.secondaryCta.label}
@@ -68,7 +68,7 @@ export default function AiStudioSection() {
               </div>
 
               <figure>
-                <div className="border border-gold/30 bg-paper p-2.5 sm:p-3">
+                <div className="border border-brand-accent/30 bg-surface-primary p-2.5 sm:p-3">
                   <div className="overflow-hidden">
                     <img
                       src={studio.triptych.src}
@@ -80,12 +80,12 @@ export default function AiStudioSection() {
                 </div>
                 <figcaption className="mt-5 grid grid-cols-3 gap-3 text-center">
                   {studio.steps.map((step) => (
-                    <div key={step.code} className="border-t border-gold/25 pt-3">
-                      <p className="font-serif text-lg italic text-gold-deep">{step.code}</p>
-                      <p className="mt-1 font-sans text-[10px] font-medium uppercase tracking-[0.2em] text-ink">
+                    <div key={step.code} className="border-t border-brand-accent/25 pt-3">
+                      <p className="font-serif text-h4 italic text-brand-accent-strong">{step.code}</p>
+                      <p className="mt-1 font-sans text-label font-medium uppercase tracking-[0.2em] text-text-primary">
                         {step.label}
                       </p>
-                      <p className="mt-2 hidden text-[11.5px] leading-snug text-ash lg:block">
+                      <p className="mt-2 hidden text-caption leading-snug text-text-secondary lg:block">
                         {step.caption}
                       </p>
                     </div>

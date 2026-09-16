@@ -21,14 +21,14 @@ export default function WhyChooseUsSection({ content }) {
             <div
               key={item.title}
               className={`text-center lg:px-7 ${
-                index !== 0 ? "lg:border-l lg:border-cream/10" : ""
+                index !== 0 ? "lg:border-l lg:border-text-inverse/10" : ""
               }`}
             >
-              <Icon name={item.icon} size={34} className="mx-auto text-champagne" />
-              <h3 className="mt-4 font-sans text-[11px] font-medium uppercase tracking-[0.2em] text-cream sm:mt-5 sm:text-[12px] sm:tracking-[0.26em]">
+              <Icon name={item.icon} size={28} className="mx-auto text-brand-accent-soft" />
+              <h3 className="mt-4 font-sans text-nav font-medium uppercase tracking-[0.2em] text-text-inverse sm:mt-5 sm:text-caption sm:tracking-[0.26em]">
                 {item.title}
               </h3>
-              <p className="mx-auto mt-3 max-w-[15rem] text-[12.5px] leading-relaxed text-cream/65 sm:text-[13.5px]">
+              <p className="mx-auto mt-3 max-w-[15rem] text-caption leading-relaxed text-text-inverse/70 sm:text-body-sm">
                 {item.text}
               </p>
             </div>

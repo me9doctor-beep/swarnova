@@ -1,10 +1,14 @@
 import PropTypes from "prop-types";
 import Card from "../ui/Card.jsx";
 
-/** Light, quiet category card in the reference's collection-grid language. */
+/**
+ * Frameless editorial category tile — the imagery carries the card, the
+ * label sits beneath on the section surface with a quiet gold hairline.
+ * No frame, no shadow: collection imagery reads as fashion photography.
+ */
 export default function CollectionCard({ category }) {
   return (
-    <Card interactive className="group text-center">
+    <Card className="group border-0 bg-transparent text-center">
       <Card.Media
         ratio="square"
         href={category.cta?.href ?? "#"}
@@ -18,16 +22,20 @@ export default function CollectionCard({ category }) {
         />
       </Card.Media>
 
-      <Card.Body className="px-4 pb-7 pt-5">
-        <h3 className="font-sans text-[12px] font-medium uppercase tracking-[0.3em] text-ink">
+      <Card.Body className="pt-6">
+        <h3 className="font-sans text-caption font-medium uppercase tracking-[0.3em] text-text-primary">
           <a
             href={category.cta?.href ?? "#"}
-            className="transition-colors duration-200 hover:text-wine"
+            className="transition-colors duration-200 hover:text-brand-primary"
           >
             {category.name}
           </a>
         </h3>
-        <p className="mt-2 font-serif text-[17px] italic leading-snug text-ash">
+        <div
+          className="mx-auto mt-3 h-px w-8 bg-brand-accent/50"
+          aria-hidden="true"
+        />
+        <p className="mt-3 font-serif text-body-lg italic leading-snug text-text-secondary">
           {category.tagline}
         </p>
       </Card.Body>

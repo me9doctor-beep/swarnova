@@ -12,7 +12,7 @@ export default function EditorialSection({ content }) {
       <Container>
         <div className="grid items-center gap-12 lg:grid-cols-12 lg:gap-16">
           <div className="lg:col-span-7">
-            <div className="border border-gold/30 bg-paper p-2.5 sm:p-3">
+            <div className="border border-brand-accent/30 bg-surface-primary p-2.5 sm:p-3">
               <div className="overflow-hidden">
                 <img
                   src={content.image.src}
@@ -28,7 +28,7 @@ export default function EditorialSection({ content }) {
             <Eyebrow>{content.eyebrow}</Eyebrow>
             <h2
               id="editorial-title"
-              className="mt-5 font-serif text-[34px] font-medium leading-[1.14] sm:text-[42px]"
+              className="mt-5 font-serif text-h1 font-medium leading-[1.14] sm:text-display"
             >
               {content.title.lines.map((line, index) => (
                 <span key={`${line.text}-${index}`} className="block">
@@ -36,29 +36,29 @@ export default function EditorialSection({ content }) {
                 </span>
               ))}
             </h2>
-            <p className="mt-5 font-serif text-[19px] italic leading-relaxed text-gold-deep">
+            <p className="mt-5 font-serif text-h4 italic leading-relaxed text-brand-accent-strong">
               {content.lead}
             </p>
             {content.paragraphs.map((paragraph) => (
-              <p key={paragraph.slice(0, 24)} className="mt-4 text-[14.5px] leading-relaxed text-ash">
+              <p key={paragraph.slice(0, 24)} className="mt-4 text-body leading-relaxed text-text-secondary">
                 {paragraph}
               </p>
             ))}
 
-            <div className="mt-8 space-y-4 border-t border-line pt-7">
+            <div className="mt-8 space-y-4 border-t border-border-default pt-7">
               {content.motifs.map((motif) => (
                 <div key={motif.label} className="flex items-start gap-3">
                   <Diamond
                     size={12}
                     strokeWidth={1.5}
-                    className="mt-1.5 shrink-0 rotate-90 text-gold"
+                    className="mt-1.5 shrink-0 rotate-90 text-brand-accent"
                     aria-hidden="true"
                   />
-                  <p className="text-[14px] text-ink/85">
-                    <span className="mr-2 font-sans text-[11px] font-medium uppercase tracking-[0.22em] text-gold-deep">
+                  <p className="text-body text-text-primary/85">
+                    <span className="mr-2 font-sans text-nav font-medium uppercase tracking-[0.22em] text-brand-accent-strong">
                       {motif.label}
                     </span>
-                    <span className="text-ash">{motif.text}</span>
+                    <span className="text-text-secondary">{motif.text}</span>
                   </p>
                 </div>
               ))}

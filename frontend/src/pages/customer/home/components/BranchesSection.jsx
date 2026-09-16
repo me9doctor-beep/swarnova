@@ -29,14 +29,14 @@ export default function BranchesSection({ content }) {
             emptyMessage="Our boutiques will be listed here shortly."
             className="py-12"
           >
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-7">
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 lg:gap-8">
               {(branches ?? []).map((branch) => (
                 <BranchCard key={branch.id} branch={branch} />
               ))}
             </div>
           </AsyncBoundary>
         </div>
-        <div className="mt-14 text-center">
+        <div className="mt-12 text-center">
           <Button variant="outline" href={content.cta.href}>
             {content.cta.label}
           </Button>

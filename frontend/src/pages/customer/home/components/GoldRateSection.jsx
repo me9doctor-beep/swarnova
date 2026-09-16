@@ -28,45 +28,45 @@ export default function GoldRateSection({ content }) {
           className="py-10"
         >
           {board && (
-            <div className="border border-line bg-ivory/70 px-6 py-10 sm:px-12 sm:py-12">
-              <div className="flex flex-col gap-3 border-b border-gold/20 pb-6 sm:flex-row sm:items-end sm:justify-between">
+            <div className="border border-border-default bg-surface-secondary/70 px-6 py-10 sm:px-12 sm:py-12">
+              <div className="flex flex-col gap-3 border-b border-brand-accent/20 pb-6 sm:flex-row sm:items-end sm:justify-between">
                 <div>
                   <Eyebrow>{content.eyebrow}</Eyebrow>
                   <h2
                     id="gold-rate-title"
-                    className="mt-3 font-serif text-[30px] font-medium text-ink"
+                    className="mt-3 font-serif text-h2 font-medium text-text-primary sm:text-h1"
                   >
                     {content.title}
                   </h2>
                 </div>
-                <p className="font-sans text-[11px] uppercase tracking-[0.2em] text-ash">
+                <p className="font-sans text-nav uppercase tracking-[0.2em] text-text-secondary">
                   Updated {dateFormatter.format(new Date(board.updatedAt))}
                 </p>
               </div>
 
-              <div className="grid divide-y divide-gold/20 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+              <div className="grid divide-y divide-brand-accent/20 sm:grid-cols-2 sm:divide-x sm:divide-y-0">
                 {board.rates.map((rate, index) => (
                   <div
                     key={rate.karat}
                     className={`py-8 sm:px-10 ${index === 0 ? "sm:pl-0" : "sm:pr-0"}`}
                   >
-                    <p className="font-sans text-[11px] font-medium uppercase tracking-[0.28em] text-gold-deep">
+                    <p className="font-sans text-nav font-medium uppercase tracking-[0.28em] text-brand-accent-strong">
                       {rate.karat} Gold
                     </p>
-                    <p className="mt-3 font-serif text-[40px] leading-none text-ink">
-                      <span className="mr-1 text-[26px] align-top text-gold-deep">₹</span>
+                    <p className="mt-3 font-serif text-h1 leading-none text-text-primary sm:text-display">
+                      <span className="mr-1 text-h3 align-top text-brand-accent-strong">₹</span>
                       {new Intl.NumberFormat("en-IN").format(rate.pricePer10g)}
                     </p>
-                    <p className="mt-2.5 font-sans text-[12px] tracking-wide text-ash">
+                    <p className="mt-2.5 font-sans text-caption tracking-wide text-text-secondary">
                       per {board.unit} · {rate.description}
                     </p>
                   </div>
                 ))}
               </div>
 
-              <div className="mt-2 space-y-1.5 border-t border-gold/20 pt-6">
-                <p className="font-sans text-[11.5px] leading-relaxed text-ash">{board.note}</p>
-                <p className="font-sans text-[11.5px] leading-relaxed text-ash">{board.includes}</p>
+              <div className="mt-2 space-y-1.5 border-t border-brand-accent/20 pt-6">
+                <p className="font-sans text-caption leading-relaxed text-text-secondary">{board.note}</p>
+                <p className="font-sans text-caption leading-relaxed text-text-secondary">{board.includes}</p>
               </div>
 
               <div className="mt-6">

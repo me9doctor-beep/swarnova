@@ -12,7 +12,7 @@ export default function CampaignSection({ content }) {
   return (
     <section
       aria-label="Current campaign"
-      className="relative overflow-hidden bg-cream py-14 sm:py-16 lg:h-[340px] lg:py-0"
+      className="relative overflow-hidden bg-surface-muted py-16 sm:py-20 lg:h-[340px] lg:py-0"
     >
       <AsyncBoundary
         status={status}
@@ -31,15 +31,15 @@ export default function CampaignSection({ content }) {
                 loading="lazy"
                 className="h-full w-full object-cover object-[82%_center] lg:object-[72%_center]"
               />
-              <div className="absolute inset-0 bg-gradient-to-r from-cream via-cream/95 to-cream/45 lg:via-cream/70 lg:to-cream/25" />
+              <div className="absolute inset-0 bg-gradient-to-r from-surface-muted via-surface-muted/95 to-surface-muted/45 lg:via-surface-muted/70 lg:to-surface-muted/25" />
             </div>
             <div className="shell relative flex items-center lg:h-full">
               <div className="max-w-lg">
                 <Eyebrow>{campaign.eyebrow}</Eyebrow>
-                <h2 className="mt-4 font-serif text-[34px] font-medium leading-[1.15] text-ink sm:text-[42px]">
+                <h2 className="mt-4 font-serif text-h1 font-medium leading-[1.15] text-text-primary sm:text-display">
                   {campaign.title}
                 </h2>
-                <p className="mt-4 text-[15px] leading-relaxed text-ash">{campaign.body}</p>
+                <p className="mt-4 text-body-lg text-text-secondary">{campaign.body}</p>
                 <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-4">
                   <Button href={campaign.cta.href}>{campaign.cta.label}</Button>
                   {campaign.secondaryCta && (

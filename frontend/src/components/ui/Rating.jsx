@@ -13,13 +13,13 @@ export default function Rating({ average, count, className, showCount = false, s
             key={i}
             size={size}
             strokeWidth={1.4}
-            className={i < full ? "fill-gold text-gold" : "text-gold/35"}
+            className={i < full ? "fill-brand-accent text-brand-accent" : "text-brand-accent/35"}
             aria-hidden="true"
           />
         ))}
       </span>
       {showCount && count != null && (
-        <span className="font-sans text-[11px] tracking-wide text-mist">
+        <span className="font-sans text-[11px] tracking-wide text-text-muted">
           ({count})
         </span>
       )}

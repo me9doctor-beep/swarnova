@@ -22,33 +22,33 @@ export default function BranchCard({ branch }) {
 
       <Card.Body padding="md">
         {branch.flagship && (
-          <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-gold-deep">
+          <p className="text-label font-medium uppercase tracking-[0.3em] text-brand-accent-strong">
             Flagship Boutique
           </p>
         )}
-        <h3 className="mt-2 font-serif text-[23px] leading-tight">
-          <a href={branch.href} className="transition-colors duration-200 hover:text-wine">
+        <h3 className="mt-2 font-serif text-h3 leading-tight">
+          <a href={branch.href} className="transition-colors duration-200 hover:text-brand-primary">
             {branch.name}
           </a>
         </h3>
 
-        <p className="mt-2 inline-flex items-center gap-1.5 text-[11px] uppercase tracking-[0.22em] text-ash">
-          <MapPin size={13} strokeWidth={1.5} className="text-gold-deep" aria-hidden="true" />
+        <p className="mt-2 inline-flex items-center gap-1.5 text-nav uppercase tracking-[0.22em] text-text-secondary">
+          <MapPin size={13} strokeWidth={1.5} className="text-brand-accent-strong" aria-hidden="true" />
           {branch.city}, {branch.state}
         </p>
 
-        <p className="mt-4 text-[13px] leading-relaxed text-ash">{branch.address}</p>
+        <p className="mt-4 text-body-sm leading-relaxed text-text-secondary">{branch.address}</p>
 
-        <div className="mt-5 space-y-2 border-t border-line pt-5 text-[13px] text-ink/80">
+        <div className="mt-5 space-y-2 border-t border-border-default pt-5 text-body-sm text-text-primary/80">
           <p className="flex items-center gap-2.5">
-            <Clock size={14} strokeWidth={1.5} className="shrink-0 text-gold-deep" aria-hidden="true" />
-            <span className="text-[11px] uppercase tracking-[0.18em]">
+            <Clock size={14} strokeWidth={1.5} className="shrink-0 text-brand-accent-strong" aria-hidden="true" />
+            <span className="text-nav uppercase tracking-[0.18em]">
               {branch.openingHours.summary} · {branch.openingHours.hours}
             </span>
           </p>
           <p className="flex items-center gap-2.5">
-            <Phone size={14} strokeWidth={1.5} className="shrink-0 text-gold-deep" aria-hidden="true" />
-            <a href={`tel:${branch.phone.replace(/\s/g, "")}`} className="tracking-wide hover:text-wine">
+            <Phone size={14} strokeWidth={1.5} className="shrink-0 text-brand-accent-strong" aria-hidden="true" />
+            <a href={`tel:${branch.phone.replace(/\s/g, "")}`} className="tracking-wide hover:text-brand-primary">
               {branch.phone}
             </a>
           </p>

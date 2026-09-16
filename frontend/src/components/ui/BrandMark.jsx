@@ -16,7 +16,7 @@ export default function BrandMark({ tone = "dark", className, compact = false })
         viewBox="0 0 40 40"
         fill="none"
         aria-hidden="true"
-        className={cn("shrink-0", isLight ? "text-champagne" : "text-gold-deep")}
+        className={cn("shrink-0", isLight ? "text-brand-accent-soft" : "text-brand-accent-strong")}
       >
         <path
           d="M11 5h18l7 10-16 20L4 15l7-10Z"
@@ -35,7 +35,7 @@ export default function BrandMark({ tone = "dark", className, compact = false })
         <span
           className={cn(
             "block font-serif text-[22px] font-semibold tracking-[0.24em]",
-            isLight ? "text-cream" : "text-ink"
+            isLight ? "text-text-inverse" : "text-text-primary"
           )}
         >
           SWARNOVA
@@ -43,7 +43,7 @@ export default function BrandMark({ tone = "dark", className, compact = false })
         <span
           className={cn(
             "mt-[5px] block text-[8px] font-medium tracking-[0.44em]",
-            isLight ? "text-champagne/85" : "text-gold"
+            isLight ? "text-brand-accent-soft/85" : "text-brand-accent"
           )}
         >
           JEWELLERS

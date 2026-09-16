@@ -5,12 +5,15 @@ import NewsletterForm from "../../../../components/forms/NewsletterForm.jsx";
 
 export default function NewsletterSection({ content }) {
   return (
-    <Section id="newsletter" background="paper" className="border-y border-line">
+    <Section id="newsletter" background="paper" className="border-y border-border-default">
       <Container className="max-w-2xl text-center">
-        <h2 className="font-serif text-[32px] font-medium leading-tight text-ink sm:text-[38px]">
+        <div className="ornament mb-6" aria-hidden="true">
+          <span />
+        </div>
+        <h2 className="font-serif text-h2 font-medium leading-tight text-text-primary sm:text-h1">
           {content.title}
         </h2>
-        <p className="mx-auto mt-4 max-w-lg text-[15px] leading-relaxed text-ash">
+        <p className="mx-auto mt-4 max-w-lg text-body-lg text-text-secondary">
           {content.body}
         </p>
         <NewsletterForm
@@ -20,7 +23,7 @@ export default function NewsletterSection({ content }) {
           successMessage={content.successMessage}
           className="mx-auto mt-8"
         />
-        <p className="mx-auto mt-4 max-w-md text-[11.5px] leading-relaxed text-mist">
+        <p className="mx-auto mt-4 max-w-md text-caption leading-relaxed text-text-muted">
           {content.privacyNote}
         </p>
       </Container>

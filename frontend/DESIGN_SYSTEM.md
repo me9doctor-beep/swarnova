@@ -83,10 +83,12 @@ neon; borders are `1px` and neutral unless a gold hairline is intentional.
 
 **Where each vocabulary is used.** Shared primitives, the cards' surface/media
 chrome, the console shell and the console screens consume the semantic layer.
-The storefront's editorial typography, section composition and card content
-still use the brand palette names; Phase 2 migrates them in one pass as part of
-the storefront refinement. The two vocabularies resolve to the same values — the
-semantic layer is an alias of the palette, never a parallel set of colours.
+The storefront migrated to the semantic layer in Phase 2 (customer homepage
+refinement); only deliberate neutrals remain raw — the hero photograph fallback
+`bg-ink`, the newsletter field's `border-ink` and the header's `text-white`
+chrome over imagery, none of which has a semantic alias. The two vocabularies
+resolve to the same values — the semantic layer is an alias of the palette,
+never a parallel set of colours.
 
 ### 1.2 Typography
 
@@ -342,3 +344,49 @@ implementations → one hook; two skip links → one `SkipLink`.
 | Homepage stability | baseline vs Phase 1 element-tree comparison: every changed class-set is either a palette→semantic alias (proven to emit identical CSS), the header's icon-action normalisation, or the removal of a redundant wrapper; nothing else moved |
 | Mock architecture | untouched; no component imports `src/mock` or `src/services` |
 | Accessibility | one `h1` per page, skip link in both experiences, every icon action labelled, `aria-current` on active navigation and breadcrumb, visible focus from one global rule, native elements before ARIA |
+
+---
+
+## 7. Phase 2 delivery notes — customer homepage refinement
+
+Phase 2 performed the storefront migration the tokens were built for, without
+touching the console experiences, the data architecture or the mock boundary.
+
+**Semantic colour migration.** Every customer-facing component (homepage
+sections, the four cards, `NewsletterForm`, `Header`, `Footer`) and the shared
+primitives that still used raw palette names (`Section`, `SectionHeading`,
+`Eyebrow`, `TextLink`, `Rating`, `BrandMark`, `AsyncBoundary`, `ErrorBoundary`,
+`SkipLink`) now consume the semantic layer (`bg-surface-*`, `text-text-*`,
+`text-brand-*`, `border-border-*`, `divide-brand-accent`, `fill-brand-accent`,
+gradient stops). Values are unchanged — the migration swaps names, not colours.
+Remaining raw usages are deliberate neutrals with no semantic alias: the hero
+photograph fallback `bg-ink`, the newsletter field's `border-ink`, and the
+header's `text-white` chrome over imagery.
+
+**Typography mapped onto the scale.** Storefront editorial type now uses the
+semantic scale: section headings ramp `text-h2 → text-h1 → text-display`,
+split-section titles `text-h1 → text-display`, card titles `text-h3`/`text-h4`,
+body copy `text-body-lg`/`text-body`/`text-body-sm`, micro labels
+`text-label`/`text-nav`/`text-caption`. The hero keeps one documented one-off
+display step (`lg:text-[3.5rem]`, 56px) above `text-display` — the single
+editorial exception, held in the section rather than the token system.
+
+**Composition.** The collection grid became frameless editorial tiles
+(imagery + centred label + gold hairline, no card frame); the trust strip and
+wine promise icons were quieted to 24/28px; section gutters and grid gaps were
+normalised to the approved spacing set; the newsletter gained the house
+ornament; the duplicated hard-coded try-on caption was removed from the
+component (the copy lives in the data layer); the hero's desktop header
+clearance moved from arbitrary inline padding into the `hero__copy-inner`
+media block.
+
+**Validation snapshot** (`npm run build`, Phase 2):
+
+| Check | Result |
+| --- | --- |
+| Production build | passes — single-file bundle, no new dependencies |
+| Routes | `/`, `/admin`, `/super-admin`, `/employee`, unknown path — rendered in jsdom, one `h1` each, zero console errors |
+| Homepage | all 14 CMS sections render with imagery (20 images, none missing), zero console errors |
+| Tokens | every migrated utility verified present in the compiled CSS (a missing token would silently emit nothing) |
+| Mock architecture | untouched; only `services/providers/mock` reads `src/mock` |
+| Animation / TypeScript | none introduced |

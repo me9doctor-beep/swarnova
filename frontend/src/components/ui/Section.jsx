@@ -2,10 +2,10 @@ import PropTypes from "prop-types";
 import { cn } from "../../utils/cn.js";
 
 const backgrounds = {
-  paper: "bg-paper",
-  ivory: "bg-ivory",
-  cream: "bg-cream",
-  wine: "bg-wine text-cream/80",
+  paper: "bg-surface-primary",
+  ivory: "bg-surface-secondary",
+  cream: "bg-surface-muted",
+  wine: "bg-surface-inverse text-text-inverse/80",
 };
 
 /** Semantic section wrapper with the reference's generous vertical rhythm. */

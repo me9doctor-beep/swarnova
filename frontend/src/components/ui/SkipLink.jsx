@@ -12,7 +12,7 @@ export default function SkipLink({ href = "#main", children = "Skip to main cont
     <a
       href={href}
       className={cn(
-        "sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:bg-wine focus:px-4 focus:py-2 focus:text-[11px] focus:uppercase focus:tracking-[0.2em] focus:text-cream",
+        "sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:bg-brand-primary focus:px-4 focus:py-2 focus:text-nav focus:uppercase focus:tracking-[0.2em] focus:text-text-inverse",
         className
       )}
     >

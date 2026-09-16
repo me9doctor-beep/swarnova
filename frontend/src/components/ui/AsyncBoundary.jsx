@@ -26,7 +26,7 @@ export default function AsyncBoundary({
   if (status === "error") {
     return (
       <div className={`${className} text-center`} role="alert">
-        <p className="mx-auto max-w-md text-sm text-ash">{error?.message ?? errorMessage}</p>
+        <p className="mx-auto max-w-md text-body text-text-secondary">{error?.message ?? errorMessage}</p>
         {onRetry && (
           <Button variant="outline" size="sm" className="mt-6" onClick={onRetry}>
             Try Again
@@ -39,7 +39,7 @@ export default function AsyncBoundary({
   if (status === "success" && isEmpty) {
     return (
       <div className={`${className} text-center`}>
-        <p className="mx-auto max-w-md text-sm text-ash">{emptyMessage}</p>
+        <p className="mx-auto max-w-md text-body text-text-secondary">{emptyMessage}</p>
       </div>
     );
   }

@@ -39,7 +39,7 @@ function MobileMenu({ open, onClose, navigation }) {
       role="dialog"
       aria-modal="true"
       aria-label="Primary menu"
-      className="fixed inset-0 z-[70] flex flex-col overscroll-contain bg-paper"
+      className="fixed inset-0 z-[70] flex flex-col overscroll-contain bg-surface-primary"
     >
       <Container className="flex h-[72px] shrink-0 items-center justify-between">
         <BrandMark />
@@ -60,13 +60,13 @@ function MobileMenu({ open, onClose, navigation }) {
         aria-label="Mobile primary"
         className="flex-1 overflow-y-auto pb-10 pt-2"
       >
-        <ul className="grid grid-cols-2 gap-x-4 border-t border-line">
+        <ul className="grid grid-cols-2 gap-x-4 border-t border-border-default">
           {navigation.map((item) => (
-            <li key={item.href + item.label} className="border-b border-line">
+            <li key={item.href + item.label} className="border-b border-border-default">
               <a
                 href={item.href}
                 onClick={onClose}
-                className="flex min-h-[52px] items-center py-3 font-serif text-[19px] leading-tight text-ink transition-colors duration-200 hover:text-wine"
+                className="flex min-h-[52px] items-center py-3 font-serif text-h4 leading-tight text-text-primary transition-colors duration-200 hover:text-brand-primary"
               >
                 {item.label}
               </a>
@@ -88,7 +88,7 @@ function MobileMenu({ open, onClose, navigation }) {
           </Button>
         </div>
 
-        <div className="mt-8 flex items-center gap-2 border-t border-line pt-6 text-ink/70">
+        <div className="mt-8 flex items-center gap-2 border-t border-border-default pt-6 text-text-primary/70">
           {HEADER_ACTIONS.map(({ label, href, Glyph }) => (
             <IconButton key={label} label={label} href={href} size="touch">
               <Glyph size={19} strokeWidth={1.5} />
@@ -121,17 +121,17 @@ export default function Header() {
     <>
       <header className="fixed inset-x-0 top-0 z-50">
         {site.announcement?.enabled && (
-          <div className="bg-wine-deep text-cream/85">
+          <div className="bg-surface-inverse-deep text-text-inverse/85">
             {/* On phones the message was cut mid-word by `truncate`. The data
                 layer's shorter variant now wraps to at most two tighter-set
                 lines (≤42px tall, so the fixed header never exceeds the 112px
                 section scroll margin). From `sm` up the full message and the
                 original single-line truncation are unchanged. */}
             <Container className="flex items-center justify-center py-1 sm:h-9 sm:py-0">
-              <p className="line-clamp-2 text-center text-[10px] font-light uppercase leading-[1.45] tracking-[0.1em] sm:hidden">
+              <p className="line-clamp-2 text-center text-label font-light uppercase leading-[1.45] tracking-[0.1em] sm:hidden">
                 {site.announcement.shortMessage ?? site.announcement.message}
               </p>
-              <p className="hidden text-center text-[10px] font-light uppercase tracking-[0.22em] sm:block sm:truncate">
+              <p className="hidden text-center text-label font-light uppercase tracking-[0.22em] sm:block sm:truncate">
                 {site.announcement.message}
               </p>
             </Container>
@@ -142,7 +142,7 @@ export default function Header() {
           className={cn(
             "border-b transition-colors duration-200",
             scrolled
-              ? "border-line bg-paper/95 backdrop-blur-sm"
+              ? "border-border-default bg-surface-primary/95 backdrop-blur-sm"
               : "border-transparent bg-transparent"
           )}
         >
@@ -163,7 +163,7 @@ export default function Header() {
                       className={cn(
                         "whitespace-nowrap font-sans text-nav font-medium uppercase transition-colors duration-200",
                         scrolled
-                          ? "text-ink/80 hover:text-gold-deep"
+                          ? "text-text-primary/80 hover:text-brand-accent-strong"
                           : "text-white/90 hover:text-white"
                       )}
                     >
@@ -202,7 +202,7 @@ export default function Header() {
                      here because the trigger sits alone on the hero photograph
                      and reads as chrome, not as content. */
                   scrolled
-                    ? "text-ink hover:text-ink"
+                    ? "text-text-primary hover:text-text-primary"
                     : "text-white hover:text-white"
                 )}
               >
