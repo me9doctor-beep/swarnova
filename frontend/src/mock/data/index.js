@@ -16,5 +16,5 @@ export { default as products } from "./products/index.js";
 export { default as branches } from "./branches/index.js";
 export { default as campaigns, getActiveCampaign } from "./campaigns/index.js";
 export { default as goldRateBoard } from "./gold-rates/index.js";
-export { default as aiStudio } from "./ai/index.js";
+export { aiStudio, aiAtelier, aiDesigns } from "./ai/index.js";
 export { default as journalArticles } from "./journal/index.js";

@@ -20,6 +20,8 @@ import mockProvider from "./mock/mockProvider.js";
  *   getCollections()             getProducts(query) getProduct(id)
  *   getBranches(query)           getJournalArticles(query)
  *   getActiveCampaign()          getGoldRateBoard() getAiStudio()
+ *   getAiAtelier()               generateAiDesign(request)
+ *   createAiVariations(id)       refineAiDesign(request)
  */
 const DataContext = createContext(mockProvider);
 
@@ -40,6 +42,10 @@ DataProvider.propTypes = {
     getActiveCampaign: PropTypes.func.isRequired,
     getGoldRateBoard: PropTypes.func.isRequired,
     getAiStudio: PropTypes.func.isRequired,
+    getAiAtelier: PropTypes.func.isRequired,
+    generateAiDesign: PropTypes.func.isRequired,
+    createAiVariations: PropTypes.func.isRequired,
+    refineAiDesign: PropTypes.func.isRequired,
   }),
   children: PropTypes.node.isRequired,
 };
