@@ -14,6 +14,7 @@
  *   getCategories()
  *   getCollections()
  *   getProducts(query)
+ *   getProduct(id)
  *   getBranches(query)
  *   getJournalArticles(query)
  *   getActiveCampaign()
@@ -24,6 +25,10 @@
  * future API provider will accept, one-to-one:
  *   { categoryId, collectionId, featured, bestseller, tryOnAvailable,
  *     availability, priceMin, priceMax, search, sort, limit }
+ *
+ * getProduct(id) is the single-piece query — the shape of a future
+ * `GET /products/:id`. An unknown id resolves to `null` rather than rejecting,
+ * exactly as a 404 would, so the screen can render its own not-found state.
  */
 import * as db from "../../../mock/data/index.js";
 
@@ -94,6 +99,10 @@ export const mockProvider = {
 
     if (typeof query.limit === "number") list = list.slice(0, query.limit);
     return Promise.resolve(emit(list));
+  },
+
+  getProduct(id) {
+    return Promise.resolve(emit(db.products.find((product) => product.id === id) ?? null));
   },
 
   getBranches(query = {}) {

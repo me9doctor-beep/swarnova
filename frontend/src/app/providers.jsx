@@ -3,6 +3,7 @@ import ErrorBoundary from "../components/ui/ErrorBoundary.jsx";
 import { DataProvider } from "../services/providers/DataProvider.jsx";
 import { AuthProvider } from "../features/authentication/AuthProvider.jsx";
 import { WishlistProvider } from "../state/WishlistContext.jsx";
+import { CartProvider } from "../state/CartContext.jsx";
 
 /**
  * PROVIDER STACK — the composition root for cross-cutting concerns.
@@ -12,6 +13,7 @@ import { WishlistProvider } from "../state/WishlistContext.jsx";
  *   DataProvider   injects the data source (mock today, API later)
  *   AuthProvider   session { user, role, permissions }
  *   WishlistProvider  client-side customer state
+ *   CartProvider   client-side shopping bag
  *
  * Business state stays out of here: features add their own providers next to
  * their own code and are mounted from this file when their phase lands.
@@ -21,7 +23,9 @@ export default function AppProviders({ children }) {
     <ErrorBoundary variant="root">
       <DataProvider>
         <AuthProvider>
-          <WishlistProvider>{children}</WishlistProvider>
+          <WishlistProvider>
+            <CartProvider>{children}</CartProvider>
+          </WishlistProvider>
         </AuthProvider>
       </DataProvider>
     </ErrorBoundary>

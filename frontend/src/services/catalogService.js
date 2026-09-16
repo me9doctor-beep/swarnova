@@ -11,6 +11,9 @@ export const catalogService = {
   getProducts(provider, query) {
     return provider.getProducts(query);
   },
+  getProduct(provider, id) {
+    return provider.getProduct(id);
+  },
 };
 
 export default catalogService;
