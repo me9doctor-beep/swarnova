@@ -120,37 +120,55 @@
 }
 
 /* ===========================================================================
-   HERO COMPOSITION — responsive treatment
+   HERO COMPOSITION
    ---------------------------------------------------------------------------
-   ≥1280px keeps the original editorial layout: the campaign photograph drives
-   the section height and the copy floats in its negative space.
+   The campaign photograph is 1801×873 (≈2.06:1) while the hero copy needs
+   ~923px of height — the photograph only supplies that from ~1900px of viewport
+   width. Everywhere narrower the original image-led layout produced a section
+   shorter than its own copy, and `overflow-hidden` then cut it off: the trust
+   line from 1366px laptops, both CTAs at 1280px, the top 72px of the copy on a
+   320px phone, and 132px on an iPad in landscape.
 
-   Below that, the photograph is proportionally too short to hold the copy
-   (a 1801×873 frame is only ~190px tall on a 390px phone), which clipped the
-   headline, body and CTAs. Those viewports instead use a full-bleed cover crop
-   with a portrait-friendly focal point, and the copy is anchored to the bottom
-   over a vertical veil. A minimum height guarantees the whole copy block is
-   always visible, including on short landscape phones.
+   The hero is therefore one composition at every width rather than a desktop
+   layout with patches bolted on below a breakpoint:
+
+     · the section is a flex column whose floor is the photograph's own aspect
+       ratio — so a wide display still shows the full, uncropped frame — with a
+       screen-filling floor so a phone hero behaves like a hero;
+     · the photograph is a full-bleed cover layer behind the copy;
+     · the copy sits in normal flow, so the section grows to whatever the copy
+       needs and no headline, CTA or trust line can ever be clipped.
+
+   Only the crop focal point changes across breakpoints: ≤1279px the copy spans
+   the full width, so the crop tracks the model; from 1280px the copy is a 520px
+   left column, so the crop keeps the photograph's negative space behind it.
    =========================================================================== */
+.hero {
+  display: flex;
+  flex-direction: column;
+  /* `vh` first as the fallback for browsers without small-viewport units. */
+  min-height: max(calc(100vw * 873 / 1801), 78vh);
+  min-height: max(calc(100vw * 873 / 1801), 78svh);
+}
+
+.hero__media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 64% 26%;
+}
+
+.hero__copy {
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+}
+
 @media (max-width: 1279px) {
-  /* Tall enough for the whole copy block on any phone (including short
-     landscape screens, where the floor keeps every CTA visible), capped so it
-     never becomes an oversized banner on a tall display. `svh` avoids the
-     mobile URL-bar resize jump; the `vh` line is the fallback. */
-  .hero {
-    min-height: clamp(700px, 92vh, 940px);
-    min-height: clamp(700px, 92svh, 940px);
-  }
-
-  .hero__media {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    object-position: 64% 26%;
-  }
-
+  /* The copy spans the full width here, so the veil darkens top and bottom
+     instead of the desktop's left-to-right wash. */
   .hero__veil {
     background-image: linear-gradient(
       to bottom,
@@ -158,10 +176,6 @@
       color-mix(in srgb, var(--color-ink) 40%, transparent) 34%,
       color-mix(in srgb, var(--color-ink) 90%, transparent) 100%
     );
-  }
-
-  .hero__copy {
-    align-items: flex-end;
   }
 
   .hero__copy-inner {
@@ -190,5 +204,12 @@
     font-size: 0.5625rem;
     line-height: 1.75;
     letter-spacing: 0.22em;
+  }
+}
+
+@media (min-width: 1280px) {
+  /* Keep the photograph's left-hand negative space under the copy. */
+  .hero__media {
+    object-position: 18% 30%;
   }
 }

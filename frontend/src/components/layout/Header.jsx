@@ -162,7 +162,10 @@ export default function Header() {
             </a>
 
             <nav aria-label="Primary" className="hidden xl:block">
-              <ul className="flex items-center gap-7 2xl:gap-9">
+              {/* gap-5 rather than gap-7 at the 1280–1535 breakpoint: the eight
+                  links plus the four header actions overflowed the row by 18px
+                  at exactly 1280px, clipping the shopping-bag icon. */}
+              <ul className="flex items-center gap-5 2xl:gap-9">
                 {site.navigation.map((item) => (
                   <li key={item.href + item.label}>
                     <a

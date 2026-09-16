@@ -6,11 +6,11 @@ import Eyebrow from "../../../../components/ui/Eyebrow.jsx";
  * Campaign-led hero — large model imagery dominates the frame, copy lives
  * in the negative space on the left, CTA treatment matches the reference.
  *
- * Two compositions share this markup (the `hero__*` hooks in index.css):
- *   ≥1280px  image-led — the photograph sets the section height and the copy
- *            floats in its negative space (the original editorial layout)
- *   <1280px  full-bleed cover crop with the copy anchored to the bottom, so
- *            no line is ever clipped on a phone or tablet
+ * One composition at every width, held together by the `hero__*` hooks in
+ * index.css: the photograph is a full-bleed cover layer, the section is a flex
+ * column floored at the photograph's own aspect ratio, and the copy sits in
+ * normal flow — so the hero grows to fit its copy instead of clipping it on
+ * phones, tablets and laptops alike.
  */
 export default function HeroSection({ content }) {
   const { title, eyebrow, body, primaryCta, secondaryCta, image } = content;
@@ -20,8 +20,7 @@ export default function HeroSection({ content }) {
       aria-label="Featured campaign"
       className="hero relative overflow-hidden bg-ink"
     >
-      {/* ≥1280px: the image drives the section height (no cropping, no
-          letterbox gaps). Below that it becomes a full-bleed cover crop. */}
+      {/* Full-bleed campaign photograph; its ratio sets the hero's floor. */}
       <img
         src={image.src}
         alt={image.alt}
@@ -41,8 +40,9 @@ export default function HeroSection({ content }) {
         aria-hidden="true"
       />
 
-      {/* Copy block — overlaid on the image */}
-      <div className="hero__copy absolute inset-0 flex items-center">
+      {/* Copy block — in flow, vertically centred in whatever height the hero
+          takes, so it is never cropped by the section. */}
+      <div className="hero__copy flex items-center">
         <div className="hero__copy-inner shell relative w-full pb-20 pt-[160px] sm:pt-[180px]">
           <div className="max-w-[520px]">
 
