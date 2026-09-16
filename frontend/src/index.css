@@ -1,0 +1,120 @@
+@import "tailwindcss";
+
+@theme {
+  /* Foundation — white, warm ivory, soft cream */
+  --color-paper: #ffffff;
+  --color-ivory: #f8f3ea;
+  --color-cream: #f2ead9;
+  --color-sand: #e7dbc4;
+
+  /* Accent — refined champagne & muted jewellery gold */
+  --color-champagne: #d8bf93;
+  --color-gold-soft: #c6a86f;
+  --color-gold: #b28a45;
+  --color-gold-deep: #8d6c33;
+
+  /* Dark accent — deep burgundy / wine */
+  --color-wine: #4d1220;
+  --color-wine-soft: #63202f;
+  --color-wine-deep: #3a0c17;
+
+  /* Text */
+  --color-ink: #2f2a25;
+  --color-ash: #70665b;
+  --color-mist: #a19687;
+
+  /* Hairlines */
+  --color-line: #e8ddca;
+  --color-line-light: #f0e8d9;
+
+  /* Typography */
+  --font-serif: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --font-sans: "Jost", ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+@layer base {
+  html {
+    scroll-behavior: auto;
+  }
+
+  body {
+    @apply bg-paper text-ink font-sans antialiased;
+    font-size: 15px;
+    line-height: 1.75;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-serif;
+    font-weight: 500;
+    line-height: 1.12;
+    color: var(--color-ink);
+  }
+
+  ::selection {
+    background: color-mix(in srgb, var(--color-gold) 22%, transparent);
+    color: var(--color-wine-deep);
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-gold);
+    outline-offset: 3px;
+  }
+
+  img {
+    max-width: 100%;
+  }
+}
+
+@layer components {
+  /* Page-wide content container matching the reference's generous margins */
+  .shell {
+    @apply mx-auto w-full max-w-[1280px] px-5 sm:px-8 lg:px-12;
+  }
+
+  /* Small uppercase eyebrow label with champagne / gold emphasis */
+  .eyebrow {
+    @apply font-sans text-[11px] font-medium uppercase;
+    letter-spacing: 0.34em;
+  }
+
+  .eyebrow-light {
+    color: var(--color-gold-deep);
+  }
+
+  .eyebrow-on-wine {
+    color: var(--color-champagne);
+  }
+
+  /* Hairline ornamental divider — fine rule with a diamond */
+  .ornament {
+    @apply flex items-center justify-center gap-3 text-gold;
+  }
+  .ornament::before,
+  .ornament::after {
+    content: "";
+    height: 1px;
+    width: 3.25rem;
+    background: color-mix(in srgb, var(--color-gold) 55%, transparent);
+  }
+  .ornament > span {
+    width: 7px;
+    height: 7px;
+    border: 1px solid currentColor;
+    transform: rotate(45deg);
+  }
+
+  .ornament-wine::before,
+  .ornament-wine::after {
+    background: color-mix(in srgb, var(--color-champagne) 45%, transparent);
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
