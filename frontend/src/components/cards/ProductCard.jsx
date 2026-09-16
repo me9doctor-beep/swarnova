@@ -4,12 +4,18 @@ import Card from "../ui/Card.jsx";
 import IconButton from "../ui/IconButton.jsx";
 import Price from "../ui/Price.jsx";
 import Rating from "../ui/Rating.jsx";
+import ProductActions from "../product/ProductActions.jsx";
 import { useWishlist } from "../../state/WishlistContext.jsx";
 import { cn } from "../../utils/cn.js";
 
 /**
  * Premium catalogue product card — dominant image, quiet type, hairline
- * border, single wishlist action. Composed from the shared Card foundation.
+ * border, the two commerce actions and the wishlist. Composed from the shared
+ * Card foundation.
+ *
+ * Imagery and name carry the customer to the product detail route; the
+ * commerce actions are siblings of those links, never nested inside them, so
+ * adding a piece from the catalogue never navigates away from it.
  */
 export default function ProductCard({ product }) {
   const { has, toggle } = useWishlist();
@@ -67,6 +73,9 @@ export default function ProductCard({ product }) {
         {product.rating && (
           <Rating average={product.rating.average} className="mt-2.5" size={11} />
         )}
+        {/* `mt-auto` sits the actions on the same line across a row, however
+            many lines the piece's name takes. */}
+        <ProductActions product={product} size="sm" className="mt-auto pt-5" />
       </Card.Body>
     </article>
   );

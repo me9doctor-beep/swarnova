@@ -2,14 +2,24 @@ import { media } from "../../assets/index.js";
 
 /**
  * Product catalogue. Field names mirror the planned commerce API contract:
- * id / name / purity / price (in INR, whole rupees) / weight / categoryId /
- * collectionId / images / rating / flags.
+ * id / sku / name / description / purity / price (in INR, whole rupees) /
+ * weight / categoryId / collectionId / images / rating / flags.
+ *
+ * `href` is the piece's canonical customer route — `/product/:id`, the one
+ * product detail route in `app/router.jsx`. Every product card resolves
+ * through it, so the route is never re-derived in the presentation layer.
+ *
+ * `description` is the piece's story, the copy the product detail screen
+ * presents in its editorial band. It lives here, in the mock boundary, so the
+ * screen stays provider-driven; the API provider returns the same field.
  */
 export const products = [
   {
     id: "JWL-001",
     sku: "SWN-PND-001",
     name: "Hrudaya Diamond Pendant",
+    description:
+      "An open teardrop, drawn thin at the shoulder so the light passes clean through it. Hrudaya sits close to the collarbone — a piece for the hours in between, worn as easily against cotton as against silk.",
     purity: "22K",
     price: 72400,
     currency: "INR",
@@ -27,12 +37,14 @@ export const products = [
     featured: true,
     bestseller: true,
     availability: "available",
-    href: "/jewellery/hrudaya-diamond-pendant",
+    href: "/product/JWL-001",
   },
   {
     id: "JWL-002",
     sku: "SWN-RNG-014",
     name: "Eternal Halo Ring",
+    description:
+      "A single centre held in a quiet circle of light. The halo sits low against the finger and the band tapers toward the palm, so Eternal Halo reads as a promise rather than a statement.",
     purity: "22K",
     price: 56800,
     currency: "INR",
@@ -50,12 +62,14 @@ export const products = [
     featured: true,
     bestseller: true,
     availability: "available",
-    href: "/jewellery/eternal-halo-ring",
+    href: "/product/JWL-002",
   },
   {
     id: "JWL-003",
     sku: "SWN-ERG-022",
     name: "Aabharan Drop Earrings",
+    description:
+      "Chandelier drops that move a half-beat after you do. Aabharan is made for the wedding hours — long enough to catch light across a crowded room, balanced so it never pulls at the ear.",
     purity: "22K",
     price: 84900,
     currency: "INR",
@@ -73,12 +87,14 @@ export const products = [
     featured: true,
     bestseller: true,
     availability: "available",
-    href: "/jewellery/aabharan-drop-earrings",
+    href: "/product/JWL-003",
   },
   {
     id: "JWL-004",
     sku: "SWN-BRC-008",
     name: "Lumina Tennis Bracelet",
+    description:
+      "A continuous line of round diamonds, each held in its own collet so the wrist stays free to move. Lumina is the piece the house returns to: alone it is complete, beside a watch it settles into the day.",
     purity: "22K",
     price: 112500,
     currency: "INR",
@@ -96,12 +112,14 @@ export const products = [
     featured: true,
     bestseller: true,
     availability: "available",
-    href: "/jewellery/lumina-tennis-bracelet",
+    href: "/product/JWL-004",
   },
   {
     id: "JWL-005",
     sku: "SWN-NCK-031",
     name: "Pushp Pendant Necklace",
+    description:
+      "A floral pendant carried on a substantial chain, and the weightiest piece in the Virasat collections. Pushp takes the temple motif those collections are built on and sets it plain, letting the gold itself carry the pattern instead of filigree.",
     purity: "22K",
     price: 142000,
     currency: "INR",
@@ -119,12 +137,14 @@ export const products = [
     featured: true,
     bestseller: false,
     availability: "available",
-    href: "/jewellery/pushp-pendant-necklace",
+    href: "/product/JWL-005",
   },
   {
     id: "JWL-006",
     sku: "SWN-RNG-021",
     name: "Aadvika Halo Ring",
+    description:
+      "A halo ring with a studded shoulder, scaled for a hand that wears rings every day. Aadvika sits flatter than a solitaire and wears closer to the finger — an everyday piece that never asks to be taken off.",
     purity: "22K",
     price: 64300,
     currency: "INR",
@@ -142,12 +162,14 @@ export const products = [
     featured: false,
     bestseller: false,
     availability: "available",
-    href: "/jewellery/aadvika-halo-ring",
+    href: "/product/JWL-006",
   },
   {
     id: "JWL-007",
     sku: "SWN-ERG-030",
     name: "Aabha Chandelier Earrings",
+    description:
+      "Teardrops that stop short of the shoulder — the shorter sibling of the house's bridal chandeliers. Aabha is light enough for a working day and finished well enough for the evening that follows it.",
     purity: "22K",
     price: 49600,
     currency: "INR",
@@ -165,12 +187,14 @@ export const products = [
     featured: false,
     bestseller: false,
     availability: "available",
-    href: "/jewellery/aabha-chandelier-earrings",
+    href: "/product/JWL-007",
   },
   {
     id: "JWL-008",
     sku: "SWN-BRC-017",
     name: "Saanjh Diamond Line Bracelet",
+    description:
+      "Saanjh — the hour between day and evening — is a line bracelet in the truest sense: one unbroken row of diamonds, no clasp ornament, nothing to catch on a sleeve. The quietest piece in the Signature collections.",
     purity: "22K",
     price: 98700,
     currency: "INR",
@@ -188,7 +212,7 @@ export const products = [
     featured: false,
     bestseller: false,
     availability: "available",
-    href: "/jewellery/saanjh-line-bracelet",
+    href: "/product/JWL-008",
   },
 ];
 

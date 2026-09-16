@@ -8,6 +8,7 @@ import IconButton from "../ui/IconButton.jsx";
 import { useBodyScrollLock } from "../../hooks/useBodyScrollLock.js";
 import { useSite } from "../../hooks/useSite.js";
 import { useWishlist } from "../../state/WishlistContext.jsx";
+import { useCart } from "../../state/CartContext.jsx";
 import { cn } from "../../utils/cn.js";
 
 const HEADER_ACTIONS = [
@@ -104,7 +105,8 @@ function MobileMenu({ open, onClose, navigation }) {
 export default function Header() {
   const { pathname } = useLocation();
   const { data: site } = useSite();
-  const { count } = useWishlist();
+  const { count: wishlistCount } = useWishlist();
+  const { count: bagCount } = useCart();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -116,6 +118,10 @@ export default function Header() {
   }, []);
 
   if (!site) return null;
+
+  /* The two client-side customer states surface their counts on the icons
+     that already own them — the IconButton badge slot, no new chrome. */
+  const badges = { Wishlist: wishlistCount, "Shopping bag": bagCount };
 
   /* The transparent, light-tinted chrome is designed to sit over the hero
      photograph — the only customer route with a dark backdrop. Every other
@@ -189,7 +195,7 @@ export default function Header() {
                     label={label}
                     href={href}
                     variant={actionVariant}
-                    badge={label === "Wishlist" ? count || undefined : undefined}
+                    badge={badges[label] || undefined}
                     size="touch"
                   >
                     <Glyph size={18} strokeWidth={1.5} />

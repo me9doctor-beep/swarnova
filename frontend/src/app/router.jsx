@@ -9,6 +9,7 @@ import HomePage from "../pages/customer/home/HomePage.jsx";
 import CollectionsPage from "../pages/customer/catalogue/CollectionsPage.jsx";
 import CatalogueDetailPage from "../pages/customer/catalogue/CatalogueDetailPage.jsx";
 import ProductsPage from "../pages/customer/catalogue/ProductsPage.jsx";
+import ProductDetailPage from "../pages/customer/product/ProductDetailPage.jsx";
 import AdminDashboardPage from "../pages/admin/dashboard/AdminDashboardPage.jsx";
 import SuperAdminDashboardPage from "../pages/super-admin/dashboard/SuperAdminDashboardPage.jsx";
 import EmployeeDashboardPage from "../pages/employee/dashboard/EmployeeDashboardPage.jsx";
@@ -25,9 +26,9 @@ import { ROLES } from "../features/authentication/roles.js";
  * and are added as their phases land — no route exists before its screen does.
  *
  *   Customer      /            /collections  /collections/:slug
- *                 /category/:slug  /products
- *                 (planned: /product/:id  /ai-studio  /virtual-try-on
- *                  /stores  /cart  /checkout  /account)
+ *                 /category/:slug  /products  /product/:id
+ *                 (planned: /ai-studio  /virtual-try-on  /stores  /cart
+ *                  /checkout  /account)
  *   Admin         /admin       /admin/products   /admin/inventory
  *                 /admin/orders    /admin/customers
  *   Super Admin   /super-admin /super-admin/users /super-admin/roles
@@ -51,6 +52,7 @@ export const routeTree = [
       { path: "collections/:slug", element: <CatalogueDetailPage scope="collection" /> },
       { path: "category/:slug", element: <CatalogueDetailPage scope="category" /> },
       { path: "products", element: <ProductsPage /> },
+      { path: "product/:id", element: <ProductDetailPage /> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },

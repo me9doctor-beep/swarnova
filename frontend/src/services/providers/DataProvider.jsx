@@ -17,9 +17,9 @@ import mockProvider from "./mock/mockProvider.js";
  *
  * Provider interface (all methods async):
  *   getSite()                    getHomepage()      getCategories()
- *   getCollections()             getProducts(query) getBranches(query)
- *   getJournalArticles(query)    getActiveCampaign() getGoldRateBoard()
- *   getAiStudio()
+ *   getCollections()             getProducts(query) getProduct(id)
+ *   getBranches(query)           getJournalArticles(query)
+ *   getActiveCampaign()          getGoldRateBoard() getAiStudio()
  */
 const DataContext = createContext(mockProvider);
 
@@ -34,6 +34,7 @@ DataProvider.propTypes = {
     getCategories: PropTypes.func.isRequired,
     getCollections: PropTypes.func.isRequired,
     getProducts: PropTypes.func.isRequired,
+    getProduct: PropTypes.func.isRequired,
     getBranches: PropTypes.func.isRequired,
     getJournalArticles: PropTypes.func.isRequired,
     getActiveCampaign: PropTypes.func.isRequired,

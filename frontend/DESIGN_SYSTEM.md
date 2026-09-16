@@ -464,3 +464,111 @@ light background, so the chrome is solid there from the first pixel
 pagination (the catalogue is intentionally small — the provider already
 supports `limit`), pagination of results, a filter drawer (no screen needs
 one yet).
+
+---
+
+## 9. Phase 4 delivery notes — product detail + card commerce actions
+
+Phase 4 completes the customer catalogue: every piece now has a premium detail
+screen, and every `ProductCard` can add that piece to the bag or buy it
+directly. The console experiences, the homepage, the data architecture and the
+mock boundary are preserved.
+
+**Canonical product route**
+
+| Route | Screen |
+| --- | --- |
+| `/product/:id` | Product detail — gallery, information, specifications, story, related pieces |
+
+`/product/:id` is the route the Phase 0 route table already reserved, so no new
+convention was introduced. The mock products' stale `/jewellery/:slug` hrefs —
+which resolved to `NotFoundPage` in Phase 3 — now point at it, and the href
+stays in the data contract: every card resolves through the value the provider
+returns, so no screen re-derives a product URL.
+
+**Product components** (new, under `src/components/product`):
+
+| Component | Responsibility | Key API |
+| --- | --- | --- |
+| `ProductGallery` | the piece's photography: one large 4:5 plate plus a thumbnail selector. Static by design — no carousel, transition or gesture library; the selector renders only when a piece carries more than one plate | `images` `name` |
+| `ProductSummary` | the information column: collection eyebrow, the page's single serif H1, rating, hairlined price + availability, specifications, commerce actions, wishlist | `product` `category` `collection` |
+| `ProductSpecifications` | the piece's details as a quiet definition list; a field the contract does not carry is not rendered | `product` `category` `collection` |
+| `ProductActions` | the two purchase intents and their confirmation, shared by card and detail screen | `product` `size` |
+
+One composition serves every width: from `lg` the gallery sits beside the
+information column, below it the same two blocks stack — gallery, name, price,
+specifications, actions, wishlist, story, related — with no separate mobile
+implementation.
+
+**Data flow.** The screen adds exactly one query, `getProduct(id)`, threaded
+through the existing layers — `useProduct` → `catalogService.getProduct` →
+`provider.getProduct` — so a future API provider answers it as
+`GET /products/:id` with no presentation change. An unknown id resolves to
+`null` (as a 404 would) and the screen renders its not-found state from the
+same async result; loading and error go through `AsyncBoundary`. Category and
+collection names are resolved from the existing `useCategories` /
+`useCollections` hooks, so the breadcrumb (`Home / Collections / Rings /
+Piece`) and the specification rows speak the catalogue's real hierarchy.
+
+**Related pieces.** `useRelatedProducts(product)` curates from the catalogue the
+storefront already fetches: same collection first, then the same category, then
+the strongest remaining piece in the provider's featured order, the current
+piece excluded, capped at four. No second data source, and no related-product
+card — the rail is the shared `ProductGrid` + `ProductCard`.
+
+**Commerce boundary.** `state/CartContext.jsx` is the bag: `items`, `add`,
+`quantityOf`, `count`, mirroring `WishlistContext`. A line snapshots the
+product, so the price a customer agreed to survives a catalogue change.
+`ProductActions` is the single place purchase intent is expressed:
+
+* **Add to Cart** — `outline`; adds the line and confirms in place with the
+  storefront's existing gold status language (the newsletter's pattern). It is
+  a sibling of the card's links, never nested in them, so adding never
+  navigates.
+* **Buy Now** — solid wine, visually distinct; records the direct-purchase line
+  in the same bag. When the commerce phase registers its checkout route, this
+  component is the one call site that navigates to it.
+
+The header's shopping-bag icon reuses the `IconButton` badge slot the wishlist
+already uses, so the bag count is visible without new chrome.
+
+**Reused, not recreated:** `Card`, `Container`, `Section`, `SectionHeading`,
+`Eyebrow`, `Button`, `IconButton`, `Price`, `Rating`, `Badge`,
+`AsyncBoundary`, `EmptyState` (via the catalogue's own not-found pattern),
+`CatalogueHeader`, `ProductGrid`, `ProductCard`, `Header`, `Footer` and the
+existing `WishlistContext`. No new button, price, image, modal or carousel
+primitive was created.
+
+**States.** Loading and error go through the existing `AsyncBoundary`; an
+unknown id reuses `CatalogueHeader` + `Button` as a polished not-found
+("Product Not Found" → Explore Jewellery) rather than a second error framework.
+The related rail owns its own `AsyncBoundary`, as every other data-driven
+section does.
+
+**Mock contract.** No new entities and no duplicated datasets. One field added
+where the boundary already owns the copy: `description` — the piece's story,
+presented in the detail screen's editorial band. Everything else the screen
+shows (`purity`, `weight`, `sku`, `availability`, `rating`, `images`) already
+existed; nothing was invented to fill the specification grid.
+
+**Validation snapshot** (build + jsdom client renders, zero console errors):
+
+| Check | Result |
+| --- | --- |
+| Production build | passes — single-file bundle 3,185 kB (Phase 3: 3,174 kB), no new dependencies |
+| Routes | `/`, `/collections`, `/collections/:slug`, `/category/:slug`, `/products` (incl. filtered URLs), `/product/:id`, unknown id, unknown path, plus the three console routes — all render, one `h1` each |
+| Product detail | provider-driven load, alt text from the data, specification rows, story, related rail (order verified against the provider's featured ordering), not-found state — 86 jsdom checks passed |
+| Commerce actions | add from card and from detail confirm in place without navigating, repeat adds report the quantity, Buy Now records the intent, the header badge reflects the bag; card and detail share one wishlist state |
+| Gallery | multi-plate selector exercised directly (labelled buttons, `aria-current`, plate swap, clamp when a shorter plate list follows a route change); single-plate pieces render no selector |
+| Responsive CSS | 22 checks — every breakpoint utility the screen relies on verified present in the production bundle inside its own media query (`sm` two-up specs and side-by-side actions, `md` card action row, `lg` gallery \| information, header clearance at 132/152/168px), plus the 44px thumb target on the compact actions |
+| Mock architecture | untouched boundary; `services/providers/mock` remains the only reader of `src/mock` |
+| Animation / TypeScript | none introduced — no new dependency, no keyframes, no motion library; zero `.ts` / `.tsx` / `tsconfig` |
+
+**Not validated here.** No browser was available in this environment, so the
+responsive result above is verified against the compiled CSS and the rendered
+DOM, not measured at each viewport; no screenshot or pixel-level audit was
+performed.
+
+**Deliberately deferred** (later phases): the cart page and checkout, payment,
+orders, shipping and accounts; a sticky mobile action bar (the existing design
+system has no sticky UI); a zoom/lightbox gallery; product reviews; pagination.
