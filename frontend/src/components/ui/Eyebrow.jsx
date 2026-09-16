@@ -4,7 +4,7 @@ import { cn } from "../../utils/cn.js";
 const tones = {
   gold: "eyebrow-light",
   wine: "eyebrow-on-wine",
-  ink: "text-ink/70",
+  ink: "text-text-primary/70",
 };
 
 /** Small uppercase label with generous tracking and gold/champagne emphasis. */

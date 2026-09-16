@@ -12,7 +12,7 @@ function TitleLines({ title, tone }) {
       <span
         className={cn(
           line.emphasis &&
-            (tone === "wine" ? "text-champagne" : "italic text-gold")
+            (tone === "wine" ? "text-brand-accent-soft" : "italic text-brand-accent")
         )}
       >
         {line.text}
@@ -58,8 +58,8 @@ export default function SectionHeading({
       )}
       <Tag
         className={cn(
-          "text-balance text-h1 leading-[1.14] sm:text-4xl lg:text-display",
-          isWine ? "text-cream" : "text-ink"
+          "text-balance text-h2 leading-[1.14] sm:text-h1 lg:text-display",
+          isWine ? "text-text-inverse" : "text-text-primary"
         )}
       >
         <TitleLines title={title} tone={tone} />
@@ -68,7 +68,7 @@ export default function SectionHeading({
         <div
           className={cn(
             "mt-5 flex items-center gap-3",
-            isWine ? "text-champagne" : "text-gold",
+            isWine ? "text-brand-accent-soft" : "text-brand-accent",
             !isRow && align === "center" && "justify-center"
           )}
           aria-hidden="true"
@@ -76,14 +76,14 @@ export default function SectionHeading({
           <span
             className={cn(
               "h-px w-12",
-              isWine ? "bg-champagne/45" : "bg-gold/50"
+              isWine ? "bg-brand-accent-soft/45" : "bg-brand-accent/50"
             )}
           />
           <span className="h-[7px] w-[7px] rotate-45 border border-current" />
           <span
             className={cn(
               "h-px w-12",
-              isWine ? "bg-champagne/45" : "bg-gold/50"
+              isWine ? "bg-brand-accent-soft/45" : "bg-brand-accent/50"
             )}
           />
         </div>
@@ -91,8 +91,8 @@ export default function SectionHeading({
       {description && (
         <p
           className={cn(
-            "mt-5 text-[15px] leading-relaxed",
-            isWine ? "text-cream/70" : "text-ash"
+            "mt-5 text-body-lg",
+            isWine ? "text-text-inverse/70" : "text-text-secondary"
           )}
         >
           {description}

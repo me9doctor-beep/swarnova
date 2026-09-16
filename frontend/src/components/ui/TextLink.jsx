@@ -16,9 +16,9 @@ export default function TextLink({
       href={href}
       className={cn(
         "group inline-flex items-center gap-2 border-b border-transparent font-sans text-[11px] font-medium uppercase tracking-[0.24em] transition-colors duration-200",
-        tone === "wine" && "text-wine hover:text-gold-deep",
-        tone === "gold" && "text-gold-deep hover:text-wine",
-        tone === "light" && "text-champagne hover:text-cream",
+        tone === "wine" && "text-brand-primary hover:text-brand-accent-strong",
+        tone === "gold" && "text-brand-accent-strong hover:text-brand-primary",
+        tone === "light" && "text-brand-accent-soft hover:text-text-inverse",
         className
       )}
       {...rest}

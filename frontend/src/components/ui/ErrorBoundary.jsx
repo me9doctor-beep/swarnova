@@ -39,11 +39,11 @@ export default class ErrorBoundary extends Component {
       return (
         <div
           role="alert"
-          className="border border-line bg-ivory px-6 py-12 text-center"
+          className="border border-border-default bg-surface-secondary px-6 py-12 text-center"
           aria-label={label}
         >
           <p className="eyebrow eyebrow-light">Temporarily Unavailable</p>
-          <p className="mx-auto mt-3 max-w-md text-sm text-ash">
+          <p className="mx-auto mt-3 max-w-md text-body text-text-secondary">
             This content could not be displayed. The rest of the house remains
             open — please continue browsing.
           </p>
@@ -52,18 +52,18 @@ export default class ErrorBoundary extends Component {
     }
 
     return (
-      <div className="flex min-h-[70vh] items-center justify-center bg-ivory px-6">
-        <div className="max-w-md border border-line bg-paper px-10 py-12 text-center">
+      <div className="flex min-h-[70vh] items-center justify-center bg-surface-secondary px-6">
+        <div className="max-w-md border border-border-default bg-surface-primary px-10 py-12 text-center">
           <p className="eyebrow eyebrow-light">Swarnova</p>
-          <h1 className="mt-4 font-serif text-3xl text-ink">
+          <h1 className="mt-4 font-serif text-h1 text-text-primary">
             Something interrupted the page
           </h1>
-          <p className="mt-3 text-sm leading-relaxed text-ash">
+          <p className="mt-3 text-body leading-relaxed text-text-secondary">
             An unexpected rendering issue occurred. Reloading usually resolves
             it in a moment.
           </p>
           {error?.message && (
-            <p className="mt-4 break-words border-t border-line pt-4 text-[11px] tracking-wide text-mist">
+            <p className="mt-4 break-words border-t border-border-default pt-4 text-nav tracking-wide text-text-muted">
               {error.message}
             </p>
           )}

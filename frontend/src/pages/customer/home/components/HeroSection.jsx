@@ -43,25 +43,25 @@ export default function HeroSection({ content }) {
       {/* Copy block — in flow, vertically centred in whatever height the hero
           takes, so it is never cropped by the section. */}
       <div className="hero__copy flex items-center">
-        <div className="hero__copy-inner shell relative w-full pb-20 pt-[160px] sm:pt-[180px]">
+        <div className="hero__copy-inner shell relative w-full pb-20">
           <div className="max-w-[520px]">
 
             {/* Ornamental top rule */}
             <div className="mb-6 flex items-center gap-3" aria-hidden="true">
-              <div className="h-px w-8 bg-gold/60" />
-              <div className="h-[5px] w-[5px] rotate-45 border border-gold/60" />
+              <div className="h-px w-8 bg-brand-accent/60" />
+              <div className="h-[5px] w-[5px] rotate-45 border border-brand-accent/60" />
             </div>
 
             {eyebrow && (
-              <Eyebrow tone="gold" className="text-champagne/80 tracking-[0.38em]">
+              <Eyebrow tone="gold" className="text-brand-accent-soft/80 tracking-[0.38em]">
                 {eyebrow}
               </Eyebrow>
             )}
 
-            <h1 className="hero__title mt-4 font-serif text-[52px] font-medium leading-[1.04] text-cream sm:text-[64px] lg:text-[76px]">
+            <h1 className="hero__title mt-5 font-serif font-medium leading-[1.06] text-h1 text-text-inverse sm:text-display lg:text-[3.5rem]">
               {title.lines.map((line, index) => (
                 <span key={`${line.text}-${index}`} className="block">
-                  <span className={line.emphasis ? "italic text-gold" : undefined}>
+                  <span className={line.emphasis ? "italic text-brand-accent" : undefined}>
                     {line.text}
                   </span>
                 </span>
@@ -70,11 +70,11 @@ export default function HeroSection({ content }) {
 
             {/* Ornamental divider below headline */}
             <div className="mt-7 mb-6 flex items-center gap-4" aria-hidden="true">
-              <div className="h-px flex-1 max-w-[80px] bg-gold/40" />
-              <div className="h-px flex-1 max-w-[200px] bg-cream/10" />
+              <div className="h-px flex-1 max-w-[80px] bg-brand-accent/40" />
+              <div className="h-px flex-1 max-w-[200px] bg-surface-muted/10" />
             </div>
 
-            <p className="hero__body max-w-sm text-[14.5px] leading-[1.9] text-cream/65 font-light tracking-wide">
+            <p className="hero__body max-w-sm text-body leading-[1.9] text-text-inverse/70 font-light tracking-wide">
               {body}
             </p>
 
@@ -86,7 +86,7 @@ export default function HeroSection({ content }) {
             </div>
 
             {/* Bottom badge / trust micro-copy */}
-            <p className="hero__micro mt-10 text-[10px] font-sans uppercase tracking-[0.3em] text-cream/35">
+            <p className="hero__micro mt-10 text-label font-light uppercase tracking-[0.3em] text-text-inverse/45">
               BIS Hallmarked &nbsp;·&nbsp; Lifetime Exchange &nbsp;·&nbsp; Free Shipping
             </p>
           </div>
@@ -95,7 +95,7 @@ export default function HeroSection({ content }) {
 
       {/* Gold hairline at the bottom */}
       <div
-        className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-gold/50 via-gold/20 to-transparent"
+        className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-brand-accent/50 via-brand-accent/20 to-transparent"
         aria-hidden="true"
       />
     </section>

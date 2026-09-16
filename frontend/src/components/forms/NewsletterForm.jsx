@@ -38,8 +38,8 @@ export default function NewsletterForm({
       <p
         role="status"
         className={cn(
-          "flex items-center justify-center gap-2.5 text-[13px]",
-          variant === "compact" ? "text-champagne" : "text-gold-deep",
+          "flex items-center justify-center gap-2.5 text-body-sm",
+          variant === "compact" ? "text-brand-accent-soft" : "text-brand-accent-strong",
           className
         )}
       >
@@ -63,7 +63,7 @@ export default function NewsletterForm({
       <div
         className={cn(
           "flex items-stretch",
-          isCompact ? "border-b border-cream/30" : "border border-ink/25 bg-paper"
+          isCompact ? "border-b border-text-inverse/30" : "border border-ink/25 bg-surface-primary"
         )}
       >
         <input
@@ -78,10 +78,10 @@ export default function NewsletterForm({
           className={cn(
             // 16px on phones: iOS Safari zooms the whole page when a field
             // smaller than that receives focus, which broke the mobile layout.
-            "min-w-0 flex-1 bg-transparent font-sans text-[16px] tracking-wide outline-none placeholder:text-mist sm:text-sm",
+            "min-w-0 flex-1 bg-transparent font-sans text-body-lg tracking-wide outline-none placeholder:text-text-muted sm:text-body",
             isCompact
-              ? "px-1 py-3 text-cream placeholder:text-cream/45"
-              : "px-5 py-3.5 text-ink"
+              ? "px-1 py-3 text-text-inverse placeholder:text-text-inverse/45"
+              : "px-5 py-3.5 text-text-primary"
           )}
         />
         <button
@@ -89,8 +89,8 @@ export default function NewsletterForm({
           className={cn(
             "flex shrink-0 items-center justify-center px-5 transition-colors duration-200",
             isCompact
-              ? "text-champagne hover:text-cream"
-              : "bg-wine text-cream hover:bg-wine-deep"
+              ? "text-brand-accent-soft hover:text-text-inverse"
+              : "bg-surface-inverse text-text-inverse hover:bg-surface-inverse-deep"
           )}
           aria-label={buttonLabel}
         >
@@ -101,8 +101,8 @@ export default function NewsletterForm({
         <p
           id={`newsletter-error-${variant}`}
           className={cn(
-            "mt-2 text-xs",
-            isCompact ? "text-champagne" : "text-wine"
+            "mt-2 text-caption",
+            isCompact ? "text-brand-accent-soft" : "text-brand-primary"
           )}
         >
           {error}

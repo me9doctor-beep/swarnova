@@ -23,19 +23,19 @@ export default function JournalCard({ article }) {
 
       <Card.Body className="pt-5">
         <div className="flex items-center justify-between gap-4">
-          <Eyebrow className="text-[10px] tracking-[0.28em]">{article.category}</Eyebrow>
-          <span className="shrink-0 font-sans text-[11px] tracking-wide text-mist">
+          <Eyebrow className="text-label tracking-[0.28em]">{article.category}</Eyebrow>
+          <span className="shrink-0 font-sans text-caption tracking-wide text-text-muted">
             {article.readTime}
           </span>
         </div>
 
-        <h3 className="mt-3 font-serif text-[24px] leading-tight">
-          <a href={article.href} className="transition-colors duration-200 hover:text-wine">
+        <h3 className="mt-3 font-serif text-h3 leading-tight">
+          <a href={article.href} className="transition-colors duration-200 hover:text-brand-primary">
             {article.title}
           </a>
         </h3>
 
-        <p className="mt-3 text-[14px] leading-relaxed text-ash">{article.excerpt}</p>
+        <p className="mt-3 text-body leading-relaxed text-text-secondary">{article.excerpt}</p>
 
         <TextLink tone="gold" href={article.href} className="mt-5">
           Read Story

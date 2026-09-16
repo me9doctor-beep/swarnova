@@ -331,6 +331,12 @@
   .hero__media {
     object-position: 18% 30%;
   }
+
+  /* Clear the fixed header at desktop; smaller widths are handled by the
+     max-width blocks above. */
+  .hero__copy-inner {
+    padding-top: 10rem;
+  }
 }
 
 /* ===========================================================================

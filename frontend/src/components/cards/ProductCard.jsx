@@ -41,7 +41,7 @@ export default function ProductCard({ product }) {
             <Heart
               size={15}
               strokeWidth={1.5}
-              className={cn(wished && "fill-wine text-wine")}
+              className={cn(wished && "fill-brand-primary text-brand-primary")}
             />
           </IconButton>
         }
@@ -54,12 +54,12 @@ export default function ProductCard({ product }) {
         />
       </Card.Media>
 
-      <Card.Body className="items-center pt-4 text-center">
-        <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-gold-deep">
+      <Card.Body className="items-center pt-5 text-center">
+        <p className="text-label font-medium uppercase tracking-[0.3em] text-brand-accent-strong">
           {product.purity} Gold
         </p>
-        <h3 className="mt-2 font-serif text-[19px] leading-snug">
-          <a href={product.href} className="transition-colors duration-200 hover:text-wine">
+        <h3 className="mt-2 font-serif text-h4 leading-snug">
+          <a href={product.href} className="transition-colors duration-200 hover:text-brand-primary">
             {product.name}
           </a>
         </h3>
