@@ -80,7 +80,7 @@ export default function HeroSection({ content }) {
 
             <div className="mt-10 flex flex-wrap items-center gap-x-4 gap-y-4">
               <Button href={primaryCta.href}>{primaryCta.label}</Button>
-              <Button href={secondaryCta.href} variant="outlineOnWine">
+              <Button href={secondaryCta.href} variant="outlineInverse">
                 {secondaryCta.label}
               </Button>
             </div>

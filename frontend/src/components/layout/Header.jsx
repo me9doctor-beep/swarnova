@@ -2,50 +2,35 @@ import { useEffect, useState } from "react";
 import { Search, Heart, User, ShoppingBag, Menu, X } from "lucide-react";
 import BrandMark from "../ui/BrandMark.jsx";
 import Button from "../ui/Button.jsx";
+import Container from "../ui/Container.jsx";
+import IconButton from "../ui/IconButton.jsx";
+import { useBodyScrollLock } from "../../hooks/useBodyScrollLock.js";
 import { useSite } from "../../hooks/useSite.js";
 import { useWishlist } from "../../state/WishlistContext.jsx";
 import { cn } from "../../utils/cn.js";
 
-function HeaderAction({ label, children, href, onClick, badge, transparent }) {
-  // 44px on phones (thumb-friendly target), the original 40px from `sm` up.
-  const classes = cn(
-    "relative flex h-11 w-11 items-center justify-center transition-colors duration-200 sm:h-10 sm:w-10",
-    transparent
-      ? "text-white/90 hover:text-white"
-      : "text-ink/75 hover:text-wine"
-  );
-  const content = (
-    <>
-      {children}
-      {badge ? (
-        <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-wine px-1 text-[9px] font-medium text-cream">
-          {badge}
-        </span>
-      ) : null}
-    </>
-  );
-
-  if (href) {
-    return (
-      <a href={href} aria-label={label} className={classes}>
-        {content}
-      </a>
-    );
-  }
-  return (
-    <button type="button" aria-label={label} onClick={onClick} className={classes}>
-      {content}
-    </button>
-  );
-}
+const HEADER_ACTIONS = [
+  { label: "Search", href: "#search", Glyph: Search, size: 18 },
+  { label: "Wishlist", href: "#wishlist", Glyph: Heart, size: 18 },
+  { label: "Account", href: "#account", Glyph: User, size: 18 },
+  { label: "Shopping bag", href: "#cart", Glyph: ShoppingBag, size: 18 },
+];
 
 function MobileMenu({ open, onClose, navigation }) {
+  useBodyScrollLock(open);
+
+  /* A dialog closes on Escape. Registered above the early return so the hook
+     order never depends on the open state. */
   useEffect(() => {
-    document.body.style.overflow = open ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
+    if (!open) return undefined;
+
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") onClose();
     };
-  }, [open]);
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, onClose]);
 
   if (!open) return null;
 
@@ -56,23 +41,24 @@ function MobileMenu({ open, onClose, navigation }) {
       aria-label="Primary menu"
       className="fixed inset-0 z-[70] flex flex-col overscroll-contain bg-paper"
     >
-      <div className="shell flex h-[72px] shrink-0 items-center justify-between">
+      <Container className="flex h-[72px] shrink-0 items-center justify-between">
         <BrandMark />
-        <button
-          type="button"
+        <IconButton
+          label="Close menu"
+          size="touch"
+          className="text-text-primary"
           onClick={onClose}
-          aria-label="Close menu"
-          className="flex h-11 w-11 items-center justify-center text-ink hover:text-wine sm:h-10 sm:w-10"
         >
           <X size={22} strokeWidth={1.4} />
-        </button>
-      </div>
+        </IconButton>
+      </Container>
 
       {/* Navigation scrolls inside the panel so every destination stays
           reachable on a short phone; two-up keeps the list compact. */}
-      <nav
-        className="shell flex-1 overflow-y-auto pb-10 pt-2"
+      <Container
+        as="nav"
         aria-label="Mobile primary"
+        className="flex-1 overflow-y-auto pb-10 pt-2"
       >
         <ul className="grid grid-cols-2 gap-x-4 border-t border-line">
           {navigation.map((item) => (
@@ -103,20 +89,13 @@ function MobileMenu({ open, onClose, navigation }) {
         </div>
 
         <div className="mt-8 flex items-center gap-2 border-t border-line pt-6 text-ink/70">
-          <HeaderAction label="Search" href="#search">
-            <Search size={19} strokeWidth={1.5} />
-          </HeaderAction>
-          <HeaderAction label="Wishlist" href="#wishlist">
-            <Heart size={19} strokeWidth={1.5} />
-          </HeaderAction>
-          <HeaderAction label="Account" href="#account">
-            <User size={19} strokeWidth={1.5} />
-          </HeaderAction>
-          <HeaderAction label="Shopping bag" href="#cart">
-            <ShoppingBag size={19} strokeWidth={1.5} />
-          </HeaderAction>
+          {HEADER_ACTIONS.map(({ label, href, Glyph }) => (
+            <IconButton key={label} label={label} href={href} size="touch">
+              <Glyph size={19} strokeWidth={1.5} />
+            </IconButton>
+          ))}
         </div>
-      </nav>
+      </Container>
     </div>
   );
 }
@@ -136,6 +115,8 @@ export default function Header() {
 
   if (!site) return null;
 
+  const actionVariant = scrolled ? "plain" : "inverse";
+
   return (
     <>
       <header className="fixed inset-x-0 top-0 z-50">
@@ -146,14 +127,14 @@ export default function Header() {
                 lines (≤42px tall, so the fixed header never exceeds the 112px
                 section scroll margin). From `sm` up the full message and the
                 original single-line truncation are unchanged. */}
-            <div className="shell flex items-center justify-center py-1 sm:h-9 sm:py-0">
+            <Container className="flex items-center justify-center py-1 sm:h-9 sm:py-0">
               <p className="line-clamp-2 text-center text-[10px] font-light uppercase leading-[1.45] tracking-[0.1em] sm:hidden">
                 {site.announcement.shortMessage ?? site.announcement.message}
               </p>
               <p className="hidden text-center text-[10px] font-light uppercase tracking-[0.22em] sm:block sm:truncate">
                 {site.announcement.message}
               </p>
-            </div>
+            </Container>
           </div>
         )}
 
@@ -165,7 +146,7 @@ export default function Header() {
               : "border-transparent bg-transparent"
           )}
         >
-          <div className="shell flex h-[72px] items-center justify-between gap-6">
+          <Container className="flex h-[72px] items-center justify-between gap-6">
             <a href="#top" aria-label="Swarnova — home" className="shrink-0">
               <BrandMark tone={scrolled ? "dark" : "light"} />
             </a>
@@ -180,7 +161,7 @@ export default function Header() {
                     <a
                       href={item.href}
                       className={cn(
-                        "whitespace-nowrap font-sans text-[11px] font-medium uppercase tracking-[0.18em] transition-colors duration-200",
+                        "whitespace-nowrap font-sans text-nav font-medium uppercase transition-colors duration-200",
                         scrolled
                           ? "text-ink/80 hover:text-gold-deep"
                           : "text-white/90 hover:text-white"
@@ -195,33 +176,40 @@ export default function Header() {
 
             <div className="flex shrink-0 items-center">
               <span className="hidden items-center sm:flex">
-                <HeaderAction label="Search" href="#search" transparent={!scrolled}>
-                  <Search size={18} strokeWidth={1.5} />
-                </HeaderAction>
-                <HeaderAction label="Wishlist" href="#wishlist" badge={count || undefined} transparent={!scrolled}>
-                  <Heart size={18} strokeWidth={1.5} />
-                </HeaderAction>
-                <HeaderAction label="Account" href="#account" transparent={!scrolled}>
-                  <User size={18} strokeWidth={1.5} />
-                </HeaderAction>
-                <HeaderAction label="Shopping bag" href="#cart" transparent={!scrolled}>
-                  <ShoppingBag size={18} strokeWidth={1.5} />
-                </HeaderAction>
+                {HEADER_ACTIONS.map(({ label, href, Glyph }) => (
+                  <IconButton
+                    key={label}
+                    label={label}
+                    href={href}
+                    variant={actionVariant}
+                    badge={label === "Wishlist" ? count || undefined : undefined}
+                    size="touch"
+                  >
+                    <Glyph size={18} strokeWidth={1.5} />
+                  </IconButton>
+                ))}
               </span>
-              <button
-                type="button"
-                className={cn(
-                  "flex h-11 w-11 items-center justify-center xl:hidden sm:h-10 sm:w-10",
-                  !scrolled ? "text-white" : "text-ink"
-                )}
-                aria-label="Open menu"
+              {/* Solid ink/white rather than the icon actions' 75–90% tone: the
+                  trigger sits alone against the hero and reads as chrome. */}
+              <IconButton
+                label="Open menu"
                 aria-expanded={menuOpen}
                 onClick={() => setMenuOpen(true)}
+                size="touch"
+                className={cn(
+                  "xl:hidden",
+                  /* `plain` supplies the shape; the hover tone is neutralised
+                     here because the trigger sits alone on the hero photograph
+                     and reads as chrome, not as content. */
+                  scrolled
+                    ? "text-ink hover:text-ink"
+                    : "text-white hover:text-white"
+                )}
               >
                 <Menu size={22} strokeWidth={1.4} />
-              </button>
+              </IconButton>
             </div>
-          </div>
+          </Container>
         </div>
       </header>
 

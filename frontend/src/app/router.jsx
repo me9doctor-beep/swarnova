@@ -31,7 +31,11 @@ import { ROLES } from "../features/authentication/roles.js";
  *                 /employee/inventory
  *
  * The `/products`, `/inventory`, … children above are planned: only the routes
- * required to prove the layout architecture are registered in Phase 0.
+ * required to prove the layout architecture are registered so far.
+ *
+ * Each console route also declares `handle.crumb`, the label the shared console
+ * topbar shows as the breadcrumb — the place in the hierarchy is defined next
+ * to the route instead of being pushed into the shell from the page.
  */
 const router = createBrowserRouter([
   {
@@ -50,7 +54,9 @@ const router = createBrowserRouter([
         <AdminLayout />
       </RoleBoundary>
     ),
-    children: [{ index: true, element: <AdminDashboardPage /> }],
+    children: [
+      { index: true, element: <AdminDashboardPage />, handle: { crumb: "Overview" } },
+    ],
   },
   {
     path: "/super-admin",
@@ -59,7 +65,13 @@ const router = createBrowserRouter([
         <SuperAdminLayout />
       </RoleBoundary>
     ),
-    children: [{ index: true, element: <SuperAdminDashboardPage /> }],
+    children: [
+      {
+        index: true,
+        element: <SuperAdminDashboardPage />,
+        handle: { crumb: "Command Centre" },
+      },
+    ],
   },
   {
     path: "/employee",
@@ -68,7 +80,9 @@ const router = createBrowserRouter([
         <EmployeeLayout />
       </RoleBoundary>
     ),
-    children: [{ index: true, element: <EmployeeDashboardPage /> }],
+    children: [
+      { index: true, element: <EmployeeDashboardPage />, handle: { crumb: "Overview" } },
+    ],
   },
 ]);
 

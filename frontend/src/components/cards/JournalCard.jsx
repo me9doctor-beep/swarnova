@@ -1,4 +1,5 @@
 import PropTypes from "prop-types";
+import Card from "../ui/Card.jsx";
 import Eyebrow from "../ui/Eyebrow.jsx";
 import TextLink from "../ui/TextLink.jsx";
 
@@ -6,10 +7,11 @@ import TextLink from "../ui/TextLink.jsx";
 export default function JournalCard({ article }) {
   return (
     <article className="group flex h-full flex-col">
-      <a
+      <Card.Media
+        ratio="3/2"
         href={article.href}
-        aria-label={`Read ${article.title}`}
-        className="block aspect-[3/2] overflow-hidden border border-line bg-ivory"
+        ariaLabel={`Read ${article.title}`}
+        className="border border-border-default"
       >
         <img
           src={article.image?.src}
@@ -17,9 +19,9 @@ export default function JournalCard({ article }) {
           loading="lazy"
           className="h-full w-full object-cover transition-colors duration-200"
         />
-      </a>
+      </Card.Media>
 
-      <div className="flex flex-1 flex-col pt-5">
+      <Card.Body className="pt-5">
         <div className="flex items-center justify-between gap-4">
           <Eyebrow className="text-[10px] tracking-[0.28em]">{article.category}</Eyebrow>
           <span className="shrink-0 font-sans text-[11px] tracking-wide text-mist">
@@ -38,7 +40,7 @@ export default function JournalCard({ article }) {
         <TextLink tone="gold" href={article.href} className="mt-5">
           Read Story
         </TextLink>
-      </div>
+      </Card.Body>
     </article>
   );
 }

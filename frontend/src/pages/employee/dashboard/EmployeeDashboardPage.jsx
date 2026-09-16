@@ -1,27 +1,23 @@
-import {
-  ROLE_LABELS,
-  ROLES,
-} from "../../../features/authentication/roles.js";
+import PageHeader from "../../../components/layout/PageHeader.jsx";
+import EmptyState from "../../../components/ui/EmptyState.jsx";
+import { ROLE_LABELS, ROLES } from "../../../features/authentication/roles.js";
 
 /**
- * PHASE 0 PLACEHOLDER — proves the Employee route, role boundary, layout and
- * navigation shell only. Real counter workflows arrive in later phases.
+ * PHASE 1 PLACEHOLDER — proves the Employee route, role boundary, shell and
+ * page foundation only. Real counter workflows arrive in later phases.
  */
 export default function EmployeeDashboardPage() {
   return (
-    <div className="mx-auto max-w-3xl">
-      <p className="eyebrow eyebrow-light">{ROLE_LABELS[ROLES.EMPLOYEE]}</p>
-      <h1 className="mt-4 font-serif text-[30px] leading-tight text-ink">
-        Counter Operations
-      </h1>
-      <p className="mt-4 text-[14.5px] leading-relaxed text-ash">
-        Billing, customer lookup and stock enquiry will be composed inside this
-        shell, optimised for speed at the counter.
-      </p>
-      <div className="mt-8 border border-dashed border-line bg-paper px-6 py-8 text-[13px] leading-relaxed text-mist">
-        No Employee functionality is implemented in Phase 0. The layout, role
-        boundary and route are live so later phases can drop straight in.
-      </div>
-    </div>
+    <>
+      <PageHeader
+        eyebrow={ROLE_LABELS[ROLES.EMPLOYEE]}
+        title="Counter Operations"
+        description="Billing, customer lookup and stock enquiry are composed inside this shell, optimised for speed at the counter."
+      />
+      <EmptyState className="mt-6" title="No counter workflow is implemented yet">
+        The shell, role boundary and navigation are live, so each workflow can
+        drop straight in without rebuilding chrome.
+      </EmptyState>
+    </>
   );
 }

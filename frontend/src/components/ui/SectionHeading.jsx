@@ -32,19 +32,23 @@ export default function SectionHeading({
   align = "center",
   tone = "ink",
   ornament = true,
+  action,
   className,
   headingLevel = 2,
 }) {
   const Tag = `h${headingLevel}`;
   const isWine = tone === "wine";
+  /* With an action the heading becomes the left column of a two-up row — the
+     editorial pattern for "section title … quiet action" on one line. */
+  const isRow = Boolean(action);
 
-  return (
+  const block = (
     <div
       className={cn(
         "max-w-2xl",
-        align === "center" && "mx-auto text-center",
-        align === "left" && "text-left",
-        className
+        isRow ? "text-left" : align === "center" && "mx-auto text-center",
+        !isRow && align === "left" && "text-left",
+        !isRow && className
       )}
     >
       {eyebrow && (
@@ -54,7 +58,7 @@ export default function SectionHeading({
       )}
       <Tag
         className={cn(
-          "text-balance text-[34px] leading-[1.14] sm:text-4xl lg:text-[44px]",
+          "text-balance text-h1 leading-[1.14] sm:text-4xl lg:text-display",
           isWine ? "text-cream" : "text-ink"
         )}
       >
@@ -65,7 +69,7 @@ export default function SectionHeading({
           className={cn(
             "mt-5 flex items-center gap-3",
             isWine ? "text-champagne" : "text-gold",
-            align === "center" && "justify-center"
+            !isRow && align === "center" && "justify-center"
           )}
           aria-hidden="true"
         >
@@ -96,6 +100,22 @@ export default function SectionHeading({
       )}
     </div>
   );
+
+  if (!isRow) {
+    return block;
+  }
+
+  return (
+    <div
+      className={cn(
+        "flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between sm:gap-10",
+        className
+      )}
+    >
+      {block}
+      <div className="shrink-0">{action}</div>
+    </div>
+  );
 }
 
 SectionHeading.propTypes = {
@@ -115,6 +135,8 @@ SectionHeading.propTypes = {
   align: PropTypes.oneOf(["center", "left"]),
   tone: PropTypes.oneOf(["ink", "wine"]),
   ornament: PropTypes.bool,
+  /** Quiet action rendered on the heading's line (usually a TextLink). */
+  action: PropTypes.node,
   className: PropTypes.string,
   headingLevel: PropTypes.number,
 };

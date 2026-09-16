@@ -1,15 +1,16 @@
 import PropTypes from "prop-types";
 import { MapPin, Clock, Phone } from "lucide-react";
+import Card from "../ui/Card.jsx";
 import TextLink from "../ui/TextLink.jsx";
 
 /** Boutique card — the physical extension of the jewellery house. */
 export default function BranchCard({ branch }) {
   return (
-    <article className="group flex h-full flex-col border border-line bg-paper transition-colors duration-200 hover:border-gold/45">
-      <a
+    <Card interactive className="group">
+      <Card.Media
+        ratio="4/3"
         href={branch.href}
-        aria-label={`View ${branch.name}`}
-        className="block aspect-[4/3] overflow-hidden bg-ivory"
+        ariaLabel={`View ${branch.name}`}
       >
         <img
           src={branch.image?.src}
@@ -17,9 +18,9 @@ export default function BranchCard({ branch }) {
           loading="lazy"
           className="h-full w-full object-cover"
         />
-      </a>
+      </Card.Media>
 
-      <div className="flex flex-1 flex-col p-6 sm:p-7">
+      <Card.Body padding="md">
         {branch.flagship && (
           <p className="text-[10px] font-medium uppercase tracking-[0.3em] text-gold-deep">
             Flagship Boutique
@@ -56,8 +57,8 @@ export default function BranchCard({ branch }) {
         <TextLink href={branch.href} className="mt-6">
           View Store
         </TextLink>
-      </div>
-    </article>
+      </Card.Body>
+    </Card>
   );
 }
 

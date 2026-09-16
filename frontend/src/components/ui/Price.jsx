@@ -12,8 +12,8 @@ export default function Price({ amount, currency = "INR", className, tone = "ink
   return (
     <span
       className={cn(
-        "font-sans text-[15px] tracking-wide",
-        tone === "wine" ? "text-cream" : "text-ink",
+        "font-sans text-price",
+        tone === "wine" ? "text-text-inverse" : "text-text-primary",
         className
       )}
     >

@@ -1,6 +1,26 @@
 @import "tailwindcss";
 
+/* ===========================================================================
+   SWARNOVA DESIGN TOKENS  ·  Phase 1
+   ---------------------------------------------------------------------------
+   Two layers, one system:
+
+     1. BRAND PALETTE — the raw colours of the house: white, warm ivory, soft
+        cream, muted champagne gold, deep burgundy/wine, dark charcoal and the
+        warm neutrals. This is the ONLY place literal colour values live.
+
+     2. SEMANTIC TOKENS — what a surface, a piece of text or a border *means*
+        (`--color-surface-primary`, `--color-text-muted`, …). Components consume
+        these, so the palette can be re-tuned later (Phase 2 storefront
+        refinement, future theming) without touching component code.
+
+   Typography, radius, elevation and focus tokens follow the same rule: system
+   decisions live here, page-level composition lives in components. Anything
+   that is a one-off editorial decision (hero display type, section rhythm)
+   stays in its section and is refined in Phase 2.
+   =========================================================================== */
 @theme {
+  /* ---------- 1. Brand palette (raw values) ---------- */
   /* Foundation — white, warm ivory, soft cream */
   --color-paper: #ffffff;
   --color-ivory: #f8f3ea;
@@ -27,7 +47,101 @@
   --color-line: #e8ddca;
   --color-line-light: #f0e8d9;
 
-  /* Typography */
+  /* ---------- 2. Semantic colour tokens ---------- */
+  /* Surfaces */
+  --color-surface-primary: var(--color-paper);
+  --color-surface-secondary: var(--color-ivory);
+  --color-surface-muted: var(--color-cream);
+  --color-surface-inverse: var(--color-wine);
+  --color-surface-inverse-deep: var(--color-wine-deep);
+
+  /* Text */
+  --color-text-primary: var(--color-ink);
+  --color-text-secondary: var(--color-ash);
+  --color-text-muted: var(--color-mist);
+  --color-text-inverse: var(--color-cream);
+
+  /* Brand */
+  --color-brand-primary: var(--color-wine);
+  --color-brand-primary-strong: var(--color-wine-deep);
+  --color-brand-primary-soft: var(--color-wine-soft);
+  --color-brand-accent: var(--color-gold);
+  --color-brand-accent-strong: var(--color-gold-deep);
+  --color-brand-accent-soft: var(--color-champagne);
+
+  /* Borders */
+  --color-border-default: var(--color-line);
+  --color-border-subtle: var(--color-line-light);
+
+  /* States — muted and warm, never neon */
+  --color-state-success: #3f6b4f;
+  --color-state-success-soft: #edf3ec;
+  --color-state-warning: #8a6218;
+  --color-state-warning-soft: #faf2e2;
+  --color-state-error: #9b2f28;
+  --color-state-error-soft: #f9ece7;
+  --color-state-info: #42616b;
+  --color-state-info-soft: #eef3f4;
+
+  /* Focus */
+  --color-focus: var(--color-gold);
+
+  /* ---------- Typography scale ---------- */
+  /* Display / headings — sophisticated serif */
+  --text-display: 2.75rem; /* 44px */
+  --text-display--line-height: 1.12;
+  --text-h1: 2.125rem; /* 34px */
+  --text-h1--line-height: 1.14;
+  --text-h2: 1.75rem; /* 28px */
+  --text-h2--line-height: 1.2;
+  --text-h3: 1.375rem; /* 22px */
+  --text-h3--line-height: 1.3;
+  --text-h4: 1.125rem; /* 18px */
+  --text-h4--line-height: 1.35;
+
+  /* UI / body — clean sans-serif */
+  --text-body-lg: 1rem; /* 16px — the phone-safe field size */
+  --text-body-lg--line-height: 1.8;
+  --text-body: 0.875rem; /* 14px */
+  --text-body--line-height: 1.75;
+  --text-body-sm: 0.8125rem; /* 13px */
+  --text-body-sm--line-height: 1.7;
+  --text-caption: 0.75rem; /* 12px */
+  --text-caption--line-height: 1.6;
+
+  /* Micro roles — uppercase, tracked, used across storefront and console */
+  --text-nav: 0.6875rem; /* 11px — navigation links */
+  --text-nav--line-height: 1.4;
+  --text-nav--letter-spacing: 0.18em;
+  --text-label: 0.625rem; /* 10px — field labels, badges, meta */
+  --text-label--line-height: 1.5;
+  --text-label--letter-spacing: 0.18em;
+  --text-label--font-weight: 500;
+  --text-price: 0.9375rem; /* 15px — prices sit on the body rhythm */
+  --text-price--line-height: 1.75;
+  --text-price--letter-spacing: 0.025em;
+
+  /* ---------- Spacing ---------- */
+  /* The system scale is Tailwind's 4px step (1 = 4px … 30 = 120px), used in
+     the small approved set: 4 · 8 · 12 · 16 · 20 · 24 · 32 · 40 · 48 · 64 ·
+     80 · 96 · 120. The two aliases below carry the decisions that components
+     actually repeat. */
+  --spacing-gutter: 1.25rem; /* 20px — page & shell gutter  (px-gutter) */
+  --spacing-panel: 1.5rem; /* 24px — card & panel padding  (p-panel) */
+
+  /* ---------- Radius ---------- */
+  /* Refined corners; pills only for status, tags and compact metadata. */
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-pill: 999px;
+
+  /* ---------- Elevation ---------- */
+  /* Restrained: the storefront relies on spacing, type, imagery and hairlines. */
+  --shadow-subtle: 0 1px 2px rgba(47, 42, 37, 0.05), 0 1px 3px rgba(47, 42, 37, 0.04);
+  --shadow-medium: 0 12px 32px -16px rgba(47, 42, 37, 0.24);
+
+  /* Typography families (Phase 0 — unchanged) */
   --font-serif: "Cormorant Garamond", Georgia, "Times New Roman", serif;
   --font-sans: "Jost", ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
@@ -38,7 +152,7 @@
   }
 
   body {
-    @apply bg-paper text-ink font-sans antialiased;
+    @apply bg-surface-primary text-text-primary font-sans antialiased;
     font-size: 15px;
     line-height: 1.75;
     text-rendering: optimizeLegibility;
@@ -51,16 +165,16 @@
     @apply font-serif;
     font-weight: 500;
     line-height: 1.12;
-    color: var(--color-ink);
+    color: var(--color-text-primary);
   }
 
   ::selection {
-    background: color-mix(in srgb, var(--color-gold) 22%, transparent);
-    color: var(--color-wine-deep);
+    background: color-mix(in srgb, var(--color-brand-accent) 22%, transparent);
+    color: var(--color-brand-primary-strong);
   }
 
   :focus-visible {
-    outline: 2px solid var(--color-gold);
+    outline: 2px solid var(--color-focus);
     outline-offset: 3px;
   }
 
