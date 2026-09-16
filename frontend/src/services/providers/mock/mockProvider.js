@@ -20,11 +20,24 @@
  *   getActiveCampaign()
  *   getGoldRateBoard()
  *   getAiStudio()
+ *   getAiAtelier()
+ *   generateAiDesign(request)
+ *   createAiVariations(conceptId)
+ *   refineAiDesign(request)
  *
  * getProducts(query) is the catalogue query contract — the same parameters a
  * future API provider will accept, one-to-one:
  *   { categoryId, collectionId, featured, bestseller, tryOnAvailable,
  *     availability, priceMin, priceMax, search, sort, limit }
+ *
+ * The AI studio methods are the generation contract a future AI backend
+ * fulfils one-to-one:
+ *   generateAiDesign({ prompt, jewelleryType, style, occasion, purity })
+ *   createAiVariations(conceptId)   →  { id, images }
+ *   refineAiDesign({ conceptId, feedback, purity })
+ *
+ * All generation behaviour lives here — the presentation layer only renders
+ * the concept shape the provider resolves with.
  *
  * getProduct(id) is the single-piece query — the shape of a future
  * `GET /products/:id`. An unknown id resolves to `null` rather than rejecting,
@@ -40,6 +53,57 @@ function emit(value) {
 
 function byOrder(a, b) {
   return (a.order ?? 0) - (b.order ?? 0);
+}
+
+/* --------------------------------------------------------------------------
+ * AI atelier — mock generation
+ * --------------------------------------------------------------------------
+ * The mock "renders" a concept by choosing from the atelier's design library
+ * (`mock/data/ai`). Structured options weigh more than prompt keywords, and
+ * ties resolve to the library's own order, so the same request always
+ * resolves to the same concept — deterministic, like a backend would be.
+ * A short latency makes the atelier's static creation state readable.
+ * ------------------------------------------------------------------------ */
+const AI_RENDER_DELAY = 900;
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function buildConcept(design, promptSummary, purity) {
+  return {
+    id: design.id,
+    title: design.title,
+    promptSummary,
+    category: design.category,
+    style: design.style,
+    occasion: design.occasion,
+    purity: purity || design.purity,
+    status: "completed",
+    story: design.story,
+    images: [{ ...design.image }],
+  };
+}
+
+function matchDesign(request) {
+  const prompt = String(request.prompt ?? "").toLowerCase();
+
+  let best = null;
+  let bestScore = -Infinity;
+  for (const design of db.aiDesigns) {
+    let score = 0;
+    if (request.jewelleryType) score += design.category === request.jewelleryType ? 6 : -4;
+    if (request.style) score += design.style === request.style ? 3 : 0;
+    if (request.occasion) score += design.occasion === request.occasion ? 3 : 0;
+    for (const keyword of design.keywords) {
+      if (prompt.includes(keyword)) score += 1;
+    }
+    if (score > bestScore) {
+      best = design;
+      bestScore = score;
+    }
+  }
+  return best;
 }
 
 /** Product orderings the contract supports. "featured" is the default. */
@@ -128,6 +192,59 @@ export const mockProvider = {
 
   getAiStudio() {
     return Promise.resolve(emit(db.aiStudio));
+  },
+
+  getAiAtelier() {
+    return Promise.resolve(emit(db.aiAtelier));
+  },
+
+  async generateAiDesign(request = {}) {
+    const prompt = String(request.prompt ?? "").trim();
+    if (!prompt) {
+      return Promise.reject(
+        new Error("Describe the jewellery you envision before creating a design.")
+      );
+    }
+
+    await wait(AI_RENDER_DELAY);
+    const design = matchDesign({ ...request, prompt });
+    if (!design) {
+      return Promise.reject(
+        new Error("The atelier could not render this concept. Please try again.")
+      );
+    }
+    return emit(buildConcept(design, prompt, request.purity));
+  },
+
+  async createAiVariations(conceptId) {
+    await wait(AI_RENDER_DELAY);
+    const design = db.aiDesigns.find((item) => item.id === conceptId);
+    if (!design) {
+      return Promise.reject(new Error("This concept is no longer available in the atelier."));
+    }
+    return emit({
+      id: design.id,
+      images: [{ ...design.image }, ...design.variationPlates.map((plate) => ({ ...plate }))],
+    });
+  },
+
+  async refineAiDesign(request = {}) {
+    const feedback = String(request.feedback ?? "").trim();
+    if (!feedback) {
+      return Promise.reject(new Error("Describe how you would like the design refined."));
+    }
+
+    await wait(AI_RENDER_DELAY);
+    const design = db.aiDesigns.find((item) => item.id === request.conceptId);
+    if (!design) {
+      return Promise.reject(new Error("This concept is no longer available in the atelier."));
+    }
+
+    /* The mock re-renders the concept from the refinement words: the atelier
+       note stays with the design, the plate is re-issued and the customer's
+       latest words become the concept's prompt summary. */
+    const plate = design.variationPlates[0] ?? design.image;
+    return emit({ ...buildConcept(design, feedback, request.purity), images: [{ ...plate }] });
   },
 };
 

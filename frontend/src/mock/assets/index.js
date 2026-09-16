@@ -50,6 +50,16 @@ export const media = {
   /* AI Jewellery Studio */
   aiTriptych,
 
+  /* AI concept gallery — stills the mock atelier renders as generated
+     concepts. They reuse the house's catalogue and editorial photography;
+     a future AI backend returns its own render URLs through these keys. */
+  aiConceptNecklace: necklacesCategory,
+  aiConceptRing: ringsCategory,
+  aiConceptEarrings: earringsCategory,
+  aiConceptBracelet: braceletsCategory,
+  aiConceptBridal: bridalEditorial,
+  aiConceptAtelier: atelierStill,
+
   /* Branches (individual store photography) */
   flagshipStore: boutiqueBhubaneswar,
   boutiqueCuttack: boutiqueCuttackImg,

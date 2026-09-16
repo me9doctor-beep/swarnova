@@ -31,7 +31,7 @@ export const homepage = {
         },
         body: "Jewellery crafted with timeless artistry and imagined through a new generation of technology — from our master karigars to your fingertips.",
         primaryCta: { label: "Explore Collections", href: "#collections" },
-        secondaryCta: { label: "Create with AI", href: "#ai-studio" },
+        secondaryCta: { label: "Create with AI", href: "/ai-studio" },
         image: {
           src: media.heroEditorial,
           alt: "Indian model in a deep burgundy silk drape wearing an ornate 22K gold and polki diamond choker necklace",

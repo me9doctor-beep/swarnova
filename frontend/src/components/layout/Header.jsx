@@ -81,7 +81,7 @@ function MobileMenu({ open, onClose, navigation }) {
             Explore Collections
           </Button>
           <Button
-            href="#ai-studio"
+            href="/ai-studio"
             variant="outline"
             className="w-full"
             onClick={onClose}
