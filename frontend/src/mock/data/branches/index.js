@@ -3,10 +3,15 @@ import { media } from "../../assets/index.js";
 /**
  * Physical boutique network. Mirrors the future branches API.
  * openingHours uses ISO weekday keys for easy calendar rendering.
+ *
+ * `status` (Phase 8) is the platform governance state: "active" branches
+ * trade and appear on the storefront; "disabled" branches are hidden from
+ * the storefront but never deleted — their history stays attached.
  */
 export const branches = [
   {
     id: "BR-001",
+    status: "active",
     name: "Swarnova Bhubaneswar",
     flagship: true,
     city: "Bhubaneswar",
@@ -28,6 +33,7 @@ export const branches = [
   },
   {
     id: "BR-002",
+    status: "active",
     name: "Swarnova Cuttack",
     flagship: false,
     city: "Cuttack",
@@ -49,6 +55,7 @@ export const branches = [
   },
   {
     id: "BR-003",
+    status: "active",
     name: "Swarnova Rourkela",
     flagship: false,
     city: "Rourkela",
