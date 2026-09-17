@@ -33,6 +33,7 @@ export default function ProfilePage() {
 
   const [isEditing, setIsEditing] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [saveError, setSaveError] = useState(null);
 
   const [form, setForm] = useState({
     name: "",
@@ -87,17 +88,27 @@ export default function ProfilePage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    await updateProfile({
-      name: form.name,
-      email: form.email,
-      phone: form.phone,
-      dateOfBirth: form.dateOfBirth,
-      preferences: {
-        preferredMetal: form.preferredMetal,
-        ringSize: form.ringSize,
-        favouriteStyle: form.favouriteStyle,
-      },
-    });
+    setSaveError(null);
+    /* The provider is authoritative — its rejections (validation, lapsed
+       session) render inline rather than escaping as unhandled errors. */
+    try {
+      await updateProfile({
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
+        dateOfBirth: form.dateOfBirth,
+        preferences: {
+          preferredMetal: form.preferredMetal,
+          ringSize: form.ringSize,
+          favouriteStyle: form.favouriteStyle,
+        },
+      });
+    } catch (caught) {
+      setSaveError(
+        caught?.message ?? "We could not save your profile. Please try again."
+      );
+      return;
+    }
     setIsEditing(false);
     setSaveSuccess(true);
   };
@@ -139,6 +150,15 @@ export default function ProfilePage() {
         >
           <Check size={16} strokeWidth={2} aria-hidden="true" />
           <span>Your client profile and preferences have been updated successfully.</span>
+        </div>
+      )}
+
+      {saveError && (
+        <div
+          role="alert"
+          className="border border-state-error/30 bg-state-error-soft p-4 text-body-sm text-state-error"
+        >
+          {saveError}
         </div>
       )}
 

@@ -14,6 +14,11 @@ import AiStudioPage from "../pages/customer/ai-studio/AiStudioPage.jsx";
 import VirtualTryOnPage from "../pages/customer/virtual-try-on/VirtualTryOnPage.jsx";
 import CartPage from "../pages/customer/cart/CartPage.jsx";
 
+import CustomerLoginPage from "../pages/customer/auth/CustomerLoginPage.jsx";
+import CustomerRegisterPage from "../pages/customer/auth/CustomerRegisterPage.jsx";
+import ForgotPasswordPage from "../pages/customer/auth/ForgotPasswordPage.jsx";
+import ResetPasswordPage from "../pages/customer/auth/ResetPasswordPage.jsx";
+
 import AccountLayout from "../pages/customer/account/AccountLayout.jsx";
 import AccountOverviewPage from "../pages/customer/account/AccountOverviewPage.jsx";
 import ProfilePage from "../pages/customer/account/ProfilePage.jsx";
@@ -72,6 +77,8 @@ import NotFoundPage from "../pages/NotFoundPage.jsx";
 
 import RoleBoundary from "../features/authentication/RoleBoundary.jsx";
 import RequireCapability from "../features/authentication/RequireCapability.jsx";
+import RequireCustomer from "../features/customer-auth/RequireCustomer.jsx";
+import GuestOnly from "../features/customer-auth/GuestOnly.jsx";
 import { ROLES, STAFF_LOGIN_PATH } from "../features/authentication/roles.js";
 import { CAPABILITIES } from "../features/authentication/capabilities.js";
 
@@ -90,9 +97,14 @@ import { CAPABILITIES } from "../features/authentication/capabilities.js";
  *   Customer      /            /collections  /collections/:slug
  *                 /category/:slug  /products  /product/:id  /ai-studio
  *                 /virtual-try-on  /cart
+ *                 /login  /register  /forgot-password  /reset-password
+ *                   — the customer auth surface (guest-only for /login and
+ *                   /register: an authenticated customer lands in /account)
  *                 /account     /account/profile  /account/wishlist
  *                 /account/saved-designs  /account/saved-try-ons
  *                 /account/addresses  /account/orders  /account/orders/:id
+ *                   — behind RequireCustomer: guests bounce to
+ *                   /login?returnTo=<destination>
  *                 (planned: /stores  /checkout)
  *   Admin         /admin       business operations dashboard
  *                 /admin/products[/:id]  /admin/orders[/:id]
@@ -137,8 +149,30 @@ export const routeTree = [
       { path: "virtual-try-on", element: <VirtualTryOnPage /> },
       { path: "cart", element: <CartPage /> },
       {
+        path: "login",
+        element: (
+          <GuestOnly>
+            <CustomerLoginPage />
+          </GuestOnly>
+        ),
+      },
+      {
+        path: "register",
+        element: (
+          <GuestOnly>
+            <CustomerRegisterPage />
+          </GuestOnly>
+        ),
+      },
+      { path: "forgot-password", element: <ForgotPasswordPage /> },
+      { path: "reset-password", element: <ResetPasswordPage /> },
+      {
         path: "account",
-        element: <AccountLayout />,
+        element: (
+          <RequireCustomer>
+            <AccountLayout />
+          </RequireCustomer>
+        ),
         children: [
           { index: true, element: <AccountOverviewPage /> },
           { path: "profile", element: <ProfilePage /> },

@@ -32,8 +32,10 @@ import mockProvider from "./mock/mockProvider.js";
  * inventory, branches, employees, reports, business overview); Phase 10 adds
  * the Employee / branch operations contract — the counter-side reads and
  * actions, every one of them resolved and scoped from the session actor
- * store-side. All are declared optional so an API provider can land the
- * sources independently.
+ * store-side; Phase 11 adds the customer authentication contract — sign-in,
+ * registration, session and password reset against the customer registry,
+ * with every account read/write re-scoped to the session customer. All are
+ * declared optional so an API provider can land the sources independently.
  */
 const DataContext = createContext(mockProvider);
 
@@ -134,6 +136,13 @@ DataProvider.propTypes = {
     getEmployeeReports: PropTypes.func,
     getEmployeeProfile: PropTypes.func,
     updateEmployeeProfile: PropTypes.func,
+    /* Phase 11 — customer authentication contract */
+    authenticateCustomer: PropTypes.func,
+    registerCustomer: PropTypes.func,
+    getCurrentCustomer: PropTypes.func,
+    logoutCustomer: PropTypes.func,
+    requestCustomerPasswordReset: PropTypes.func,
+    resetCustomerPassword: PropTypes.func,
   }),
   children: PropTypes.node.isRequired,
 };

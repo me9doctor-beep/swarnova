@@ -39,6 +39,32 @@ export default function AddressesPage() {
   const [editingId, setEditingId] = useState(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState(null);
+  const [actionError, setActionError] = useState(null);
+
+  /* List actions are provider calls too — their rejections (lapsed session)
+     render inline rather than escaping as unhandled errors. */
+  const handleDelete = async (id) => {
+    setActionError(null);
+    try {
+      await deleteAddress(id);
+    } catch (caught) {
+      setActionError(
+        caught?.message ?? "We could not delete this address. Please try again."
+      );
+    }
+  };
+
+  const handleSetDefault = async (id) => {
+    setActionError(null);
+    try {
+      await setDefault(id);
+    } catch (caught) {
+      setActionError(
+        caught?.message ??
+          "We could not update your default address. Please try again."
+      );
+    }
+  };
 
   const handleOpenAdd = () => {
     setEditingId(null);
@@ -86,10 +112,19 @@ export default function AddressesPage() {
       return;
     }
 
-    if (editingId) {
-      await updateAddress({ ...formData, id: editingId });
-    } else {
-      await addAddress(formData);
+    /* The provider is authoritative — its rejections (validation, lapsed
+       session) render on the form rather than escaping as unhandled errors. */
+    try {
+      if (editingId) {
+        await updateAddress({ ...formData, id: editingId });
+      } else {
+        await addAddress(formData);
+      }
+    } catch (caught) {
+      setFormError(
+        caught?.message ?? "We could not save this address. Please try again."
+      );
+      return;
     }
 
     handleCancelForm();
@@ -124,6 +159,15 @@ export default function AddressesPage() {
           </Button>
         )}
       </div>
+
+      {actionError && (
+        <div
+          role="alert"
+          className="border border-state-error/30 bg-state-error-soft p-4 text-body-sm text-state-error"
+        >
+          {actionError}
+        </div>
+      )}
 
       {/* Address Form (Add / Edit) */}
       {formOpen && (
@@ -297,7 +341,7 @@ export default function AddressesPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => deleteAddress(addr.id)}
+                    onClick={() => handleDelete(addr.id)}
                     className="font-sans text-caption font-medium uppercase tracking-[0.2em] text-text-muted hover:text-state-error flex items-center gap-1"
                   >
                     <Trash2 size={12} /> Delete
@@ -307,7 +351,7 @@ export default function AddressesPage() {
                 {!addr.isDefault && (
                   <button
                     type="button"
-                    onClick={() => setDefault(addr.id)}
+                    onClick={() => handleSetDefault(addr.id)}
                     className="font-sans text-caption font-medium uppercase tracking-[0.18em] text-brand-accent-strong hover:underline"
                   >
                     Set as Default

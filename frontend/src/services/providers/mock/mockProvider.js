@@ -86,6 +86,16 @@
  *   adjustInventoryStock(id, adj, actor)   getInventoryMovements(query)
  *   getBranchOperations()            getAdminReports()
  *   getCapabilityProfiles()          createGovernanceEmployee(d, actor)
+ *
+ * CUSTOMER IDENTITY (Phase 11) — the customer authentication contract,
+ * fulfilled by the SAME shared governance store. The mock holds the session
+ * as the authenticated customer id (in memory, mirrored to local storage so
+ * a refresh keeps the customer signed in — the API provider resolves the
+ * same identity from its own session/token instead). Every account read and
+ * write below re-resolves ownership from that session id store-side:
+ *   authenticateCustomer(credentials)  registerCustomer(payload)
+ *   getCurrentCustomer()               logoutCustomer()
+ *   requestCustomerPasswordReset(id)   resetCustomerPassword(payload)
  */
 import * as db from "../../../mock/data/index.js";
 import * as gov from "./governanceStore.js";
@@ -211,6 +221,42 @@ function resolveTryOnSource(sourceType, sourceId, products = db.products) {
     return { sourceType, sourceId, jewellery: jewelleryFromProduct(product) };
   }
   return null;
+}
+
+/**
+ * The mock customer session — the authenticated customer id, and nothing
+ * else. No token, no secret, no credential is ever persisted: the id alone
+ * re-resolves the session against the canonical store, exactly as a backend
+ * session cookie re-resolves server-side. Every access is guarded so the
+ * provider also loads outside a browser (tests, SSR).
+ */
+const CUSTOMER_SESSION_KEY = "swarnova.customer.session";
+
+function readStoredCustomerSession() {
+  try {
+    if (typeof localStorage === "undefined") return null;
+    return localStorage.getItem(CUSTOMER_SESSION_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredCustomerSession(customerId) {
+  try {
+    if (typeof localStorage === "undefined") return;
+    localStorage.setItem(CUSTOMER_SESSION_KEY, customerId);
+  } catch {
+    /* Private browsing etc. — the in-memory session still holds for the visit. */
+  }
+}
+
+function clearStoredCustomerSession() {
+  try {
+    if (typeof localStorage === "undefined") return;
+    localStorage.removeItem(CUSTOMER_SESSION_KEY);
+  } catch {
+    /* Nothing sensitive was stored; nothing leaks. */
+  }
 }
 
 /** Product orderings the contract supports. "featured" is the default. */
@@ -437,109 +483,139 @@ export const mockProvider = {
   },
 
   /* --------------------------------------------------------------------------
-   * Customer account & commerce (Phase 7)
+   * Customer authentication & identity (Phase 11)
+   * --------------------------------------------------------------------------
+   * The session is the authenticated customer id — held in memory, mirrored
+   * to local storage so a refresh keeps the customer signed in. Every
+   * account method below hands that id to the canonical store, which
+   * re-resolves ownership itself; without a session the store rejects with
+   * SESSION_EXPIRED, exactly as an unauthenticated API call would 401.
    * ------------------------------------------------------------------------ */
-  _profile: null,
-  _addresses: null,
+
+  /* `undefined` until first read — the stored session hydrates lazily so a
+     sign-in during the visit is never overwritten by a stale stored id. */
+  _customerSessionId: undefined,
+
+  customerSessionId() {
+    if (this._customerSessionId === undefined) {
+      this._customerSessionId = readStoredCustomerSession();
+    }
+    return this._customerSessionId;
+  },
+
+  setCustomerSession(customerId) {
+    this._customerSessionId = customerId ?? null;
+    if (customerId) writeStoredCustomerSession(customerId);
+    else clearStoredCustomerSession();
+  },
+
+  authenticateCustomer(credentials = {}) {
+    const result = gov.authenticateCustomer(this.getStore(), credentials);
+    this.setCustomerSession(result.customer.id);
+    return Promise.resolve({ authenticated: true, customer: emit(result.customer) });
+  },
+
+  registerCustomer(payload = {}) {
+    const result = gov.registerCustomer(this.getStore(), payload);
+    this.setCustomerSession(result.customer.id);
+    return Promise.resolve({ authenticated: true, customer: emit(result.customer) });
+  },
+
+  getCurrentCustomer() {
+    const customerId = this.customerSessionId();
+    if (!customerId) return Promise.resolve({ authenticated: false, customer: null });
+    try {
+      const record = gov.resolveCustomerScope(this.getStore(), customerId);
+      return Promise.resolve({
+        authenticated: true,
+        customer: gov.toCustomerPublic(record),
+      });
+    } catch {
+      /* A stale stored id (disabled account, fresh seed) is simply no session. */
+      this.setCustomerSession(null);
+      return Promise.resolve({ authenticated: false, customer: null });
+    }
+  },
+
+  logoutCustomer() {
+    this.setCustomerSession(null);
+    return Promise.resolve({ authenticated: false });
+  },
+
+  requestCustomerPasswordReset(identifier) {
+    return Promise.resolve(
+      emit(gov.requestCustomerPasswordReset(this.getStore(), identifier))
+    );
+  },
+
+  resetCustomerPassword(payload = {}) {
+    return Promise.resolve(emit(gov.resetCustomerPassword(this.getStore(), payload)));
+  },
+
+  /* --------------------------------------------------------------------------
+   * Customer account & commerce (Phase 7 reads, Phase 11 ownership)
+   * --------------------------------------------------------------------------
+   * Signatures are unchanged — hooks and services call them exactly as
+   * before — but every one now resolves the caller from the customer
+   * session and reads/writes only that customer's slice of the canonical
+   * store. Customer A can no longer reach Customer B by any argument,
+   * because there is no identity argument to forge.
+   * ------------------------------------------------------------------------ */
 
   getCustomerProfile() {
-    if (!this._profile) {
-      this._profile = emit(db.customerProfile);
-    }
-    return Promise.resolve(emit(this._profile));
+    return Promise.resolve(
+      gov.getCustomerProfile(this.getStore(), this.customerSessionId())
+    );
   },
 
   updateCustomerProfile(data = {}) {
-    if (!this._profile) {
-      this._profile = emit(db.customerProfile);
-    }
-    this._profile = {
-      ...this._profile,
-      ...data,
-      preferences: {
-        ...this._profile.preferences,
-        ...(data.preferences || {}),
-      },
-    };
-    return Promise.resolve(emit(this._profile));
+    return Promise.resolve(
+      gov.updateCustomerProfile(this.getStore(), this.customerSessionId(), data)
+    );
   },
 
   getCustomerAddresses() {
-    if (!this._addresses) {
-      this._addresses = emit(db.customerAddresses);
-    }
-    return Promise.resolve(emit(this._addresses));
+    return Promise.resolve(
+      gov.listCustomerAddresses(this.getStore(), this.customerSessionId())
+    );
   },
 
   addCustomerAddress(address = {}) {
-    if (!this._addresses) {
-      this._addresses = emit(db.customerAddresses);
-    }
-    const newAddress = {
-      ...address,
-      id: `ADDR-${Date.now()}`,
-      isDefault: Boolean(address.isDefault || this._addresses.length === 0),
-    };
-    if (newAddress.isDefault) {
-      this._addresses = this._addresses.map((a) => ({ ...a, isDefault: false }));
-    }
-    this._addresses = [newAddress, ...this._addresses];
-    return Promise.resolve(emit(newAddress));
+    return Promise.resolve(
+      gov.addCustomerAddress(this.getStore(), this.customerSessionId(), address)
+    );
   },
 
   updateCustomerAddress(address = {}) {
-    if (!this._addresses) {
-      this._addresses = emit(db.customerAddresses);
-    }
-    if (address.isDefault) {
-      this._addresses = this._addresses.map((a) => ({ ...a, isDefault: false }));
-    }
-    this._addresses = this._addresses.map((a) =>
-      a.id === address.id ? { ...a, ...address } : a
+    return Promise.resolve(
+      gov.updateCustomerAddress(this.getStore(), this.customerSessionId(), address)
     );
-    return Promise.resolve(emit(address));
   },
 
   deleteCustomerAddress(id) {
-    if (!this._addresses) {
-      this._addresses = emit(db.customerAddresses);
-    }
-    const target = this._addresses.find((a) => a.id === id);
-    this._addresses = this._addresses.filter((a) => a.id !== id);
-    if (target?.isDefault && this._addresses.length > 0) {
-      this._addresses[0].isDefault = true;
-    }
-    return Promise.resolve(emit(id));
+    return Promise.resolve(
+      gov.deleteCustomerAddress(this.getStore(), this.customerSessionId(), id)
+    );
   },
 
   setDefaultCustomerAddress(id) {
-    if (!this._addresses) {
-      this._addresses = emit(db.customerAddresses);
-    }
-    this._addresses = this._addresses.map((a) => ({
-      ...a,
-      isDefault: a.id === id,
-    }));
-    return Promise.resolve(emit(this._addresses));
+    return Promise.resolve(
+      gov.setDefaultCustomerAddress(this.getStore(), this.customerSessionId(), id)
+    );
   },
 
   /* The storefront account sees its own slice of the ONE canonical order
      book — the Admin console operates the whole book from the same store. */
   getOrders() {
-    const customerId = db.customerProfile.id;
-    const orders = this.getStore()
-      .orders.filter((order) => order.customerId === customerId)
-      .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
-    return Promise.resolve(emit(orders));
+    return Promise.resolve(
+      gov.listCustomerOrders(this.getStore(), this.customerSessionId())
+    );
   },
 
   getOrder(id) {
-    const customerId = db.customerProfile.id;
-    const order = this.getStore().orders.find(
-      (item) =>
-        (item.id === id || item.orderNumber === id) && item.customerId === customerId
+    return Promise.resolve(
+      gov.getCustomerOrder(this.getStore(), this.customerSessionId(), id)
     );
-    return Promise.resolve(emit(order ?? null));
   },
 
   /* --------------------------------------------------------------------------
