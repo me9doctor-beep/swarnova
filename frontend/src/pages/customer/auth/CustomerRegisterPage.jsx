@@ -2,10 +2,12 @@ import { useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import AuthAlert from "../../../components/auth/AuthAlert.jsx";
 import AuthShell from "../../../components/auth/AuthShell.jsx";
+import GoogleSignInButton from "../../../components/auth/GoogleSignInButton.jsx";
 import Button from "../../../components/ui/Button.jsx";
 import Checkbox from "../../../components/ui/Checkbox.jsx";
 import Input from "../../../components/ui/Input.jsx";
 import { useCustomerRegister } from "../../../features/customer-auth/useCustomerRegister.js";
+import { useCustomerGoogleAuth } from "../../../features/customer-auth/useCustomerGoogleAuth.js";
 import { translateCustomerAuthError } from "../../../features/customer-auth/customerAuthErrors.js";
 import {
   CUSTOMER_LOGIN_PATH,
@@ -27,7 +29,13 @@ export default function CustomerRegisterPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const returnTo = safeReturnTo(params.get("returnTo"));
-  const { register, busy, error, clearError } = useCustomerRegister();
+  const { register, busy: registerBusy, error: registerError, clearError: clearRegisterError } = useCustomerRegister();
+  const {
+    initiateGoogleAuth,
+    isRedirecting,
+    error: googleError,
+    clearError: clearGoogleError,
+  } = useCustomerGoogleAuth();
 
   const [form, setForm] = useState({
     name: "",
@@ -44,7 +52,8 @@ export default function CustomerRegisterPage() {
       field === "acceptedTerms" ? event.target.checked : event.target.value;
     setForm((prev) => ({ ...prev, [field]: value }));
     setErrors((prev) => ({ ...prev, [field]: undefined }));
-    if (error) clearError();
+    if (registerError) clearRegisterError();
+    if (googleError) clearGoogleError();
   };
 
   const submit = async (event) => {
@@ -56,9 +65,21 @@ export default function CustomerRegisterPage() {
       await register(form);
       navigate(returnTo, { replace: true });
     } catch {
-      /* `error` renders the translated provider message below. */
+      /* `registerError` renders the translated provider message below. */
     }
   };
+
+  const handleGoogleSignUp = async () => {
+    if (registerError) clearRegisterError();
+    try {
+      await initiateGoogleAuth({ returnTo });
+    } catch {
+      /* `googleError` renders below. */
+    }
+  };
+
+  const activeError = registerError || googleError;
+  const busy = registerBusy || isRedirecting;
 
   return (
     <AuthShell
@@ -137,14 +158,21 @@ export default function CustomerRegisterPage() {
           ) : null}
         </div>
 
-        {error ? (
-          <AuthAlert>{translateCustomerAuthError(error)}</AuthAlert>
+        {activeError ? (
+          <AuthAlert>{translateCustomerAuthError(activeError)}</AuthAlert>
         ) : null}
 
         <Button type="submit" className="w-full" disabled={busy}>
-          {busy ? "Creating account…" : "Create Account"}
+          {registerBusy ? "Creating account…" : "Create Account"}
         </Button>
       </form>
+
+      <GoogleSignInButton
+        onClick={handleGoogleSignUp}
+        busy={isRedirecting}
+        disabled={busy}
+        label="Sign up with Google"
+      />
 
       <div className="mt-6 border-t border-border-subtle pt-6 text-center">
         <p className="font-sans text-body-sm text-text-secondary">
