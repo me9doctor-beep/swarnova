@@ -50,14 +50,35 @@
  * getProduct(id) is the single-piece query — the shape of a future
  * `GET /products/:id`. An unknown id resolves to `null` rather than rejecting,
  * exactly as a 404 would, so the screen can render its own not-found state.
+ *
+ * GOVERNANCE (Phase 8) — the Super Admin contract, fulfilled by the shared
+ * governance store (`governanceStore.js`). The store holds ONE canonical,
+ * mutable copy of the governed domains; the customer-facing getters above
+ * read from the same store, so publishing a product or disabling a category
+ * takes effect across the platform with no duplicate database:
+ *
+ *   getPlatformOverview()            getGovernanceProducts(query)
+ *   getGovernanceProduct(id)         createGovernanceProduct(data)
+ *   updateGovernanceProduct(id, d)   transitionGovernanceProduct(id, action, payload)
+ *   getMediaLibrary(query)           uploadMediaAsset(file)
+ *   attachMediaToProduct(id, pid, slot)   deleteMediaAsset(id)
+ *   getGovernanceCategories()        createGovernanceCategory(data)
+ *   updateGovernanceCategory(id, d)  getGovernanceCollections()
+ *   createGovernanceCollection(d)    updateGovernanceCollection(id, d)
+ *   getGovernanceHomepage()          updateHomepageSection(id, patch)
+ *   moveHomepageSection(id, dir)     getGovernanceCampaigns()
+ *   updateCampaignStatus(id, s)      getGovernanceBranches()
+ *   setBranchStatus(id, s)           getGovernanceAdmins()
+ *   createGovernanceAdmin(d)         updateGovernanceAdmin(id, d)
+ *   getGovernanceEmployees()         updateGovernanceEmployee(id, d)
+ *   updateGoldRates(rates)           getPlatformSettings()
+ *   updatePlatformSettings(patch)    getAuditLogs(query)
  */
 import * as db from "../../../mock/data/index.js";
+import * as gov from "./governanceStore.js";
 
-/** Return a detached copy so callers can never mutate the mock database. */
-function emit(value) {
-  if (value === null || value === undefined) return value;
-  return JSON.parse(JSON.stringify(value));
-}
+/** Reuse the governance store's detached-copy helper. */
+const emit = gov.emit;
 
 function byOrder(a, b) {
   return (a.order ?? 0) - (b.order ?? 0);
@@ -163,17 +184,17 @@ function jewelleryFromProduct(product) {
   };
 }
 
-function resolveTryOnSource(sourceType, sourceId) {
+function resolveTryOnSource(sourceType, sourceId, products = db.products) {
   if (sourceType === "ai-design") {
     const design = db.aiDesigns.find((item) => item.id === sourceId);
     if (!design) return null;
     return { sourceType, sourceId, jewellery: jewelleryFromDesign(design) };
   }
   if (sourceType === "product") {
-    const product = db.products.find((item) => item.id === sourceId);
+    const product = products.find((item) => item.id === sourceId);
     /* Only genuinely eligible pieces enter the room — an ineligible product
        resolves to null exactly like an unknown one. */
-    if (!product || !product.tryOnAvailable) return null;
+    if (!product || !product.tryOnAvailable || product.status !== "published") return null;
     return { sourceType, sourceId, jewellery: jewelleryFromProduct(product) };
   }
   return null;
@@ -192,12 +213,23 @@ const PRODUCT_SORTS = {
 export const mockProvider = {
   name: "mock",
 
+  /* ----------------------------------------------------------------------
+   * The one canonical store. Lazily created once per page load; every
+   * governed domain (customer reads AND Super Admin writes) flows through
+   * it, so a governance action is immediately visible platform-wide.
+   * -------------------------------------------------------------------- */
+  _store: null,
+  getStore() {
+    if (!this._store) this._store = gov.createGovernanceStore();
+    return this._store;
+  },
+
   getSite() {
     return Promise.resolve(emit(db.site));
   },
 
   getHomepage() {
-    const homepage = emit(db.homepage);
+    const homepage = emit(this.getStore().homepage);
     homepage.sections = homepage.sections
       .filter((section) => section.enabled !== false)
       .sort(byOrder);
@@ -206,16 +238,18 @@ export const mockProvider = {
 
   getCategories() {
     return Promise.resolve(
-      emit(db.categories.filter((c) => c.enabled !== false).sort(byOrder))
+      emit(this.getStore().categories.filter((c) => c.enabled !== false).sort(byOrder))
     );
   },
 
   getCollections() {
-    return Promise.resolve(emit(db.collections));
+    return Promise.resolve(emit(this.getStore().collections));
   },
 
   getProducts(query = {}) {
-    let list = [...db.products];
+    /* The storefront only ever sees published pieces — the lifecycle states
+       belong to the governance experience. */
+    let list = this.getStore().products.filter((p) => p.status === "published");
 
     if (query.categoryId) list = list.filter((p) => p.categoryId === query.categoryId);
     if (query.collectionId) list = list.filter((p) => p.collectionId === query.collectionId);
@@ -239,11 +273,17 @@ export const mockProvider = {
   },
 
   getProduct(id) {
-    return Promise.resolve(emit(db.products.find((product) => product.id === id) ?? null));
+    return Promise.resolve(
+      emit(
+        this.getStore().products.find(
+          (product) => product.id === id && product.status === "published"
+        ) ?? null
+      )
+    );
   },
 
   getBranches(query = {}) {
-    let list = [...db.branches];
+    let list = this.getStore().branches.filter((b) => b.status !== "disabled");
     if (query.featured) list = list.filter((b) => b.featured);
     if (typeof query.limit === "number") list = list.slice(0, query.limit);
     return Promise.resolve(emit(list));
@@ -256,11 +296,11 @@ export const mockProvider = {
   },
 
   getActiveCampaign() {
-    return Promise.resolve(emit(db.getActiveCampaign()));
+    return Promise.resolve(emit(db.getActiveCampaign(this.getStore().campaigns)));
   },
 
   getGoldRateBoard() {
-    return Promise.resolve(emit(db.goldRateBoard));
+    return Promise.resolve(emit(this.getStore().goldRateBoard));
   },
 
   getAiStudio() {
@@ -326,7 +366,9 @@ export const mockProvider = {
 
   getTryOnSource(source = {}) {
     return Promise.resolve(
-      emit(resolveTryOnSource(source.sourceType, source.sourceId))
+      emit(
+        resolveTryOnSource(source.sourceType, source.sourceId, this.getStore().products)
+      )
     );
   },
 
@@ -334,7 +376,7 @@ export const mockProvider = {
     const { sourceType, sourceId } = request;
     const photo = request.photo;
 
-    const source = resolveTryOnSource(sourceType, sourceId);
+    const source = resolveTryOnSource(sourceType, sourceId, this.getStore().products);
     if (!source) {
       return Promise.reject(
         new Error(
@@ -482,6 +524,142 @@ export const mockProvider = {
     }
     const order = this._orders.find((o) => o.id === id || o.orderNumber === id);
     return Promise.resolve(emit(order ?? null));
+  },
+
+  /* --------------------------------------------------------------------------
+   * Platform governance (Phase 8)
+   * --------------------------------------------------------------------------
+   * Every method delegates to the shared governance store, which enforces
+   * the lifecycle, readiness and usage contracts. A future API provider
+   * exposes the same methods over HTTP.
+   * ------------------------------------------------------------------------ */
+
+  getPlatformOverview() {
+    return Promise.resolve(gov.platformOverview(this.getStore()));
+  },
+
+  getGovernanceProducts(query = {}) {
+    return Promise.resolve(gov.listGovernanceProducts(this.getStore(), query));
+  },
+
+  getGovernanceProduct(id) {
+    return Promise.resolve(gov.getGovernanceProduct(this.getStore(), id));
+  },
+
+  createGovernanceProduct(data = {}) {
+    return Promise.resolve(gov.createGovernanceProduct(this.getStore(), data));
+  },
+
+  updateGovernanceProduct(id, data = {}) {
+    return Promise.resolve(gov.updateGovernanceProduct(this.getStore(), id, data));
+  },
+
+  transitionGovernanceProduct(id, action, payload = {}) {
+    return Promise.resolve(gov.transitionGovernanceProduct(this.getStore(), id, action, payload));
+  },
+
+  getMediaLibrary(query = {}) {
+    return Promise.resolve(gov.listGovernanceMedia(this.getStore(), query));
+  },
+
+  uploadMediaAsset(file = {}) {
+    return Promise.resolve(gov.uploadGovernanceMedia(this.getStore(), file));
+  },
+
+  attachMediaToProduct(mediaId, productId, slot = "primary") {
+    return Promise.resolve(gov.attachGovernanceMedia(this.getStore(), mediaId, productId, slot));
+  },
+
+  deleteMediaAsset(id) {
+    return Promise.resolve(gov.deleteGovernanceMedia(this.getStore(), id));
+  },
+
+  getGovernanceCategories() {
+    return Promise.resolve(emit(this.getStore().categories));
+  },
+
+  createGovernanceCategory(data = {}) {
+    return Promise.resolve(gov.createGovernanceCategory(this.getStore(), data));
+  },
+
+  updateGovernanceCategory(id, data = {}) {
+    return Promise.resolve(gov.updateGovernanceCategory(this.getStore(), id, data));
+  },
+
+  getGovernanceCollections() {
+    return Promise.resolve(emit(this.getStore().collections));
+  },
+
+  createGovernanceCollection(data = {}) {
+    return Promise.resolve(gov.createGovernanceCollection(this.getStore(), data));
+  },
+
+  updateGovernanceCollection(id, data = {}) {
+    return Promise.resolve(gov.updateGovernanceCollection(this.getStore(), id, data));
+  },
+
+  getGovernanceHomepage() {
+    return Promise.resolve(gov.getGovernanceHomepage(this.getStore()));
+  },
+
+  updateHomepageSection(id, patch = {}) {
+    return Promise.resolve(gov.updateHomepageSection(this.getStore(), id, patch));
+  },
+
+  moveHomepageSection(id, direction) {
+    return Promise.resolve(gov.moveHomepageSection(this.getStore(), id, direction));
+  },
+
+  getGovernanceCampaigns() {
+    return Promise.resolve(gov.listGovernanceCampaigns(this.getStore()));
+  },
+
+  updateCampaignStatus(id, status) {
+    return Promise.resolve(gov.updateCampaignStatus(this.getStore(), id, status));
+  },
+
+  getGovernanceBranches() {
+    return Promise.resolve(gov.listGovernanceBranches(this.getStore()));
+  },
+
+  setBranchStatus(id, status) {
+    return Promise.resolve(gov.setBranchStatus(this.getStore(), id, status));
+  },
+
+  getGovernanceAdmins() {
+    return Promise.resolve(gov.listGovernanceAdmins(this.getStore()));
+  },
+
+  createGovernanceAdmin(data = {}) {
+    return Promise.resolve(gov.createGovernanceAdmin(this.getStore(), data));
+  },
+
+  updateGovernanceAdmin(id, data = {}) {
+    return Promise.resolve(gov.updateGovernanceAdmin(this.getStore(), id, data));
+  },
+
+  getGovernanceEmployees() {
+    return Promise.resolve(gov.listGovernanceEmployees(this.getStore()));
+  },
+
+  updateGovernanceEmployee(id, data = {}) {
+    return Promise.resolve(gov.updateGovernanceEmployee(this.getStore(), id, data));
+  },
+
+  updateGoldRates(rates = []) {
+    return Promise.resolve(gov.updateGoldRates(this.getStore(), rates));
+  },
+
+  getPlatformSettings() {
+    return Promise.resolve(emit(this.getStore().settings));
+  },
+
+  updatePlatformSettings(patch = {}) {
+    return Promise.resolve(gov.updatePlatformSettings(this.getStore(), patch));
+  },
+
+  getAuditLogs(query = {}) {
+    return Promise.resolve(gov.listAuditLogs(this.getStore(), query));
   },
 };
 

@@ -1,9 +1,24 @@
 import { media } from "../../assets/index.js";
 
 /**
- * Product catalogue. Field names mirror the planned commerce API contract:
+ * Product catalogue — the ONE canonical product source of truth.
+ *
+ * Customer catalogue, Admin views and Super Admin governance all read the
+ * same records; only the view differs (the storefront sees `published`
+ * pieces, the command centre sees every lifecycle state).
+ *
+ * Field names mirror the planned commerce API contract:
  * id / sku / name / description / purity / price (in INR, whole rupees) /
  * weight / categoryId / collectionId / images / rating / flags.
+ *
+ * Governance contract (Phase 8):
+ *
+ *   status      one of "draft" | "submitted" | "approved" | "published" | "rejected"
+ *   governance  { createdBy, updatedAt, submittedAt, approvedAt, publishedAt, rejection }
+ *
+ * The lifecycle is deliberately small — Draft → Submit → Review → Approve →
+ * Publish, with Reject returning the piece for revision. Nothing sits between
+ * those states.
  *
  * `href` is the piece's canonical customer route — `/product/:id`, the one
  * product detail route in `app/router.jsx`. Every product card resolves
@@ -13,8 +28,24 @@ import { media } from "../../assets/index.js";
  * presents in its editorial band. It lives here, in the mock boundary, so the
  * screen stays provider-driven; the API provider returns the same field.
  */
+
+/** Stamps a live catalogue piece with its governance record. */
+function published(product) {
+  return {
+    ...product,
+    status: "published",
+    governance: {
+      createdBy: "Swarnova Atelier",
+      updatedAt: "2026-08-20T10:30:00+05:30",
+      submittedAt: "2026-02-02T09:15:00+05:30",
+      approvedAt: "2026-02-04T12:00:00+05:30",
+      publishedAt: "2026-02-06T10:00:00+05:30",
+      rejection: null,
+    },
+  };
+}
 export const products = [
-  {
+  published({
     id: "JWL-001",
     sku: "SWN-PND-001",
     name: "Hrudaya Diamond Pendant",
@@ -38,8 +69,8 @@ export const products = [
     bestseller: true,
     availability: "available",
     href: "/product/JWL-001",
-  },
-  {
+  }),
+  published({
     id: "JWL-002",
     sku: "SWN-RNG-014",
     name: "Eternal Halo Ring",
@@ -63,8 +94,8 @@ export const products = [
     bestseller: true,
     availability: "available",
     href: "/product/JWL-002",
-  },
-  {
+  }),
+  published({
     id: "JWL-003",
     sku: "SWN-ERG-022",
     name: "Aabharan Drop Earrings",
@@ -88,8 +119,8 @@ export const products = [
     bestseller: true,
     availability: "available",
     href: "/product/JWL-003",
-  },
-  {
+  }),
+  published({
     id: "JWL-004",
     sku: "SWN-BRC-008",
     name: "Lumina Tennis Bracelet",
@@ -113,8 +144,8 @@ export const products = [
     bestseller: true,
     availability: "available",
     href: "/product/JWL-004",
-  },
-  {
+  }),
+  published({
     id: "JWL-005",
     sku: "SWN-NCK-031",
     name: "Pushp Pendant Necklace",
@@ -138,8 +169,8 @@ export const products = [
     bestseller: false,
     availability: "available",
     href: "/product/JWL-005",
-  },
-  {
+  }),
+  published({
     id: "JWL-006",
     sku: "SWN-RNG-021",
     name: "Aadvika Halo Ring",
@@ -163,8 +194,8 @@ export const products = [
     bestseller: false,
     availability: "available",
     href: "/product/JWL-006",
-  },
-  {
+  }),
+  published({
     id: "JWL-007",
     sku: "SWN-ERG-030",
     name: "Aabha Chandelier Earrings",
@@ -188,8 +219,8 @@ export const products = [
     bestseller: false,
     availability: "available",
     href: "/product/JWL-007",
-  },
-  {
+  }),
+  published({
     id: "JWL-008",
     sku: "SWN-BRC-017",
     name: "Saanjh Diamond Line Bracelet",
@@ -213,6 +244,155 @@ export const products = [
     bestseller: false,
     availability: "available",
     href: "/product/JWL-008",
+  }),
+
+  /* ----------------------------------------------------------------------
+   * Governance seeds (Phase 8) — pieces moving through the review lifecycle.
+   * They are canonical catalogue records like any other; the storefront
+   * simply never sees them until they reach `published`.
+   * -------------------------------------------------------------------- */
+
+  /* DRAFT — started by the Bhubaneswar admin, still missing essentials. */
+  {
+    id: "JWL-009",
+    sku: "SWN-ERG-041",
+    name: "Chandni Pearl Studs",
+    description:
+      "A first draft of the house's round pearl studs — description and pricing follow once the atelier confirms the setting.",
+    purity: "22K",
+    price: null,
+    currency: "INR",
+    weight: null,
+    categoryId: "CAT-EARRINGS",
+    collectionId: "COL-EVERYDAY",
+    images: [],
+    rating: null,
+    tryOnAvailable: false,
+    featured: false,
+    bestseller: false,
+    availability: "available",
+    href: "/product/JWL-009",
+    status: "draft",
+    governance: {
+      createdBy: "Ishita Rath — Admin, Bhubaneswar",
+      updatedAt: "2026-09-15T18:05:00+05:30",
+      submittedAt: null,
+      approvedAt: null,
+      publishedAt: null,
+      rejection: null,
+    },
+  },
+
+  /* SUBMITTED — complete and waiting in the Super Admin review queue. */
+  {
+    id: "JWL-010",
+    sku: "SWN-NCK-034",
+    name: "Mayura Polki Choker",
+    description:
+      "A close-set choker of uncut polki in 22K gold, drawn from the Mayura peacock motif of the Vadhu bridal atelier. The necklace sits high on the collarbone and finishes in a ruby-dotted clasp.",
+    purity: "22K",
+    price: 156800,
+    currency: "INR",
+    weight: "31.4 g",
+    categoryId: "CAT-NECKLACES",
+    collectionId: "COL-BRIDAL",
+    images: [
+      {
+        src: media.productPendant,
+        alt: "22K gold choker necklace with uncut polki settings on ivory fabric",
+      },
+    ],
+    rating: null,
+    tryOnAvailable: true,
+    featured: false,
+    bestseller: false,
+    availability: "available",
+    href: "/product/JWL-010",
+    status: "submitted",
+    governance: {
+      createdBy: "Ishita Rath — Admin, Bhubaneswar",
+      updatedAt: "2026-09-16T11:40:00+05:30",
+      submittedAt: "2026-09-16T11:40:00+05:30",
+      approvedAt: null,
+      publishedAt: null,
+      rejection: null,
+    },
+  },
+
+  /* APPROVED — reviewed by the Super Admin, ready to publish. */
+  {
+    id: "JWL-011",
+    sku: "SWN-BRC-035",
+    name: "Surya Heritage Kada",
+    description:
+      "A broad temple-work kada from the Virasat atelier, its rim engraved with the Surya ray motif. Cast solid in 22K gold and finished by hand over nine days.",
+    purity: "22K",
+    price: 88400,
+    currency: "INR",
+    weight: "22.7 g",
+    categoryId: "CAT-BRACELETS",
+    collectionId: "COL-HERITAGE",
+    images: [
+      {
+        src: media.productTennisBracelet,
+        alt: "22K gold temple-work kada bracelet arranged on warm ivory satin",
+      },
+    ],
+    rating: null,
+    tryOnAvailable: false,
+    featured: false,
+    bestseller: false,
+    availability: "available",
+    href: "/product/JWL-011",
+    status: "approved",
+    governance: {
+      createdBy: "Prakash Sahu — Admin, Cuttack",
+      updatedAt: "2026-09-16T16:20:00+05:30",
+      submittedAt: "2026-09-14T10:10:00+05:30",
+      approvedAt: "2026-09-16T16:20:00+05:30",
+      publishedAt: null,
+      rejection: null,
+    },
+  },
+
+  /* REJECTED — returned to the admin with an explicit reason. */
+  {
+    id: "JWL-012",
+    sku: "SWN-NCK-029",
+    name: "Tara Everyday Chain",
+    description: "A light daily-wear chain in 22K gold.",
+    purity: "22K",
+    price: 38900,
+    currency: "INR",
+    weight: "9.8 g",
+    categoryId: "CAT-NECKLACES",
+    collectionId: "COL-EVERYDAY",
+    images: [
+      {
+        src: media.productFloralSet,
+        alt: "22K gold lightweight everyday chain on ivory fabric",
+      },
+    ],
+    rating: null,
+    tryOnAvailable: false,
+    featured: false,
+    bestseller: false,
+    availability: "available",
+    href: "/product/JWL-012",
+    status: "rejected",
+    governance: {
+      createdBy: "Ishita Rath — Admin, Bhubaneswar",
+      updatedAt: "2026-09-17T09:25:00+05:30",
+      submittedAt: "2026-09-15T14:00:00+05:30",
+      approvedAt: null,
+      publishedAt: null,
+      rejection: {
+        reason:
+          "Description is incomplete — add the BIS hallmark and making-charges note, then re-submit.",
+        by: "Super Admin",
+        at: "2026-09-17T09:25:00+05:30",
+      },
+    },
   },
 ];
 

@@ -21,3 +21,10 @@ export { tryOnRoom, tryOnSamples } from "./try-on/index.js";
 export { default as journalArticles } from "./journal/index.js";
 export { customerProfile, customerAddresses } from "./customer/index.js";
 export { default as customerOrders } from "./orders/index.js";
+export { default as mediaLibrary } from "./media/index.js";
+export {
+  platformAdmins,
+  platformEmployees,
+  governanceAuditLog,
+  platformSettings,
+} from "./governance/index.js";

@@ -26,6 +26,22 @@ import OrderDetailPage from "../pages/customer/account/OrderDetailPage.jsx";
 
 import AdminDashboardPage from "../pages/admin/dashboard/AdminDashboardPage.jsx";
 import SuperAdminDashboardPage from "../pages/super-admin/dashboard/SuperAdminDashboardPage.jsx";
+import GovernanceProductsPage from "../pages/super-admin/products/ProductsPage.jsx";
+import GovernanceProductDetailPage from "../pages/super-admin/products/ProductDetailPage.jsx";
+import GovernanceProductEditorPage from "../pages/super-admin/products/ProductEditorPage.jsx";
+import MediaLibraryPage from "../pages/super-admin/media/MediaLibraryPage.jsx";
+import CategoriesPage from "../pages/super-admin/catalogue/CategoriesPage.jsx";
+import CollectionsGovernancePage from "../pages/super-admin/catalogue/CollectionsPage.jsx";
+import HomepagePage from "../pages/super-admin/content/HomepagePage.jsx";
+import CampaignsPage from "../pages/super-admin/content/CampaignsPage.jsx";
+import AiTryOnGovernancePage from "../pages/super-admin/platform/AiTryOnGovernancePage.jsx";
+import GoldRatePage from "../pages/super-admin/platform/GoldRatePage.jsx";
+import BranchesPage from "../pages/super-admin/organization/BranchesPage.jsx";
+import AdminsPage from "../pages/super-admin/organization/AdminsPage.jsx";
+import EmployeesPage from "../pages/super-admin/organization/EmployeesPage.jsx";
+import RolesPage from "../pages/super-admin/governance/RolesPage.jsx";
+import AuditLogsPage from "../pages/super-admin/governance/AuditLogsPage.jsx";
+import SettingsPage from "../pages/super-admin/governance/SettingsPage.jsx";
 import EmployeeDashboardPage from "../pages/employee/dashboard/EmployeeDashboardPage.jsx";
 import NotFoundPage from "../pages/NotFoundPage.jsx";
 
@@ -48,8 +64,15 @@ import { ROLES } from "../features/authentication/roles.js";
  *                 (planned: /stores  /checkout)
  *   Admin         /admin       /admin/products   /admin/inventory
  *                 /admin/orders    /admin/customers
- *   Super Admin   /super-admin /super-admin/users /super-admin/roles
- *                 /super-admin/branches
+ *   Super Admin   /super-admin               command centre
+ *                 /super-admin/products[/new|/:id|/:id/edit]
+ *                 /super-admin/media         /super-admin/categories
+ *                 /super-admin/collections   /super-admin/homepage
+ *                 /super-admin/campaigns     /super-admin/ai-try-on
+ *                 /super-admin/gold-rate     /super-admin/branches
+ *                 /super-admin/admins        /super-admin/employees
+ *                 /super-admin/roles         /super-admin/audit-logs
+ *                 /super-admin/settings
  *   Employee      /employee    /employee/sales   /employee/customers
  *                 /employee/inventory
  */
@@ -108,6 +131,23 @@ export const routeTree = [
         element: <SuperAdminDashboardPage />,
         handle: { crumb: "Command Centre" },
       },
+      { path: "products", element: <GovernanceProductsPage />, handle: { crumb: "Products" } },
+      { path: "products/new", element: <GovernanceProductEditorPage />, handle: { crumb: "New Product" } },
+      { path: "products/:id", element: <GovernanceProductDetailPage />, handle: { crumb: "Product" } },
+      { path: "products/:id/edit", element: <GovernanceProductEditorPage />, handle: { crumb: "Edit Product" } },
+      { path: "media", element: <MediaLibraryPage />, handle: { crumb: "Media" } },
+      { path: "categories", element: <CategoriesPage />, handle: { crumb: "Categories" } },
+      { path: "collections", element: <CollectionsGovernancePage />, handle: { crumb: "Collections" } },
+      { path: "homepage", element: <HomepagePage />, handle: { crumb: "Homepage" } },
+      { path: "campaigns", element: <CampaignsPage />, handle: { crumb: "Campaigns" } },
+      { path: "ai-try-on", element: <AiTryOnGovernancePage />, handle: { crumb: "AI & Try-On" } },
+      { path: "gold-rate", element: <GoldRatePage />, handle: { crumb: "Gold Rate" } },
+      { path: "branches", element: <BranchesPage />, handle: { crumb: "Branches" } },
+      { path: "admins", element: <AdminsPage />, handle: { crumb: "Admins" } },
+      { path: "employees", element: <EmployeesPage />, handle: { crumb: "Employees" } },
+      { path: "roles", element: <RolesPage />, handle: { crumb: "Roles & Permissions" } },
+      { path: "audit-logs", element: <AuditLogsPage />, handle: { crumb: "Audit Logs" } },
+      { path: "settings", element: <SettingsPage />, handle: { crumb: "Settings" } },
     ],
   },
   {

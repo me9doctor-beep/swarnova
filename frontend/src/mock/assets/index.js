@@ -44,6 +44,10 @@ import boutiqueBhubaneswar from "./images/branches/branch1.avif";
 import boutiqueCuttackImg from "./images/branches/branch2.avif";
 import boutiqueRourkelaImg from "./images/branches/branch3.avif";
 
+/* Media library — uploaded editorial awaiting a placement (Phase 8 media
+   governance seeds; not yet referenced by any product or content block) */
+import festiveMakar from "./images/media/festive-makar.jpg";
+
 export const media = {
   /* Homepage */
   heroEditorial,
@@ -84,6 +88,9 @@ export const media = {
   productDiamondHoops: earringsCategory,
   productTennisBracelet: braceletsCategory,
   productEternalBracelet: braceletsCategory,
+
+  /* Media library (unplaced uploads) */
+  festiveMakar,
 
   /* Virtual Try-On */
   tryOnAtelier: wearAi,

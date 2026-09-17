@@ -24,6 +24,11 @@ import mockProvider from "./mock/mockProvider.js";
  *   createAiVariations(id)       refineAiDesign(request)
  *   getTryOnRoom()               getTryOnSource(source)
  *   createTryOn(request)
+ *
+ * Phase 7 added the customer account contract; Phase 8 adds the Super Admin
+ * governance contract (products lifecycle, media library, catalogue, content,
+ * organisation, platform settings and audit) — declared optional so an API
+ * provider can land the two sources independently.
  */
 const DataContext = createContext(mockProvider);
 
@@ -60,6 +65,39 @@ DataProvider.propTypes = {
     setDefaultCustomerAddress: PropTypes.func,
     getOrders: PropTypes.func,
     getOrder: PropTypes.func,
+    /* Phase 8 — platform governance contract */
+    getPlatformOverview: PropTypes.func,
+    getGovernanceProducts: PropTypes.func,
+    getGovernanceProduct: PropTypes.func,
+    createGovernanceProduct: PropTypes.func,
+    updateGovernanceProduct: PropTypes.func,
+    transitionGovernanceProduct: PropTypes.func,
+    getMediaLibrary: PropTypes.func,
+    uploadMediaAsset: PropTypes.func,
+    attachMediaToProduct: PropTypes.func,
+    deleteMediaAsset: PropTypes.func,
+    getGovernanceCategories: PropTypes.func,
+    createGovernanceCategory: PropTypes.func,
+    updateGovernanceCategory: PropTypes.func,
+    getGovernanceCollections: PropTypes.func,
+    createGovernanceCollection: PropTypes.func,
+    updateGovernanceCollection: PropTypes.func,
+    getGovernanceHomepage: PropTypes.func,
+    updateHomepageSection: PropTypes.func,
+    moveHomepageSection: PropTypes.func,
+    getGovernanceCampaigns: PropTypes.func,
+    updateCampaignStatus: PropTypes.func,
+    getGovernanceBranches: PropTypes.func,
+    setBranchStatus: PropTypes.func,
+    getGovernanceAdmins: PropTypes.func,
+    createGovernanceAdmin: PropTypes.func,
+    updateGovernanceAdmin: PropTypes.func,
+    getGovernanceEmployees: PropTypes.func,
+    updateGovernanceEmployee: PropTypes.func,
+    updateGoldRates: PropTypes.func,
+    getPlatformSettings: PropTypes.func,
+    updatePlatformSettings: PropTypes.func,
+    getAuditLogs: PropTypes.func,
   }),
   children: PropTypes.node.isRequired,
 };
