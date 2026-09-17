@@ -1,6 +1,7 @@
 import { Phone, Mail } from "lucide-react";
 import BrandMark from "../ui/BrandMark.jsx";
 import Container from "../ui/Container.jsx";
+import ContentLink from "../ui/ContentLink.jsx";
 import Eyebrow from "../ui/Eyebrow.jsx";
 import SocialIcon from "../ui/SocialIcon.jsx";
 import NewsletterForm from "../forms/NewsletterForm.jsx";
@@ -15,12 +16,12 @@ function FooterColumn({ title, links }) {
       <ul className="mt-5 space-y-2.5">
         {links.map((link) => (
           <li key={link.label + link.href}>
-            <a
+            <ContentLink
               href={link.href}
               className="font-sans text-caption text-text-inverse/65 transition-colors duration-200 hover:text-text-inverse sm:text-body-sm"
             >
               {link.label}
-            </a>
+            </ContentLink>
           </li>
         ))}
       </ul>
@@ -38,9 +39,9 @@ export default function Footer() {
         <div className="grid grid-cols-2 gap-x-6 gap-y-10 sm:grid-cols-2 sm:gap-12 lg:grid-cols-12 lg:gap-8">
           {/* Brand */}
           <div className="col-span-2 sm:col-span-1 lg:col-span-3">
-            <a href="#top" aria-label="Swarnova — home" className="inline-block">
+            <ContentLink href="/#top" aria-label="Swarnova — home" className="inline-block">
               <BrandMark tone="light" />
-            </a>
+            </ContentLink>
             <p className="mt-5 font-serif text-h4 italic leading-relaxed text-text-inverse/70">
               {site.brand.tagline}
             </p>
@@ -109,12 +110,12 @@ export default function Footer() {
           <ul className="flex items-center gap-6">
             {site.legal.map((link) => (
               <li key={link.label + link.href}>
-                <a
+                <ContentLink
                   href={link.href}
                   className="text-caption text-text-inverse/50 transition-colors duration-200 hover:text-text-inverse"
                 >
                   {link.label}
-                </a>
+                </ContentLink>
               </li>
             ))}
           </ul>

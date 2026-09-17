@@ -193,6 +193,30 @@ export function appendAudit(store, entry) {
   return emit(record);
 }
 
+/**
+ * Prepend one row to the stock ledger and return it. Every movement of free
+ * stock calls this — a checkout allocation, a counter adjustment, a cancelled
+ * order's pieces coming back — so the log the branch reads and the log the
+ * storefront implies can never disagree on shape.
+ *
+ * `delta` is always the change to FREE stock: a movement that only retires a
+ * reservation writes no row, because the ledger counts pieces, not promises.
+ */
+function appendMovement(store, { stockId, type, delta, by, note }) {
+  store.counters.movement += 1;
+  const movement = {
+    id: `MV-2026-${String(store.counters.movement).padStart(4, "0")}`,
+    stockId,
+    type,
+    delta,
+    at: now(),
+    by: by ?? "Admin",
+    note,
+  };
+  store.inventoryMovements = [movement, ...store.inventoryMovements].slice(0, 200);
+  return movement;
+}
+
 /* ----------------------------------------------------------------------- */
 /* Products — readiness, lifecycle, serialisation                            */
 /* ----------------------------------------------------------------------- */
@@ -1539,6 +1563,55 @@ export function getAdminOrder(store, id) {
 }
 
 /**
+ * The stock effect of one lifecycle move — the mirror of the allocation
+ * `placeCheckoutOrder` takes when the order is created. `reserved` means
+ * "spoken for at this boutique but not yet handed over", so:
+ *
+ *   Shipped     the pieces leave the vitrine — the allocation is retired and
+ *               free stock is untouched (it was already reduced at placement)
+ *   Cancelled   the pieces come back — the allocation is retired and free
+ *               stock is restored, which is what lets the storefront buy the
+ *               piece again
+ *
+ * Only a cancellation changes `available`, so only a cancellation writes a
+ * movement row: the ledger records changes to free stock, exactly as the
+ * counter adjustment and the checkout allocation do. Never more than the row
+ * actually holds is released, so an order whose pieces were allocated by hand
+ * (or a fixture row with nothing reserved) can never push stock negative.
+ */
+function applyOrderStockEffect(store, order, status, actor) {
+  const releasing = status === "Cancelled";
+  const handingOver = status === "Shipped";
+  if (!releasing && !handingOver) return { pieces: 0, productNames: [] };
+
+  const effect = { pieces: 0, productNames: [] };
+  for (const item of order.items) {
+    const row = store.inventory.find(
+      (line) => line.branchId === order.branchId && line.productId === item.id
+    );
+    if (!row) continue;
+
+    const released = Math.min(row.reserved, item.quantity);
+    if (released === 0) continue;
+    row.reserved -= released;
+    effect.pieces += released;
+    const product = store.products.find((item) => item.id === row.productId);
+    effect.productNames.push(product?.name ?? row.productId);
+    if (!releasing) continue;
+
+    row.available += released;
+    appendMovement(store, {
+      stockId: row.id,
+      type: "receipt",
+      delta: released,
+      by: actor,
+      note: `Returned to free stock — order ${order.orderNumber} cancelled.`,
+    });
+  }
+  return effect;
+}
+
+/**
  * Move an order along the lifecycle. The flow table is enforced here — an
  * Admin cannot skip states, re-open a delivery, or cancel a shipped order.
  *
@@ -1565,7 +1638,15 @@ export function updateAdminOrderStatus(store, id, status, actor, branchId = null
     order.cancelledAt = at;
     order.paymentStatus = "refunded";
   }
+  const stockEffect = applyOrderStockEffect(store, order, status, actor);
 
+  /* The audit line carries the stock consequence too: one entry explains both
+     the order movement and what the boutique's vitrine did in response. */
+  const stockNote =
+    stockEffect.pieces > 0
+      ? ` ${stockEffect.pieces} piece${stockEffect.pieces === 1 ? "" : "s"} (${stockEffect.productNames.join(", ")}) ` +
+        (status === "Cancelled" ? "returned to free stock." : "handed over for delivery.")
+      : "";
   appendAudit(store, {
     actor,
     branchId,
@@ -1575,8 +1656,8 @@ export function updateAdminOrderStatus(store, id, status, actor, branchId = null
     entityLabel: order.orderNumber,
     detail:
       status === "Cancelled"
-        ? "Order cancelled and payment marked for refund."
-        : `Order status changed to ${status}.`,
+        ? `Order cancelled and payment marked for refund.${stockNote}`
+        : `Order status changed to ${status}.${stockNote}`,
   });
   return toAdminOrder(store, order);
 }
@@ -1717,16 +1798,13 @@ export function adjustAdminInventory(store, stockId, adjustment = {}, actor, bra
 
   row.available += delta;
 
-  const movement = {
-    id: `MV-${Date.now()}`,
+  appendMovement(store, {
     stockId: row.id,
     type: "adjustment",
     delta,
-    at: now(),
-    by: actor ?? "Admin",
+    by: actor,
     note: adjustment.reason.trim(),
-  };
-  store.inventoryMovements = [movement, ...store.inventoryMovements].slice(0, 200);
+  });
 
   const stock = toAdminStock(store, row);
   appendAudit(store, {
@@ -2058,6 +2136,20 @@ function resolveScopeBranch(store, scope, requested) {
   }
   if (!hasText(requested)) return null;
   return branchOrFail(store, requested).id;
+}
+
+/**
+ * The branch an intrinsically single-branch view reads.
+ *
+ * A scoped caller stays pinned to its own boutique — naming another one is
+ * refused by `resolveScopeBranch`, so a URL parameter can never widen reach.
+ * A global caller (Super Admin, or a head-office Admin) may name a branch to
+ * drill into and falls back to the network default when it names none, which
+ * keeps a platform view's authority exactly as wide as it was before the
+ * branch was named. Selection is a request to validate, never authority.
+ */
+function viewBranchId(store, scope, requested) {
+  return resolveScopeBranch(store, scope, requested) ?? defaultBranchId(store);
 }
 
 /** The branch an intrinsically single-branch view opens on. */
@@ -2490,10 +2582,14 @@ function recentBranchActivity(store, branchId, limit = 6) {
  * processed, the stock that needs attention and the pieces of work that carry
  * a next step. Every block is capability-aware, so a profile without
  * inventory visibility never receives stock figures at all.
+ *
+ * `query.branchId` lets a GLOBAL account (Super Admin, head-office Admin)
+ * open the dashboard for one boutique it is inspecting; a branch account is
+ * pinned to its own, so the same parameter can never move anyone's reach.
  */
-export function employeeOverview(store, actor) {
+export function employeeOverview(store, actor, query = {}) {
   const scope = resolveStaffScope(store, actor);
-  const branchId = scope.branchId ?? defaultBranchId(store);
+  const branchId = viewBranchId(store, scope, query.branchId);
   const branch = branchOrFail(store, branchId);
   const day = businessDay(store);
 
@@ -2592,11 +2688,14 @@ export function employeeOverview(store, actor) {
  * what stock it holds, what is open and what has been happening. Read-only:
  * enabling a branch, moving employees or governing the catalogue stay with
  * head office and the Super Admin.
+ *
+ * `query.branchId` selects the boutique for a global caller; it is validated
+ * through `viewBranchId`, never trusted as a scope.
  */
-export function employeeBranchOperations(store, actor) {
+export function employeeBranchOperations(store, actor, query = {}) {
   const scope = resolveStaffScope(store, actor);
   requireScopeCapability(scope, CAPABILITIES.BRANCHES_VIEW, "branch operations");
-  const branchId = scope.branchId ?? defaultBranchId(store);
+  const branchId = viewBranchId(store, scope, query.branchId);
   const branch = branchOrFail(store, branchId);
   const day = businessDay(store);
 
@@ -2667,12 +2766,13 @@ export function employeeBranchOperations(store, actor) {
  * canonical order book and inventory: counter sales, the order book by status,
  * the pieces that actually move and stock health. Head-office comparisons,
  * other boutiques' performance and platform analytics are simply not part of
- * this contract.
+ * this contract — except when a GLOBAL account names a branch in
+ * `query.branchId` to inspect it, which is that caller's own network view.
  */
-export function employeeReports(store, actor) {
+export function employeeReports(store, actor, query = {}) {
   const scope = resolveStaffScope(store, actor);
   requireScopeCapability(scope, CAPABILITIES.REPORTS_VIEW, "reports");
-  const branchId = scope.branchId ?? defaultBranchId(store);
+  const branchId = viewBranchId(store, scope, query.branchId);
   const branch = branchOrFail(store, branchId);
   const day = businessDay(store);
   const weekStart = daysBefore(day, 6);
@@ -3650,19 +3750,13 @@ export function placeCheckoutOrder(store, customerId, payload = {}) {
     }
     row.available -= line.quantity;
     row.reserved += line.quantity;
-    store.counters.movement += 1;
-    store.inventoryMovements = [
-      {
-        id: `MV-2026-${String(store.counters.movement).padStart(4, "0")}`,
-        stockId: row.id,
-        type: "sale",
-        delta: -line.quantity,
-        at: now(),
-        by: `${record.name} — Storefront`,
-        note: `Allocated to order ${order.orderNumber}.`,
-      },
-      ...store.inventoryMovements,
-    ].slice(0, 200);
+    appendMovement(store, {
+      stockId: row.id,
+      type: "sale",
+      delta: -line.quantity,
+      by: `${record.name} — Storefront`,
+      note: `Allocated to order ${order.orderNumber}.`,
+    });
   }
 
   /* 10 · The audit trail and the idempotency ledger. */

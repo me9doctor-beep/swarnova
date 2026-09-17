@@ -1,13 +1,25 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { Sparkles, Camera, Share2, Trash2, X, Eye, Check } from "lucide-react";
+import { Sparkles, Camera, Share2, Trash2, Eye, Check } from "lucide-react";
 import Button from "../../../components/ui/Button.jsx";
 import Card from "../../../components/ui/Card.jsx";
+import Dialog from "../../../components/ui/Dialog.jsx";
 import EmptyState from "../../../components/ui/EmptyState.jsx";
 import IconButton from "../../../components/ui/IconButton.jsx";
 import { useSavedDesigns } from "../../../state/SavedDesignsContext.jsx";
 import { useDocumentTitle } from "../../../hooks/useDocumentTitle.js";
 
+/**
+ * SAVED AI DESIGNS — the member's own studio shelf.
+ *
+ * Ownership first: the list comes from the owner-scoped saved-designs store
+ * (`state/SavedDesignsContext.jsx`), so one customer never sees another's
+ * concepts and a guest's work is adopted on sign-in rather than duplicated.
+ * Nothing here invents design data — every card is the concept as the studio
+ * saved it, and the two ways forward (refine, try on) hand the canonical
+ * concept id back to the surfaces that own it. Removal is local: it clears
+ * the shelf, never the studio's own record.
+ */
 export default function SavedDesignsPage() {
   useDocumentTitle("Saved AI Designs — Swarnova");
 
@@ -182,24 +194,21 @@ export default function SavedDesignsPage() {
         </div>
       )}
 
-      {/* Concept Detail View Modal */}
-      {activeModalDesign && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="concept-modal-title"
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4"
-        >
-          <div className="relative max-h-[90vh] w-full max-w-2xl overflow-y-auto bg-surface-primary p-6 sm:p-8 border border-border-default">
-            <button
-              type="button"
-              onClick={() => setActiveModalDesign(null)}
-              className="absolute right-4 top-4 text-text-muted hover:text-text-primary"
-              aria-label="Close dialog"
-            >
-              <X size={20} />
-            </button>
-
+      {/* The concept detail overlay is the shared Dialog primitive: Escape,
+          the backdrop and the close button all resolve through it, and the
+          panel holds its own scroll and focus. */}
+      <Dialog
+        open={Boolean(activeModalDesign)}
+        onClose={() => setActiveModalDesign(null)}
+        title={
+          activeModalDesign
+            ? `${activeModalDesign.purity} Gold · AI Studio Concept`
+            : "AI Studio Concept"
+        }
+        width="lg"
+      >
+        {activeModalDesign ? (
+          <div className="space-y-6">
             <div className="aspect-[4/3] w-full overflow-hidden border border-border-default bg-surface-secondary">
               <img
                 src={activeModalDesign.images?.[0]?.src}
@@ -208,16 +217,13 @@ export default function SavedDesignsPage() {
               />
             </div>
 
-            <div className="mt-6">
-              <p className="font-sans text-label uppercase tracking-[0.28em] text-brand-accent-strong">
-                {activeModalDesign.purity} Gold · AI Studio Concept
-              </p>
-              <h3 id="concept-modal-title" className="mt-1 font-serif text-h2 text-text-primary">
+            <div>
+              <h3 className="font-serif text-h2 text-text-primary">
                 {activeModalDesign.title}
               </h3>
 
               {activeModalDesign.story && (
-                <p className="mt-4 font-serif text-body text-text-secondary leading-relaxed">
+                <p className="mt-4 font-serif text-body leading-relaxed text-text-secondary">
                   {activeModalDesign.story}
                 </p>
               )}
@@ -232,24 +238,24 @@ export default function SavedDesignsPage() {
                   </p>
                 </div>
               )}
+            </div>
 
-              <div className="mt-6 flex flex-wrap gap-3 border-t border-border-default pt-6">
-                <Button href={`/ai-studio?concept=${activeModalDesign.id}`}>
-                  <Sparkles size={13} aria-hidden="true" />
-                  Continue Designing in Studio
-                </Button>
-                <Button
-                  variant="outline"
-                  href={`/virtual-try-on?design=${activeModalDesign.id}`}
-                >
-                  <Camera size={13} aria-hidden="true" />
-                  Try It On
-                </Button>
-              </div>
+            <div className="flex flex-wrap gap-3 border-t border-border-default pt-6">
+              <Button href={`/ai-studio?concept=${activeModalDesign.id}`}>
+                <Sparkles size={13} strokeWidth={1.5} aria-hidden="true" />
+                Continue Designing in Studio
+              </Button>
+              <Button
+                variant="outline"
+                href={`/virtual-try-on?design=${activeModalDesign.id}`}
+              >
+                <Camera size={13} strokeWidth={1.5} aria-hidden="true" />
+                Try It On
+              </Button>
             </div>
           </div>
-        </div>
-      )}
+        ) : null}
+      </Dialog>
     </div>
   );
 }

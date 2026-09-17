@@ -1,6 +1,7 @@
 import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import { cn } from "../../utils/cn.js";
+import { externalLinkProps, isExternalUrl, isInternalPath } from "../../utils/links.js";
 
 /**
  * BUTTON — the single action primitive for the whole ecosystem.
@@ -54,20 +55,21 @@ export default function Button({
 
   const target = href || to;
   if (target) {
-    const isInternal = typeof target === "string" && target.startsWith("/") && !target.startsWith("//");
-    if (isInternal) {
+    /* A root-relative path is this app's own route: the router navigates it.
+       Everything else — an in-page anchor, mailto, another host — is handed to
+       the browser. One rule, shared with every other link surface. */
+    if (isInternalPath(target)) {
       return (
         <Link to={target} className={classes} {...rest}>
           {children}
         </Link>
       );
     }
-    const external = /^https?:\/\//.test(target);
     return (
       <a
         href={target}
         className={classes}
-        {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+        {...(isExternalUrl(target) ? externalLinkProps : {})}
         {...rest}
       >
         {children}

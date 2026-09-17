@@ -1,6 +1,17 @@
 /**
  * Global site configuration — chrome that wraps the CMS-driven homepage:
  * brand lockup, primary navigation, footer columns, social and legal links.
+ *
+ * `href` values follow one convention, because the storefront renders them
+ * through the router (`components/ui/ContentLink.jsx`):
+ *   "/route"        a page this app owns (`/collections`, `/ai-studio`, …)
+ *   "/#section"     a section OF THE HOMEPAGE — the leading path matters, since
+ *                   a bare "#section" would point at the current page and
+ *                   resolve to nothing anywhere but the homepage itself
+ *   "mailto:", "tel:", "https://"  handed to the browser untouched
+ * A few support and legal destinations are still unwritten copy for pages the
+ * platform has not built yet; they navigate to the in-app Not Found screen, and
+ * `PHASE_13_AUDIT.md` lists them as content gaps rather than pretending.
  */
 export const site = {
   brand: {
@@ -22,23 +33,23 @@ export const site = {
       "BIS HALLMARKED 22K GOLD  ·  FREE INSURED DELIVERY  ·  LIFETIME CARE",
   },
   navigation: [
-    { label: "Home", href: "#top" },
-    { label: "Collections", href: "#collections" },
+    { label: "Home", href: "/#top" },
+    { label: "Collections", href: "/#collections" },
     { label: "Jewellery", href: "/collections" },
     { label: "AI Studio", href: "/ai-studio" },
     { label: "Virtual Try-On", href: "/virtual-try-on" },
-    { label: "Our Story", href: "#our-story" },
-    { label: "Journal", href: "#journal" },
-    { label: "Stores", href: "#stores" },
+    { label: "Our Story", href: "/#our-story" },
+    { label: "Journal", href: "/#journal" },
+    { label: "Stores", href: "/#stores" },
   ],
   quickLinks: [
-    { label: "Home", href: "#top" },
-    { label: "Collections", href: "#collections" },
+    { label: "Home", href: "/#top" },
+    { label: "Collections", href: "/#collections" },
     { label: "Jewellery", href: "/collections" },
     { label: "AI Studio", href: "/ai-studio" },
     { label: "Virtual Try-On", href: "/virtual-try-on" },
-    { label: "Our Story", href: "#our-story" },
-    { label: "Stores", href: "#stores" },
+    { label: "Our Story", href: "/#our-story" },
+    { label: "Stores", href: "/#stores" },
   ],
   customerService: [
     { label: "Contact Us", href: "/contact" },
@@ -47,14 +58,14 @@ export const site = {
     { label: "Returns & Exchanges", href: "/returns" },
     { label: "Warranty", href: "/warranty" },
     { label: "Jewellery Care Guide", href: "/care-guide" },
-    { label: "Track Order", href: "/track-order" },
+    { label: "Track Order", href: "/account/orders" },
   ],
   experience: [
     { label: "AI Jewellery Studio", href: "/ai-studio" },
     { label: "Virtual Try-On", href: "/virtual-try-on" },
-    { label: "Custom & Bespoke Jewellery", href: "/bespoke" },
-    { label: "Book a Private Viewing", href: "/stores" },
-    { label: "Gold Rate Board", href: "#gold-rate" },
+    { label: "Custom & Bespoke Jewellery", href: "/ai-studio" },
+    { label: "Book a Private Viewing", href: "/#stores" },
+    { label: "Gold Rate Board", href: "/#gold-rate" },
   ],
   legal: [
     { label: "Privacy Policy", href: "/privacy" },

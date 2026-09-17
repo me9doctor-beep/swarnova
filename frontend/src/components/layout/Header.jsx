@@ -5,6 +5,7 @@ import BrandMark from "../ui/BrandMark.jsx";
 import Button from "../ui/Button.jsx";
 import Container from "../ui/Container.jsx";
 import IconButton from "../ui/IconButton.jsx";
+import ContentLink from "../ui/ContentLink.jsx";
 import { useBodyScrollLock } from "../../hooks/useBodyScrollLock.js";
 import { useSite } from "../../hooks/useSite.js";
 import { useWishlist } from "../../state/WishlistContext.jsx";
@@ -65,19 +66,19 @@ function MobileMenu({ open, onClose, navigation, badges = {} }) {
         <ul className="grid grid-cols-2 gap-x-4 border-t border-border-default">
           {navigation.map((item) => (
             <li key={item.href + item.label} className="border-b border-border-default">
-              <a
+              <ContentLink
                 href={item.href}
                 onClick={onClose}
                 className="flex min-h-[52px] items-center py-3 font-serif text-h4 leading-tight text-text-primary transition-colors duration-200 hover:text-brand-primary"
               >
                 {item.label}
-              </a>
+              </ContentLink>
             </li>
           ))}
         </ul>
 
         <div className="mt-8 flex flex-col gap-3">
-          <Button href="#collections" className="w-full" onClick={onClose}>
+          <Button href="/#collections" className="w-full" onClick={onClose}>
             Explore Collections
           </Button>
           <Button
@@ -167,9 +168,9 @@ export default function Header() {
           )}
         >
           <Container className="flex h-[72px] items-center justify-between gap-6">
-            <a href="#top" aria-label="Swarnova — home" className="shrink-0">
+            <ContentLink href="/#top" aria-label="Swarnova — home" className="shrink-0">
               <BrandMark tone={solid ? "dark" : "light"} />
-            </a>
+            </ContentLink>
 
             <nav aria-label="Primary" className="hidden xl:block">
               {/* gap-5 rather than gap-7 at the 1280–1535 breakpoint: the eight
@@ -178,7 +179,7 @@ export default function Header() {
               <ul className="flex items-center gap-5 2xl:gap-9">
                 {site.navigation.map((item) => (
                   <li key={item.href + item.label}>
-                    <a
+                    <ContentLink
                       href={item.href}
                       className={cn(
                         "whitespace-nowrap font-sans text-nav font-medium uppercase transition-colors duration-200",
@@ -188,7 +189,7 @@ export default function Header() {
                       )}
                     >
                       {item.label}
-                    </a>
+                    </ContentLink>
                   </li>
                 ))}
               </ul>

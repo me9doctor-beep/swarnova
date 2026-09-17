@@ -889,8 +889,8 @@ export const mockProvider = {
    *   employeeProfile(actor)                  updateEmployeeProfile(actor, patch)
    * ------------------------------------------------------------------------ */
 
-  getEmployeeOverview(actor) {
-    return Promise.resolve(gov.employeeOverview(this.getStore(), actor));
+  getEmployeeOverview(actor, query = {}) {
+    return Promise.resolve(gov.employeeOverview(this.getStore(), actor, query));
   },
 
   getEmployeeOrders(actor, query = {}) {
@@ -941,12 +941,12 @@ export const mockProvider = {
     );
   },
 
-  getEmployeeBranchOperations(actor) {
-    return Promise.resolve(gov.employeeBranchOperations(this.getStore(), actor));
+  getEmployeeBranchOperations(actor, query = {}) {
+    return Promise.resolve(gov.employeeBranchOperations(this.getStore(), actor, query));
   },
 
-  getEmployeeReports(actor) {
-    return Promise.resolve(gov.employeeReports(this.getStore(), actor));
+  getEmployeeReports(actor, query = {}) {
+    return Promise.resolve(gov.employeeReports(this.getStore(), actor, query));
   },
 
   getEmployeeProfile(actor) {

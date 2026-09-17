@@ -2,6 +2,7 @@ import PropTypes from "prop-types";
 import { Heart, Sparkles } from "lucide-react";
 import Button from "../ui/Button.jsx";
 import Card from "../ui/Card.jsx";
+import ContentLink from "../ui/ContentLink.jsx";
 import IconButton from "../ui/IconButton.jsx";
 import Price from "../ui/Price.jsx";
 import Rating from "../ui/Rating.jsx";
@@ -66,9 +67,9 @@ export default function ProductCard({ product, showTryOn = false }) {
           {product.purity} Gold
         </p>
         <h3 className="mt-2 font-serif text-h4 leading-snug">
-          <a href={product.href} className="transition-colors duration-200 hover:text-brand-primary">
+          <ContentLink href={product.href} className="transition-colors duration-200 hover:text-brand-primary">
             {product.name}
-          </a>
+          </ContentLink>
         </h3>
         <Price amount={product.price} className="mt-1.5" />
         {product.rating && (

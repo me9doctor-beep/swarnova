@@ -3,6 +3,7 @@ import PropTypes from "prop-types";
 import AsyncBoundary from "../../../components/ui/AsyncBoundary.jsx";
 import Button from "../../../components/ui/Button.jsx";
 import Container from "../../../components/ui/Container.jsx";
+import ContentLink from "../../../components/ui/ContentLink.jsx";
 import Eyebrow from "../../../components/ui/Eyebrow.jsx";
 import Section from "../../../components/ui/Section.jsx";
 import SectionHeading from "../../../components/ui/SectionHeading.jsx";
@@ -163,12 +164,12 @@ function Breadcrumb({ category, name }) {
       <ol className="flex flex-wrap items-center gap-x-2 gap-y-1 font-sans text-label uppercase">
         {trail.map((crumb) => (
           <li key={crumb.href} className="flex items-center gap-2">
-            <a
+            <ContentLink
               href={crumb.href}
               className="py-1 text-text-secondary transition-colors duration-200 hover:text-brand-primary"
             >
               {crumb.label}
-            </a>
+            </ContentLink>
             <span aria-hidden="true" className="text-text-muted">
               /
             </span>

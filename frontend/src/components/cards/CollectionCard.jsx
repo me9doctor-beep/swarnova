@@ -1,5 +1,6 @@
 import PropTypes from "prop-types";
 import Card from "../ui/Card.jsx";
+import ContentLink from "../ui/ContentLink.jsx";
 
 /**
  * Frameless editorial category tile — the imagery carries the card, the
@@ -24,12 +25,12 @@ export default function CollectionCard({ category }) {
 
       <Card.Body className="pt-6">
         <h3 className="font-sans text-caption font-medium uppercase tracking-[0.3em] text-text-primary">
-          <a
+          <ContentLink
             href={category.cta?.href ?? "#"}
             className="transition-colors duration-200 hover:text-brand-primary"
           >
             {category.name}
-          </a>
+          </ContentLink>
         </h3>
         <div
           className="mx-auto mt-3 h-px w-8 bg-brand-accent/50"

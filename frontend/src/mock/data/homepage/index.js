@@ -99,7 +99,7 @@ export const homepage = {
           "Transparent, certified pricing",
           "Customer-first care, for a lifetime",
         ],
-        cta: { label: "Learn More", href: "/our-story" },
+        cta: { label: "Learn More", href: "/#our-story" },
         image: {
           src: media.promiseEditorial,
           alt: "Indian woman in an ivory silk saree wearing a delicate gold diamond pendant necklace",
@@ -178,7 +178,7 @@ export const homepage = {
           { label: "Kundan", text: "Foil-set polki tradition" },
           { label: "Contemporary", text: "Lightweight everyday gold" },
         ],
-        cta: { label: "Discover Our Craft", href: "/our-story" },
+        cta: { label: "Discover Our Craft", href: "/#our-story" },
         image: {
           src: media.atelierStill,
           alt: "Master goldsmith setting diamonds into an unfinished 22K gold necklace",
@@ -225,7 +225,7 @@ export const homepage = {
       content: {
         eyebrow: "Today's Gold",
         title: "The Daily Gold Rate",
-        cta: { label: "View Full Rate Board", href: "/gold-rates" },
+        cta: { label: "View Full Rate Board", href: "/#gold-rate" },
       },
     },
     {
@@ -249,7 +249,7 @@ export const homepage = {
         title: "Visit Us In Person",
         body: "Discover the craftsmanship, explore our collections and experience Swarnova beyond the screen — over chai, in the company of our advisors.",
         query: { featured: true, limit: 3 },
-        cta: { label: "View All Stores", href: "/stores" },
+        cta: { label: "View All Stores", href: "/#stores" },
       },
     },
     {
@@ -261,7 +261,7 @@ export const homepage = {
         eyebrow: "The Swarnova Journal",
         title: "Notes on Gold, Craft & Occasion",
         query: { limit: 3 },
-        cta: { label: "Read All Stories", href: "/journal" },
+        cta: { label: "Read All Stories", href: "/#journal" },
       },
     },
     {

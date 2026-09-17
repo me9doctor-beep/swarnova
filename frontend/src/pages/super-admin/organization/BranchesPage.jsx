@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import PageHeader from "../../../components/layout/PageHeader.jsx";
 import Button from "../../../components/ui/Button.jsx";
 import Badge from "../../../components/ui/Badge.jsx";
@@ -18,6 +19,10 @@ import { ACCOUNT_STATUS_META } from "../../../features/super-admin/governance.js
  * One row per boutique: name, location, status, the administrator running
  * it and how many employees the platform sees there. Disable hides a branch
  * from the storefront; nothing is deleted.
+ *
+ * The branch name opens the drill-down — the platform's global view narrowed
+ * to one boutique's orders, stock, team and activity, with the way back on the
+ * page itself. Oversight only: nothing here edits the branch's own operations.
  */
 export default function BranchesPage() {
   useDocumentTitle("Branches — Swarnova Super Admin");
@@ -80,9 +85,12 @@ export default function BranchesPage() {
                           ) : null}
                         </span>
                         <span className="min-w-0">
-                          <span className="block font-sans text-body-sm font-medium text-text-primary">
+                          <Link
+                            to={`/super-admin/branches/${branch.id}`}
+                            className="block font-sans text-body-sm font-medium text-text-primary underline-offset-4 transition-colors duration-200 hover:text-brand-primary hover:underline"
+                          >
                             {branch.name}
-                          </span>
+                          </Link>
                           <span className="block font-sans text-caption text-text-muted">
                             {branch.id}
                             {branch.flagship ? " · Flagship" : ""}
@@ -107,6 +115,12 @@ export default function BranchesPage() {
                       </Badge>
                     </Table.Cell>
                     <Table.Cell align="right">
+                      <Link
+                        to={`/super-admin/branches/${branch.id}`}
+                        className="mr-3 inline-flex items-center font-sans text-label uppercase tracking-[0.18em] text-text-secondary underline-offset-4 transition-colors duration-200 hover:text-brand-primary hover:underline"
+                      >
+                        Inspect
+                      </Link>
                       {branch.status === "active" ? (
                         <Button
                           variant="secondary"

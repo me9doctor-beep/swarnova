@@ -90,6 +90,8 @@ export const tryOnRoom = {
   },
   savedMessage: "Your try-on has been saved for this visit.",
   baggedMessage: "Added to your bag.",
+  bagUnavailableMessage:
+    "This piece is no longer in the boutique catalogue, so it could not be added to your bag.",
   share: {
     copied: "The fitting room link has been copied to your clipboard.",
     shared: "Thank you for sharing your look.",

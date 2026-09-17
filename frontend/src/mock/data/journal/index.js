@@ -2,6 +2,11 @@ import { media } from "../../assets/index.js";
 
 /**
  * Editorial journal articles — CMS-managed magazine content.
+ *
+ * `href` is the article's published destination. The storefront has no article
+ * page yet (only this list), so each entry points at the homepage Journal
+ * section; `slug` is already the stable identity a future `/journal/:slug`
+ * route would read.
  */
 export const journalArticles = [
   {
@@ -16,7 +21,7 @@ export const journalArticles = [
       alt: "Artisan's hands polishing a gold ring at a jeweller's workbench",
     },
     readTime: "6 min read",
-    href: "/journal/art-of-indian-gold",
+    href: "/#journal",
   },
   {
     id: "JRL-002",
@@ -30,7 +35,7 @@ export const journalArticles = [
       alt: "Indian model in a deep burgundy silk drape wearing an ornate gold and polki choker",
     },
     readTime: "8 min read",
-    href: "/journal/choosing-bridal-jewellery",
+    href: "/#journal",
   },
   {
     id: "JRL-003",
@@ -44,7 +49,7 @@ export const journalArticles = [
       alt: "Jewellery design storyboard of sketches, a rendered lotus necklace concept and the finished gold piece",
     },
     readTime: "5 min read",
-    href: "/journal/stories-behind-motifs",
+    href: "/#journal",
   },
 ];
 

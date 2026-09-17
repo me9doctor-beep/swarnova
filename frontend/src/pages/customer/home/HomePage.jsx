@@ -1,3 +1,5 @@
+import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import AsyncBoundary from "../../../components/ui/AsyncBoundary.jsx";
 import ErrorBoundary from "../../../components/ui/ErrorBoundary.jsx";
 import { useHomepage } from "../../../hooks/useHomepage.js";
@@ -38,9 +40,29 @@ const sectionRegistry = {
   newsletter: NewsletterSection,
 };
 
-/** Customer storefront homepage — renders the CMS-ordered section document. */
+/**
+ * Customer storefront homepage — renders the CMS-ordered section document.
+ *
+ * Section anchors are part of the storefront's navigation, not decoration:
+ * `site.navigation`, the footer columns and several campaign CTAs point at
+ * `/#collections`, `/#stores` and friends, so an arrival that carries a hash
+ * lands on that section instead of at the top of the page. Each section
+ * already reserves room for the fixed header (`Section`'s `scroll-mt-28`), and
+ * an unknown hash simply matches nothing — no console error, no wrong scroll.
+ */
 export default function HomePage() {
   const { status, data: homepage, error, retry } = useHomepage();
+  const { hash } = useLocation();
+
+  useEffect(() => {
+    if (status !== "success" || !hash) return undefined;
+    const target = document.getElementById(decodeURIComponent(hash.slice(1)));
+    if (!target) return undefined;
+    /* Instant, never smooth: this is a destination, not a transition, and it
+       reads correctly under a reduced-motion preference. */
+    target.scrollIntoView({ behavior: "auto", block: "start" });
+    return undefined;
+  }, [hash, status]);
 
   return (
     <>

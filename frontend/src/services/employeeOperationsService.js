@@ -17,13 +17,18 @@
  * real employee, the branch the action happened in and, where the business
  * requires it, the written reason.
  *
+ * The dashboard, branch-operations and reports contracts also accept a query
+ * (`{ branchId }`), which is how a global account opens one boutique's own
+ * operating picture. Nothing here resolves scope: the query travels to the
+ * provider unchanged, and the provider decides what it may mean.
+ *
  * Flow: UI → hooks/useEmployeeOperations → employeeOperationsService →
  *       DataProvider → Mock Provider → shared canonical store.
  */
 export const employeeOperationsService = {
   /* Dashboard ------------------------------------------------------------ */
-  getOverview(provider, actor) {
-    return provider.getEmployeeOverview(actor);
+  getOverview(provider, actor, query) {
+    return provider.getEmployeeOverview(actor, query);
   },
 
   /* Orders --------------------------------------------------------------- */
@@ -68,11 +73,11 @@ export const employeeOperationsService = {
   },
 
   /* Branch operations, reports, profile ----------------------------------- */
-  getBranchOperations(provider, actor) {
-    return provider.getEmployeeBranchOperations(actor);
+  getBranchOperations(provider, actor, query) {
+    return provider.getEmployeeBranchOperations(actor, query);
   },
-  getReports(provider, actor) {
-    return provider.getEmployeeReports(actor);
+  getReports(provider, actor, query) {
+    return provider.getEmployeeReports(actor, query);
   },
   getProfile(provider, actor) {
     return provider.getEmployeeProfile(actor);
