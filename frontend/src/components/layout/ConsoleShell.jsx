@@ -94,7 +94,7 @@ ConsoleShell.propTypes = {
   experience: PropTypes.string.isRequired,
   /** The console's own root route. */
   homePath: PropTypes.string,
-  /** Navigation groups: [{ label?, items: [{ label, to, end?, icon }] }]. */
+  /** Navigation groups: [{ label?, items: [{ label, to, end?, icon, capability? }] }]. */
   navigation: PropTypes.arrayOf(
     PropTypes.shape({
       label: PropTypes.string,
@@ -104,6 +104,7 @@ ConsoleShell.propTypes = {
           to: PropTypes.string.isRequired,
           end: PropTypes.bool,
           icon: PropTypes.elementType,
+          capability: PropTypes.string,
         })
       ).isRequired,
     })

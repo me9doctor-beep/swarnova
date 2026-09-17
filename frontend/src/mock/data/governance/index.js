@@ -9,10 +9,15 @@
  *                         Identifiers and role strings match
  *                         `features/authentication/roles.js`.
  *
- *   platformEmployees   — platform-wide visibility over boutique staff. The
+ *   platformEmployees   — the ONE canonical employee directory. Super Admin
+ *                         sees oversight (name, role, branch, status); the
+ *                         Admin console operates the same records (contact,
+ *                         branch, capability profile, account status). The
  *                         operational employee experience (rosters, sales)
- *                         belongs to the Admin/Employee domains; governance
- *                         only sees name, role, branch and status.
+ *                         belongs to the Employee domain (Phase 10).
+ *                         `capabilities` holds the granted business
+ *                         capability levels (see capabilities.js); the
+ *                         session claim derives from them at sign-in.
  *
  *   governanceAuditLog  — seed entries for the audit trail. The mock provider
  *                         appends one entry per governance action, in exactly
@@ -25,6 +30,10 @@
  *                         currency and support contact. Infrastructure
  *                         configuration (secrets, keys, endpoints) never
  *                         appears here — by design.
+ *
+ * Phase 9 added `password` to staff accounts (the shared staff login checks
+ * it — a future backend hashes and enforces it server-side) and capability
+ * profile fields to employees.
  */
 
 export const platformAdmins = [
@@ -32,6 +41,7 @@ export const platformAdmins = [
     id: "ADM-001",
     name: "Arpita Mohanty",
     email: "arpita.mohanty@swarnova.in",
+    password: "Swarnova@123",
     role: "admin",
     scope: "head-office",
     branchId: null,
@@ -42,6 +52,7 @@ export const platformAdmins = [
     id: "ADM-002",
     name: "Ishita Rath",
     email: "ishita.rath@swarnova.in",
+    password: "Swarnova@123",
     role: "admin",
     scope: "branch",
     branchId: "BR-001",
@@ -52,6 +63,7 @@ export const platformAdmins = [
     id: "ADM-003",
     name: "Prakash Sahu",
     email: "prakash.sahu@swarnova.in",
+    password: "Swarnova@123",
     role: "admin",
     scope: "branch",
     branchId: "BR-002",
@@ -62,6 +74,7 @@ export const platformAdmins = [
     id: "ADM-004",
     name: "Lopamudra Behera",
     email: "lopamudra.behera@swarnova.in",
+    password: "Swarnova@123",
     role: "admin",
     scope: "branch",
     branchId: "BR-003",
@@ -74,50 +87,122 @@ export const platformEmployees = [
   {
     id: "EMP-001",
     name: "Meera Das",
+    email: "meera.das@swarnova.in",
+    password: "Swarnova@123",
+    phone: "+91 94371 20011",
     role: "Boutique Manager",
     branchId: "BR-001",
+    profileId: "PROF-BRANCH-MANAGER",
+    capabilities: {
+      catalogue: "manage",
+      orders: "manage",
+      inventory: "manage",
+      branches: "manage",
+      reports: "view",
+    },
     status: "active",
   },
   {
     id: "EMP-002",
     name: "Ananya Tripathy",
+    email: "ananya.tripathy@swarnova.in",
+    password: "Swarnova@123",
+    phone: "+91 94371 20012",
     role: "Senior Sales Consultant",
     branchId: "BR-001",
+    profileId: "PROF-BRANCH-SALES",
+    capabilities: {
+      catalogue: "view",
+      orders: "manage",
+      inventory: "view",
+      branches: "view",
+    },
     status: "active",
   },
   {
     id: "EMP-003",
     name: "Sonalika Mishra",
+    email: "sonalika.mishra@swarnova.in",
+    password: "Swarnova@123",
+    phone: "+91 94371 20013",
     role: "Sales Consultant",
     branchId: "BR-001",
+    profileId: "PROF-BRANCH-SALES",
+    capabilities: {
+      catalogue: "view",
+      orders: "manage",
+      inventory: "view",
+      branches: "view",
+    },
     status: "active",
   },
   {
     id: "EMP-004",
     name: "Rohit Panda",
+    email: "rohit.panda@swarnova.in",
+    password: "Swarnova@123",
+    phone: "+91 94371 20014",
     role: "Inventory Associate",
     branchId: "BR-001",
+    profileId: "PROF-INVENTORY",
+    capabilities: {
+      catalogue: "view",
+      inventory: "manage",
+      branches: "view",
+    },
     status: "active",
   },
   {
     id: "EMP-005",
     name: "Subhasmita Ray",
+    email: "subhasmita.ray@swarnova.in",
+    password: "Swarnova@123",
+    phone: "+91 94371 20021",
     role: "Boutique Manager",
     branchId: "BR-002",
+    profileId: "PROF-BRANCH-MANAGER",
+    capabilities: {
+      catalogue: "manage",
+      orders: "manage",
+      inventory: "manage",
+      branches: "manage",
+      reports: "view",
+    },
     status: "active",
   },
   {
     id: "EMP-006",
     name: "Deepankar Lenka",
+    email: "deepankar.lenka@swarnova.in",
+    password: "Swarnova@123",
+    phone: "+91 94371 20022",
     role: "Sales Consultant",
     branchId: "BR-002",
+    profileId: "PROF-BRANCH-SALES",
+    capabilities: {
+      catalogue: "view",
+      orders: "manage",
+      inventory: "view",
+      branches: "view",
+    },
     status: "disabled",
   },
   {
     id: "EMP-007",
     name: "Priyanka Khandelwal",
+    email: "priyanka.khandelwal@swarnova.in",
+    password: "Swarnova@123",
+    phone: "+91 94371 20031",
     role: "Boutique Manager",
     branchId: "BR-003",
+    profileId: "PROF-BRANCH-MANAGER",
+    capabilities: {
+      catalogue: "manage",
+      orders: "manage",
+      inventory: "manage",
+      branches: "manage",
+      reports: "view",
+    },
     status: "active",
   },
 ];

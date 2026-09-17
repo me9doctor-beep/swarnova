@@ -27,8 +27,10 @@ import mockProvider from "./mock/mockProvider.js";
  *
  * Phase 7 added the customer account contract; Phase 8 adds the Super Admin
  * governance contract (products lifecycle, media library, catalogue, content,
- * organisation, platform settings and audit) — declared optional so an API
- * provider can land the two sources independently.
+ * organisation, platform settings and audit); Phase 9 adds the shared staff
+ * login and the Admin / head-office operations contract (orders, customers,
+ * inventory, branches, employees, reports, business overview) — all declared
+ * optional so an API provider can land the sources independently.
  */
 const DataContext = createContext(mockProvider);
 
@@ -98,6 +100,21 @@ DataProvider.propTypes = {
     getPlatformSettings: PropTypes.func,
     updatePlatformSettings: PropTypes.func,
     getAuditLogs: PropTypes.func,
+    /* Phase 9 — shared staff login & Admin operations contract */
+    authenticateStaff: PropTypes.func,
+    getAdminOverview: PropTypes.func,
+    getAdminOrders: PropTypes.func,
+    getAdminOrder: PropTypes.func,
+    updateAdminOrderStatus: PropTypes.func,
+    getAdminCustomers: PropTypes.func,
+    getAdminCustomer: PropTypes.func,
+    getAdminInventory: PropTypes.func,
+    adjustInventoryStock: PropTypes.func,
+    getInventoryMovements: PropTypes.func,
+    getBranchOperations: PropTypes.func,
+    getAdminReports: PropTypes.func,
+    getCapabilityProfiles: PropTypes.func,
+    createGovernanceEmployee: PropTypes.func,
   }),
   children: PropTypes.node.isRequired,
 };

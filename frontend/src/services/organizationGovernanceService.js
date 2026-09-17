@@ -28,8 +28,19 @@ export const organizationGovernanceService = {
   getEmployees(provider) {
     return provider.getGovernanceEmployees();
   },
-  updateEmployee(provider, id, data) {
-    return provider.updateGovernanceEmployee(id, data);
+  updateEmployee(provider, id, data, actor) {
+    return provider.updateGovernanceEmployee(id, data, actor);
+  },
+  /**
+   * Admin employee creation (Phase 9) — the only staff-creation path open
+   * to Admins. `actor` carries { role, permissions } so the provider can
+   * enforce the hierarchy: no capabilities granted beyond the creator's own.
+   */
+  createEmployee(provider, data, actor) {
+    return provider.createGovernanceEmployee(data, actor);
+  },
+  getCapabilityProfiles(provider) {
+    return provider.getCapabilityProfiles();
   },
 };
 

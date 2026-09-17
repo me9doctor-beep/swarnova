@@ -1,5 +1,8 @@
 import {
   BadgeIndianRupee,
+  BarChart3,
+  Boxes,
+  ClipboardList,
   Images,
   Layers,
   LayoutDashboard,
@@ -9,6 +12,7 @@ import {
   ScrollText,
   Settings,
   ShieldCheck,
+  ShoppingBag,
   Store,
   Tags,
   UserCog,
@@ -16,6 +20,7 @@ import {
   WandSparkles,
 } from "lucide-react";
 import { ROLES } from "../../features/authentication/roles.js";
+import { CAPABILITIES } from "../../features/authentication/capabilities.js";
 
 /**
  * CONSOLE CONFIGURATION
@@ -27,12 +32,16 @@ import { ROLES } from "../../features/authentication/roles.js";
  * Navigation shape:
  *
  *   navigation: [
- *     { label?: "Group heading", items: [{ label, to, end?, icon }] }
+ *     { label?: "Group heading", items: [{ label, to, end?, icon, capability? }] }
  *   ]
  *
  * Groups without a `label` render as a plain list, which is what a single-item
  * experience uses today. Modules are appended here as their phases land —
  * never registered before their route exists.
+ *
+ * `capability` (Phase 9) names the permission key an item requires; the
+ * shared ConsoleExperience hides items the session cannot use, so a signed-in
+ * account only ever sees its own navigation (Super Admin's "*" sees all).
  */
 export const CONSOLE_CONFIG = {
   [ROLES.ADMIN]: {
@@ -42,6 +51,36 @@ export const CONSOLE_CONFIG = {
       {
         items: [
           { label: "Overview", to: "/admin", end: true, icon: LayoutDashboard },
+        ],
+      },
+      {
+        label: "Business",
+        items: [
+          { label: "Products", to: "/admin/products", icon: Package, capability: CAPABILITIES.CATALOGUE_VIEW },
+          { label: "Orders", to: "/admin/orders", icon: ClipboardList, capability: CAPABILITIES.ORDERS_VIEW },
+          { label: "Customers", to: "/admin/customers", icon: ShoppingBag, capability: CAPABILITIES.ORDERS_VIEW },
+          { label: "Inventory", to: "/admin/inventory", icon: Boxes, capability: CAPABILITIES.INVENTORY_VIEW },
+        ],
+      },
+      {
+        label: "Content",
+        items: [
+          { label: "Homepage", to: "/admin/homepage", icon: LayoutTemplate, capability: CAPABILITIES.CONTENT_VIEW },
+          { label: "Campaigns", to: "/admin/campaigns", icon: Megaphone, capability: CAPABILITIES.CONTENT_VIEW },
+          { label: "Collections", to: "/admin/collections", icon: Layers, capability: CAPABILITIES.CONTENT_VIEW },
+        ],
+      },
+      {
+        label: "Organisation",
+        items: [
+          { label: "Branches", to: "/admin/branches", icon: Store, capability: CAPABILITIES.BRANCHES_VIEW },
+          { label: "Employees", to: "/admin/employees", icon: Users, capability: CAPABILITIES.STAFF_MANAGE },
+        ],
+      },
+      {
+        label: "Insights",
+        items: [
+          { label: "Reports", to: "/admin/reports", icon: BarChart3, capability: CAPABILITIES.REPORTS_VIEW },
         ],
       },
     ],

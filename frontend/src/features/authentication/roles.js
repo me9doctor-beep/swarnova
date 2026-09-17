@@ -33,3 +33,32 @@ export const ROLE_LIST = [
 export function roleLabel(role) {
   return ROLE_LABELS[role] ?? "Guest";
 }
+
+/**
+ * STAFF LOGIN RESOLUTION (Phase 9)
+ * -----------------------------------------------------------------------------
+ * One shared staff login (`/staff/login`) authenticates every staff role; the
+ * account's role then decides where the session lands. This map is that
+ * resolution table — authentication never asks the user to pick a role.
+ */
+export const STAFF_HOME_PATHS = {
+  [ROLES.SUPER_ADMIN]: "/super-admin",
+  [ROLES.ADMIN]: "/admin",
+  [ROLES.EMPLOYEE]: "/employee",
+};
+
+export const STAFF_LOGIN_PATH = "/staff/login";
+
+/** Home route for a signed-in role; customers belong to the storefront. */
+export function roleHomePath(role) {
+  return STAFF_HOME_PATHS[role] ?? "/";
+}
+
+/**
+ * Audit-trail actor label for a session — "Name — Role". Mutations pass this
+ * to the provider so the canonical audit trail records who really acted.
+ */
+export function actorLabel(user, role) {
+  if (!user?.name) return roleLabel(role);
+  return `${user.name} — ${roleLabel(role)}`;
+}

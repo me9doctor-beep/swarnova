@@ -17,8 +17,20 @@
  *
  * This file is part of the mock provider implementation — together with
  * `mockProvider.js` it is the only place that reads `src/mock/`.
+ *
+ * Phase 9 extends the same store with ADMIN / HEAD OFFICE operations: the
+ * shared staff login, the order book, the customer directory, branch
+ * inventory, employee lifecycle and the business overview/reports — all
+ * computed from the SAME canonical entities Super Admin governs and the
+ * storefront reads. There is no second, admin-only database.
  */
 import * as db from "../../../mock/data/index.js";
+import { ROLES } from "../../../features/authentication/roles.js";
+import {
+  FULL_BUSINESS_CAPABILITIES,
+  permissionsFromCapabilities,
+  capabilitiesWithinAuthority,
+} from "../../../features/authentication/capabilities.js";
 
 /* ----------------------------------------------------------------------- */
 /* Helpers                                                                  */
@@ -76,11 +88,18 @@ export function createGovernanceStore() {
     media,
     admins: emit(db.platformAdmins),
     employees: emit(db.platformEmployees),
+    capabilityProfiles: emit(db.capabilityProfiles),
+    customers: emit(db.customers),
+    orders: emit(db.customerOrders),
+    inventory: emit(db.inventoryStock),
+    inventoryMovements: emit(db.inventoryMovements),
     auditLog: emit(db.governanceAuditLog),
     settings: emit(db.platformSettings),
     counters: {
       product: highestSequence(products, "JWL-"),
       media: highestSequence(media, "MED-"),
+      employee: highestSequence(db.platformEmployees, "EMP-"),
+      order: highestSequence(db.customerOrders, "ORD-2026-"),
       audit: 0,
     },
   };
@@ -318,10 +337,11 @@ export function createGovernanceProduct(store, data = {}) {
   return toGovernanceProduct(store, product);
 }
 
-export function updateGovernanceProduct(store, id, data = {}) {
+export function updateGovernanceProduct(store, id, data = {}, actor) {
   const product = findProduct(store, id);
   const updated = applyProductPatch(store, product, data);
   appendAudit(store, {
+    actor,
     action: "product.update",
     entityType: "product",
     entityId: id,
@@ -336,7 +356,7 @@ export function updateGovernanceProduct(store, id, data = {}) {
  * a Draft cannot be published, a Submitted piece cannot skip review, and a
  * rejection without a reason is refused — exactly what the API will enforce.
  */
-export function transitionGovernanceProduct(store, id, action, payload = {}) {
+export function transitionGovernanceProduct(store, id, action, payload = {}, actor) {
   const product = findProduct(store, id);
   const rule = PRODUCT_TRANSITIONS[action];
 
@@ -390,6 +410,7 @@ export function transitionGovernanceProduct(store, id, action, payload = {}) {
     publish: () => "Published to the storefront catalogue.",
   };
   appendAudit(store, {
+    actor,
     action: `product.${action}`,
     entityType: "product",
     entityId: product.id,
@@ -736,13 +757,14 @@ export function getGovernanceHomepage(store) {
   });
 }
 
-export function updateHomepageSection(store, id, patch = {}) {
+export function updateHomepageSection(store, id, patch = {}, actor) {
   const section = store.homepage.sections.find((item) => item.id === id);
   if (!section) fail(`Homepage section ${id} could not be found.`);
 
   if (patch.enabled !== undefined) section.enabled = Boolean(patch.enabled);
 
   appendAudit(store, {
+    actor,
     action: section.enabled ? "content.section_enable" : "content.section_disable",
     entityType: "content",
     entityId: `HOME-${section.id}`,
@@ -791,13 +813,14 @@ export function listGovernanceCampaigns(store) {
   );
 }
 
-export function updateCampaignStatus(store, id, status) {
+export function updateCampaignStatus(store, id, status, actor) {
   if (!["active", "paused"].includes(status)) fail(`“${status}” is not a campaign status.`);
   const campaign = store.campaigns.find((item) => item.id === id);
   if (!campaign) fail(`Campaign ${id} could not be found.`);
 
   campaign.status = status;
   appendAudit(store, {
+    actor,
     action: status === "active" ? "campaign.publish" : "campaign.pause",
     entityType: "campaign",
     entityId: id,
@@ -852,7 +875,15 @@ export function listGovernanceAdmins(store) {
   );
 }
 
-export function createGovernanceAdmin(store, data = {}) {
+export function createGovernanceAdmin(store, data = {}, actor = {}) {
+  /* Administrator accounts are a platform-governance concern: only the
+     Super Admin creates them. Legacy calls (no actor) come from the Super
+     Admin console itself. */
+  const actorRole = actor && typeof actor === "object" ? actor.role : undefined;
+  if (actorRole !== undefined && actorRole !== ROLES.SUPER_ADMIN) {
+    fail("Only the Super Admin can create administrator accounts.");
+  }
+
   if (!hasText(data.name)) fail("An administrator name is required.");
   if (!hasText(data.email) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
     fail("A valid email address is required.");
@@ -927,28 +958,278 @@ export function listGovernanceEmployees(store) {
   return emit(
     store.employees.map((employee) => {
       const branch = store.branches.find((item) => item.id === employee.branchId);
-      return { ...employee, branchName: branch?.name ?? null };
+      const profile = store.capabilityProfiles.find(
+        (item) => item.id === employee.profileId
+      );
+      return {
+        ...employee,
+        branchName: branch?.name ?? null,
+        profileName: profile?.name ?? null,
+      };
     })
   );
 }
 
-export function updateGovernanceEmployee(store, id, patch = {}) {
+/**
+ * Employee mutation — the single employee write path, shared by the Super
+ * Admin oversight screen (status only) and the Admin staff console (full
+ * operational detail: contact, branch, capability profile, account status).
+ *
+ * RBAC is enforced here exactly as the backend will:
+ *   only Admin / Super Admin may change an employee, and nobody but a
+ *   Super Admin may grant capabilities they do not hold themselves.
+ */
+export function updateGovernanceEmployee(store, id, patch = {}, actor = {}) {
   const employee = store.employees.find((item) => item.id === id);
   if (!employee) fail(`Employee ${id} could not be found.`);
-  if (patch.status !== undefined) {
-    employee.status = patch.status === "disabled" ? "disabled" : "active";
+
+  /* `actor` is a record { role, permissions, label }; a bare string (older
+     callers) is treated as a label-only Admin actor. */
+  const actorRecord =
+    actor && typeof actor === "object"
+      ? { role: actor.role ?? ROLES.ADMIN, permissions: actor.permissions ?? [], label: actor.label }
+      : { role: ROLES.ADMIN, permissions: [], label: actor || undefined };
+
+  if (![ROLES.ADMIN, ROLES.SUPER_ADMIN].includes(actorRecord.role)) {
+    fail("Only Admins and Super Admins can manage employee accounts.");
   }
+
+  const details = [];
+
+  if (patch.name !== undefined && patch.name.trim() && patch.name.trim() !== employee.name) {
+    employee.name = patch.name.trim();
+    details.push("Name updated.");
+  }
+  if (patch.email !== undefined) {
+    const email = String(patch.email).trim();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) fail("A valid email address is required.");
+    if (email !== employee.email) {
+      if (emailTaken(store, email, id)) fail(`The email ${email} already belongs to another staff account.`);
+      employee.email = email;
+      details.push("Email updated.");
+    }
+  }
+  if (patch.phone !== undefined && String(patch.phone).trim() !== employee.phone) {
+    employee.phone = String(patch.phone).trim();
+    details.push("Phone updated.");
+  }
+  if (patch.role !== undefined && String(patch.role).trim() && String(patch.role).trim() !== employee.role) {
+    employee.role = String(patch.role).trim();
+    details.push("Role title updated.");
+  }
+  if (patch.branchId !== undefined) {
+    const branch = store.branches.find((item) => item.id === patch.branchId);
+    if (!branch) fail("Choose the branch this employee belongs to.");
+    if (branch.id !== employee.branchId) {
+      employee.branchId = branch.id;
+      details.push(`Branch reassigned to ${branch.name}.`);
+    }
+  }
+
+  /* Capability change — profile and/or individual adjustments together.
+     Only counted when the grant actually differs from what is held. */
+  if (patch.profileId !== undefined || patch.capabilities !== undefined) {
+    let profile = store.capabilityProfiles.find((item) => item.id === employee.profileId) ?? null;
+    if (patch.profileId !== undefined) {
+      profile = store.capabilityProfiles.find((item) => item.id === patch.profileId) ?? null;
+      if (!profile) fail("Choose a valid capability profile.");
+    }
+    const capabilities = {
+      ...(profile?.capabilities ?? {}),
+      ...(patch.capabilities ?? {}),
+    };
+
+    const unchanged =
+      JSON.stringify(capabilities) === JSON.stringify(employee.capabilities ?? {}) &&
+      (profile?.id ?? null) === (employee.profileId ?? null);
+
+    if (!unchanged) {
+      if (!capabilitiesWithinAuthority(actorRecord.permissions, capabilities)) {
+        fail("You cannot grant capabilities you do not hold yourself.");
+      }
+      const profileChanged =
+        patch.profileId !== undefined && patch.profileId !== employee.profileId;
+      employee.profileId = profile?.id ?? employee.profileId;
+      employee.capabilities = capabilities;
+      details.push(
+        profileChanged
+          ? `Capability profile set to ${profile.name}.`
+          : "Capabilities updated."
+      );
+    }
+  }
+
+  if (patch.status !== undefined && patch.status !== employee.status) {
+    employee.status = patch.status === "disabled" ? "disabled" : "active";
+    details.push(
+      employee.status === "disabled"
+        ? "Employee disabled — they can no longer sign in."
+        : "Employee re-enabled."
+    );
+  }
+
+  if (details.length === 0) details.push("Employee details updated.");
+
+  /* A status-only change earns its own audit verb (disable / enable). */
+  const statusOnly =
+    patch.status !== undefined &&
+    (details[details.length - 1] === "Employee disabled — they can no longer sign in." ||
+      details[details.length - 1] === "Employee re-enabled.") &&
+    details.length === 1;
+
   appendAudit(store, {
-    action: "employee.update",
+    actor: actorRecord.label,
+    action: statusOnly
+      ? employee.status === "disabled"
+        ? "employee.disable"
+        : "employee.enable"
+      : "employee.update",
     entityType: "employee",
     entityId: id,
     entityLabel: employee.name,
-    detail:
-      employee.status === "disabled"
-        ? "Employee marked inactive at platform level."
-        : "Employee marked active.",
+    detail: details.join(" "),
   });
   return emit(employee);
+}
+
+/* ----------------------------------------------------------------------- */
+/* Staff — shared login, employee creation, directory                      */
+/* ----------------------------------------------------------------------- */
+
+function emailTaken(store, email, exceptId = null) {
+  const needle = String(email).toLowerCase();
+  const matches = (entry) =>
+    entry.id !== exceptId && String(entry.email ?? "").toLowerCase() === needle;
+  return (
+    String(db.superAdminAccount.email).toLowerCase() === needle ||
+    store.admins.some(matches) ||
+    store.employees.some(matches)
+  );
+}
+
+/**
+ * THE ONE STAFF LOGIN — credentials in, session out.
+ *
+ * The account decides the role; the caller never chooses one. Resolution
+ * order: the platform owner, then administrators, then employees. Disabled
+ * accounts are refused before the password is even compared against, and
+ * every failure rejects with a readable message — the mock's 401s.
+ */
+export function authenticateStaff(store, credentials = {}) {
+  const email = String(credentials.email ?? "").trim().toLowerCase();
+  const password = String(credentials.password ?? "");
+
+  if (!email || !password) fail("Enter both your email address and password.");
+
+  let account = null;
+  let role = null;
+
+  if (String(db.superAdminAccount.email).toLowerCase() === email) {
+    account = db.superAdminAccount;
+    role = ROLES.SUPER_ADMIN;
+  } else {
+    account =
+      store.admins.find((item) => String(item.email).toLowerCase() === email) ?? null;
+    if (account) role = ROLES.ADMIN;
+  }
+  if (!account) {
+    account =
+      store.employees.find((item) => String(item.email).toLowerCase() === email) ?? null;
+    if (account) role = ROLES.EMPLOYEE;
+  }
+
+  if (!account) fail("No staff account matches that email address.");
+  if (account.status === "disabled") {
+    fail("This account is disabled. Contact your administrator to restore access.");
+  }
+  if (account.password !== password) fail("Incorrect password. Please try again.");
+
+  /* Session claims — exactly the payload a future backend issues. */
+  let permissions;
+  if (role === ROLES.SUPER_ADMIN) permissions = ["*"];
+  else if (role === ROLES.ADMIN) {
+    permissions = permissionsFromCapabilities(FULL_BUSINESS_CAPABILITIES);
+  } else {
+    const profile = store.capabilityProfiles.find(
+      (item) => item.id === account.profileId
+    );
+    permissions = permissionsFromCapabilities(
+      account.capabilities ?? profile?.capabilities ?? {}
+    );
+  }
+
+  return emit({
+    user: {
+      id: account.id,
+      name: account.name,
+      email: account.email,
+      branchId: account.branchId ?? null,
+    },
+    role,
+    permissions,
+  });
+}
+
+/**
+ * Create an EMPLOYEE account — the only staff-creation path open to Admins.
+ * Admins cannot create Admins (that stays with the platform owner's
+ * `createGovernanceAdmin`) and nobody can create a Super Admin here.
+ *
+ * The hierarchy guard is enforced store-side, exactly as the API will:
+ * the requested capabilities must sit within the creator's own grant.
+ */
+export function createEmployee(store, data = {}, actor = {}) {
+  if (![ROLES.ADMIN, ROLES.SUPER_ADMIN].includes(actor.role)) {
+    fail("Only Admins and Super Admins can create staff accounts.");
+  }
+
+  if (!hasText(data.name)) fail("The employee's name is required.");
+  const email = String(data.email ?? "").trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) fail("A valid email address is required.");
+  if (emailTaken(store, email)) {
+    fail(`The email ${email} already belongs to another staff account.`);
+  }
+  if (!hasText(data.phone)) fail("A phone number is required.");
+  const branch = store.branches.find((item) => item.id === data.branchId);
+  if (!branch) fail("Choose the branch this employee belongs to.");
+  if (!hasText(data.role)) fail("A role title is required — for example, Sales Consultant.");
+
+  const profile = store.capabilityProfiles.find((item) => item.id === data.profileId);
+  if (!profile) fail("Choose the capability profile this employee is hired into.");
+
+  const capabilities = { ...profile.capabilities, ...(data.capabilities ?? {}) };
+  if (!capabilitiesWithinAuthority(actor.permissions, capabilities)) {
+    fail("You cannot grant capabilities you do not hold yourself.");
+  }
+
+  store.counters.employee += 1;
+  const id = `EMP-${String(store.counters.employee).padStart(3, "0")}`;
+
+  const employee = {
+    id,
+    name: data.name.trim(),
+    email,
+    password: db.STAFF_TEMP_PASSWORD,
+    phone: String(data.phone).trim(),
+    role: data.role.trim(),
+    branchId: branch.id,
+    profileId: profile.id,
+    capabilities,
+    status: "active",
+  };
+
+  store.employees = [...store.employees, employee];
+  appendAudit(store, {
+    actor: actor.label ?? "Admin",
+    action: "employee.create",
+    entityType: "employee",
+    entityId: id,
+    entityLabel: employee.name,
+    detail: `Employee account created at ${branch.name} with the ${profile.name} capability profile.`,
+  });
+
+  /* The temporary password travels once, for the invite handover. */
+  return { ...emit(employee), temporaryPassword: db.STAFF_TEMP_PASSWORD };
 }
 
 /* ----------------------------------------------------------------------- */
@@ -1089,4 +1370,468 @@ export function listAuditLogs(store, query = {}) {
 
   list.sort((a, b) => String(b.at).localeCompare(String(a.at)));
   return emit(list.slice(0, query.limit ?? 100));
+}
+
+/* ----------------------------------------------------------------------- */
+/* Admin operations — orders                                               */
+/* ----------------------------------------------------------------------- */
+
+/**
+ * The operational order lifecycle — the ONLY states and moves between them.
+ * An order walks forward Placed → Processing → Shipped → Delivered, or is
+ * Cancelled before it ships. Nothing else exists; the backend refuses it.
+ */
+export const ORDER_FLOW = {
+  Placed: ["Processing", "Cancelled"],
+  Processing: ["Shipped", "Cancelled"],
+  Shipped: ["Delivered"],
+  Delivered: [],
+  Cancelled: [],
+};
+
+/** Order states that still need business attention. */
+export const OPEN_ORDER_STATUSES = ["Placed", "Processing", "Shipped"];
+
+export function orderActions(status) {
+  return ORDER_FLOW[status] ?? [];
+}
+
+export function toAdminOrder(store, order) {
+  const customer = store.customers.find((item) => item.id === order.customerId);
+  const branch = store.branches.find((item) => item.id === order.branchId);
+  return emit({
+    ...order,
+    customerName: customer?.name ?? "Unknown customer",
+    branchName: branch?.name ?? null,
+    actions: orderActions(order.status),
+  });
+}
+
+function findOrder(store, id) {
+  const order = store.orders.find(
+    (item) => item.id === id || item.orderNumber === id
+  );
+  if (!order) fail(`Order ${id} could not be found.`);
+  return order;
+}
+
+export function listAdminOrders(store, query = {}) {
+  let list = [...store.orders];
+
+  if (query.status) list = list.filter((order) => order.status === query.status);
+  if (query.branchId) list = list.filter((order) => order.branchId === query.branchId);
+  if (query.search) {
+    const term = String(query.search).toLowerCase();
+    list = list.filter((order) => {
+      const customer = store.customers.find((item) => item.id === order.customerId);
+      return (
+        order.orderNumber.toLowerCase().includes(term) ||
+        order.id.toLowerCase().includes(term) ||
+        String(customer?.name ?? "").toLowerCase().includes(term)
+      );
+    });
+  }
+
+  list.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  return list.map((order) => toAdminOrder(store, order));
+}
+
+export function getAdminOrder(store, id) {
+  const order = store.orders.find(
+    (item) => item.id === id || item.orderNumber === id
+  );
+  return order ? toAdminOrder(store, order) : null;
+}
+
+/**
+ * Move an order along the lifecycle. The flow table is enforced here — an
+ * Admin cannot skip states, re-open a delivery, or cancel a shipped order.
+ */
+export function updateAdminOrderStatus(store, id, status, actor) {
+  const order = findOrder(store, id);
+  const allowed = ORDER_FLOW[order.status] ?? [];
+  if (!allowed.includes(status)) {
+    fail(
+      `A ${order.status.toLowerCase()} order cannot move to “${status}”. ` +
+        (allowed.length > 0
+          ? `Allowed next steps: ${allowed.join(", ")}.`
+          : "This order has reached its final state.")
+    );
+  }
+
+  const at = now();
+  order.status = status;
+  if (status === "Delivered") order.deliveredAt = at;
+  if (status === "Cancelled") {
+    order.cancelledAt = at;
+    order.paymentStatus = "refunded";
+  }
+
+  appendAudit(store, {
+    actor,
+    action: "order.status",
+    entityType: "order",
+    entityId: order.id,
+    entityLabel: order.orderNumber,
+    detail:
+      status === "Cancelled"
+        ? "Order cancelled and payment marked for refund."
+        : `Order status changed to ${status}.`,
+  });
+  return toAdminOrder(store, order);
+}
+
+/* ----------------------------------------------------------------------- */
+/* Admin operations — customers                                            */
+/* ----------------------------------------------------------------------- */
+
+function customerStats(store, customerId) {
+  const orders = store.orders.filter((order) => order.customerId === customerId);
+  const purchased = orders.filter((order) => order.status !== "Cancelled");
+  const sorted = [...orders].sort((a, b) =>
+    String(b.createdAt).localeCompare(String(a.createdAt))
+  );
+  return {
+    orderCount: orders.length,
+    totalSpent: purchased.reduce((sum, order) => sum + order.total, 0),
+    lastOrderAt: sorted[0]?.createdAt ?? null,
+  };
+}
+
+export function toAdminCustomer(store, customer) {
+  return emit({ ...customer, ...customerStats(store, customer.id) });
+}
+
+export function listAdminCustomers(store, query = {}) {
+  let list = [...store.customers];
+
+  if (query.search) {
+    const term = String(query.search).toLowerCase();
+    list = list.filter(
+      (customer) =>
+        customer.name.toLowerCase().includes(term) ||
+        customer.email.toLowerCase().includes(term) ||
+        customer.phone.toLowerCase().includes(term) ||
+        customer.city.toLowerCase().includes(term)
+    );
+  }
+
+  list.sort((a, b) => a.name.localeCompare(b.name));
+  return list.map((customer) => toAdminCustomer(store, customer));
+}
+
+export function getAdminCustomer(store, id) {
+  const customer = store.customers.find((item) => item.id === id);
+  if (!customer) return null;
+  const orders = store.orders
+    .filter((order) => order.customerId === id)
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+    .map((order) => toAdminOrder(store, order));
+  return emit({ ...toAdminCustomer(store, customer), orders });
+}
+
+/* ----------------------------------------------------------------------- */
+/* Admin operations — inventory                                            */
+/* ----------------------------------------------------------------------- */
+
+/** Stock state: "out" beats "low" beats "ok" — derived, never stored. */
+export function stockState(row) {
+  if (row.available <= 0) return "out";
+  if (row.available <= row.reorderLevel) return "low";
+  return "ok";
+}
+
+export function toAdminStock(store, row) {
+  const product = store.products.find((item) => item.id === row.productId);
+  const branch = store.branches.find((item) => item.id === row.branchId);
+  return emit({
+    ...row,
+    productName: product?.name ?? row.productId,
+    sku: product?.sku ?? null,
+    productImage: product?.images?.[0] ?? null,
+    branchName: branch?.name ?? row.branchId,
+    branchCity: branch?.city ?? null,
+    state: stockState(row),
+  });
+}
+
+/**
+ * Inventory query contract:
+ *   { branchId, productId, stock: "low" | "out", search }
+ * `stock: "low"` includes out-of-stock rows — "needs attention" as one bucket.
+ */
+export function listAdminInventory(store, query = {}) {
+  let list = [...store.inventory];
+
+  if (query.branchId) list = list.filter((row) => row.branchId === query.branchId);
+  if (query.productId) list = list.filter((row) => row.productId === query.productId);
+  if (query.stock === "low") list = list.filter((row) => stockState(row) !== "ok");
+  if (query.stock === "out") list = list.filter((row) => stockState(row) === "out");
+  if (query.search) {
+    const term = String(query.search).toLowerCase();
+    list = list.filter((row) => {
+      const product = store.products.find((item) => item.id === row.productId);
+      return (
+        String(product?.name ?? "").toLowerCase().includes(term) ||
+        String(product?.sku ?? "").toLowerCase().includes(term)
+      );
+    });
+  }
+
+  const stateOrder = { out: 0, low: 1, ok: 2 };
+  list.sort(
+    (a, b) =>
+      stateOrder[stockState(a)] - stateOrder[stockState(b)] ||
+      String(a.productId).localeCompare(String(b.productId))
+  );
+  return list.map((row) => toAdminStock(store, row));
+}
+
+/**
+ * Adjust one stock row by a signed quantity. The adjustment is validated
+ * exactly as the API will: whole pieces only, never below zero, and a
+ * written reason — which travels into the movement log and the audit trail.
+ */
+export function adjustAdminInventory(store, stockId, adjustment = {}, actor) {
+  const row = store.inventory.find((item) => item.id === stockId);
+  if (!row) fail(`Stock record ${stockId} could not be found.`);
+
+  const delta = Number(adjustment.delta);
+  if (!Number.isInteger(delta) || delta === 0) {
+    fail("Enter a whole-piece quantity to add or remove.");
+  }
+  if (!hasText(adjustment.reason)) {
+    fail("A reason is required for every stock adjustment.");
+  }
+  if (row.available + delta < 0) {
+    fail(
+      `Only ${row.available} piece${row.available === 1 ? "" : "s"} available — ` +
+        "stock can never be adjusted below zero."
+    );
+  }
+
+  row.available += delta;
+
+  const movement = {
+    id: `MV-${Date.now()}`,
+    stockId: row.id,
+    type: "adjustment",
+    delta,
+    at: now(),
+    by: actor ?? "Admin",
+    note: adjustment.reason.trim(),
+  };
+  store.inventoryMovements = [movement, ...store.inventoryMovements].slice(0, 200);
+
+  const stock = toAdminStock(store, row);
+  appendAudit(store, {
+    actor,
+    action: "inventory.adjust",
+    entityType: "inventory",
+    entityId: row.id,
+    entityLabel: `${stock.productName} · ${stock.branchName}`,
+    detail: `Stock adjusted by ${delta > 0 ? "+" : ""}${delta} (${adjustment.reason.trim()}). Now ${row.available} available.`,
+  });
+  return stock;
+}
+
+export function listInventoryMovements(store, query = {}) {
+  let list = [...store.inventoryMovements];
+  if (query.stockId) list = list.filter((item) => item.stockId === query.stockId);
+  list.sort((a, b) => String(b.at).localeCompare(String(a.at)));
+  return emit(list.slice(0, query.limit ?? 20));
+}
+
+/* ----------------------------------------------------------------------- */
+/* Admin operations — branch coordination                                  */
+/* ----------------------------------------------------------------------- */
+
+/**
+ * The operational branch view: what the head office needs to coordinate a
+ * boutique — people, stock and open orders. Platform governance of branches
+ * (enable/disable) stays with the Super Admin; nothing here duplicates it.
+ */
+export function listBranchOperations(store) {
+  return store.branches.map((branch) => {
+    const manager = store.admins.find(
+      (item) => item.branchId === branch.id && item.status === "active"
+    );
+    const employees = store.employees.filter((item) => item.branchId === branch.id);
+    const stock = store.inventory.filter((row) => row.branchId === branch.id);
+    const openOrders = store.orders.filter(
+      (order) => order.branchId === branch.id && OPEN_ORDER_STATUSES.includes(order.status)
+    );
+
+    return emit({
+      ...branch,
+      managerName: manager?.name ?? null,
+      employeeCount: employees.length,
+      activeEmployeeCount: employees.filter((item) => item.status === "active").length,
+      inventory: {
+        rows: stock.length,
+        units: stock.reduce((sum, row) => sum + row.available, 0),
+        lowCount: stock.filter((row) => stockState(row) !== "ok").length,
+      },
+      openOrders: {
+        count: openOrders.length,
+        value: openOrders.reduce((sum, order) => sum + order.total, 0),
+      },
+    });
+  });
+}
+
+/* ----------------------------------------------------------------------- */
+/* Admin operations — reports & overview                                   */
+/* ----------------------------------------------------------------------- */
+
+const ORDER_STATUS_LIST = ["Placed", "Processing", "Shipped", "Delivered", "Cancelled"];
+
+/** Business reports — computed from canonical state, never stored. */
+export function adminReports(store) {
+  const ordersByStatus = ORDER_STATUS_LIST.map((status) => {
+    const list = store.orders.filter((order) => order.status === status);
+    return {
+      status,
+      count: list.length,
+      value: list.reduce((sum, order) => sum + order.total, 0),
+    };
+  });
+
+  const salesByBranch = store.branches.map((branch) => {
+    const sold = store.orders.filter(
+      (order) => order.branchId === branch.id && order.status !== "Cancelled"
+    );
+    return {
+      branchId: branch.id,
+      branchName: branch.name,
+      city: branch.city,
+      orders: sold.length,
+      units: sold.reduce(
+        (sum, order) =>
+          sum + order.items.reduce((itemSum, item) => itemSum + item.quantity, 0),
+        0
+      ),
+      revenue: sold.reduce((sum, order) => sum + order.total, 0),
+    };
+  });
+
+  const byProduct = new Map();
+  for (const order of store.orders) {
+    if (order.status === "Cancelled") continue;
+    for (const item of order.items) {
+      const entry = byProduct.get(item.id) ?? {
+        productId: item.id,
+        name: item.name,
+        sku: item.sku,
+        units: 0,
+        revenue: 0,
+      };
+      entry.units += item.quantity;
+      entry.revenue += item.price * item.quantity;
+      byProduct.set(item.id, entry);
+    }
+  }
+  const topProducts = [...byProduct.values()]
+    .sort((a, b) => b.units - a.units || b.revenue - a.revenue)
+    .slice(0, 5);
+
+  return emit({
+    ordersByStatus,
+    salesByBranch,
+    topProducts,
+    lowStock: listAdminInventory(store, { stock: "low" }),
+  });
+}
+
+/**
+ * The Admin dashboard payload — "what needs attention in the jewellery
+ * business today?" Computed from canonical state, like the platform
+ * overview; never stored, never a second database.
+ */
+export function adminOverview(store) {
+  const openOrders = store.orders.filter((order) =>
+    OPEN_ORDER_STATUSES.includes(order.status)
+  );
+  const placed = store.orders.filter((order) => order.status === "Placed");
+  const processing = store.orders.filter((order) => order.status === "Processing");
+  const lowStock = store.inventory.filter((row) => stockState(row) !== "ok");
+  const outOfStock = store.inventory.filter((row) => stockState(row) === "out");
+  const published = store.products.filter((product) => product.status === "published");
+  const drafts = store.products.filter((product) => product.status === "draft");
+  const rejected = store.products.filter((product) => product.status === "rejected");
+  const activeCampaign = db.getActiveCampaign(store.campaigns);
+
+  const attention = [];
+  if (placed.length > 0) {
+    attention.push({
+      key: "orders-placed",
+      label: `${placed.length} newly placed order${placed.length === 1 ? "" : "s"} to confirm`,
+      action: "Review",
+      to: "/admin/orders?status=Placed",
+    });
+  }
+  if (processing.length > 0) {
+    attention.push({
+      key: "orders-fulfilment",
+      label: `${processing.length} order${processing.length === 1 ? "" : "s"} awaiting fulfilment`,
+      action: "Fulfil",
+      to: "/admin/orders?status=Processing",
+    });
+  }
+  if (lowStock.length > 0) {
+    attention.push({
+      key: "inventory-low",
+      label: `${lowStock.length} stock line${lowStock.length === 1 ? "" : "s"} at or below reorder level`,
+      action: "Restock",
+      to: "/admin/inventory?stock=low",
+    });
+  }
+  if (rejected.length > 0) {
+    attention.push({
+      key: "products-rejected",
+      label: `${rejected.length} rejected product${rejected.length === 1 ? "" : "s"} awaiting revision`,
+      action: "Revise",
+      to: "/admin/products?status=rejected",
+    });
+  }
+  if (drafts.length > 0) {
+    attention.push({
+      key: "products-drafts",
+      label: `${drafts.length} product draft${drafts.length === 1 ? "" : "s"} not yet submitted for review`,
+      action: "View",
+      to: "/admin/products?status=draft",
+    });
+  }
+
+  const recentOrders = [...store.orders]
+    .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+    .slice(0, 5)
+    .map((order) => toAdminOrder(store, order));
+
+  return emit({
+    business: {
+      openOrders: openOrders.length,
+      openOrdersValue: openOrders.reduce((sum, order) => sum + order.total, 0),
+      awaitingFulfilment: placed.length + processing.length,
+      lowStockCount: lowStock.length,
+      outOfStockCount: outOfStock.length,
+      publishedProducts: published.length,
+      totalProducts: store.products.length,
+      customers: store.customers.length,
+      activeBranches: store.branches.filter((branch) => branch.status !== "disabled").length,
+      totalBranches: store.branches.length,
+    },
+    attention,
+    ordersNeedingAttention: [...placed, ...processing]
+      .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)))
+      .slice(0, 5)
+      .map((order) => toAdminOrder(store, order)),
+    lowStock: listAdminInventory(store, { stock: "low" }).slice(0, 5),
+    branches: listBranchOperations(store),
+    recentOrders,
+    campaign: activeCampaign
+      ? { title: activeCampaign.title, eyebrow: activeCampaign.eyebrow }
+      : null,
+    recentActivity: store.auditLog.slice(0, 6),
+  });
 }
