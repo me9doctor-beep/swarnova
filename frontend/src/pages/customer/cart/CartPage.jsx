@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Plus,
@@ -7,9 +6,6 @@ import {
   ShieldCheck,
   Truck,
   RotateCcw,
-  Sparkles,
-  ArrowRight,
-  Check,
 } from "lucide-react";
 import Button from "../../../components/ui/Button.jsx";
 import Container from "../../../components/ui/Container.jsx";
@@ -32,15 +28,6 @@ export default function CartPage() {
     count,
     subtotal,
   } = useCart();
-
-  const [checkoutNotice, setCheckoutNotice] = useState(false);
-
-  const handleCheckoutClick = () => {
-    setCheckoutNotice(true);
-    setTimeout(() => {
-      setCheckoutNotice(false);
-    }, 6000);
-  };
 
   return (
     <div className="bg-surface-secondary/30 pb-20 pt-[132px] sm:pb-28 sm:pt-[152px] lg:pt-[168px]">
@@ -253,29 +240,10 @@ export default function CartPage() {
                 </div>
 
                 <div className="mt-6">
-                  <Button
-                    className="w-full justify-center"
-                    size="md"
-                    onClick={handleCheckoutClick}
-                  >
+                  <Button className="w-full justify-center" size="md" to="/checkout">
                     Proceed to Checkout
                   </Button>
                 </div>
-
-                {checkoutNotice && (
-                  <div
-                    role="status"
-                    className="mt-4 border border-brand-accent/40 bg-surface-muted p-4 text-caption text-text-primary leading-relaxed"
-                  >
-                    <p className="font-semibold uppercase tracking-[0.16em] text-brand-accent-strong flex items-center gap-1.5">
-                      <Sparkles size={13} /> Demonstration Commerce Environment
-                    </p>
-                    <p className="mt-1 text-text-secondary">
-                      Full payment gateways, Razorpay/Stripe, and automated consignment generation
-                      arrive in subsequent phases. Your shopping bag remains active for this visit.
-                    </p>
-                  </div>
-                )}
 
                 {/* Trust Points */}
                 <div className="mt-8 border-t border-border-default pt-6 space-y-3.5 text-caption text-text-secondary">

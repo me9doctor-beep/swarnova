@@ -105,7 +105,12 @@ import { CAPABILITIES } from "../features/authentication/capabilities.js";
  *                 /account/addresses  /account/orders  /account/orders/:id
  *                   — behind RequireCustomer: guests bounce to
  *                   /login?returnTo=<destination>
- *                 (planned: /stores  /checkout)
+ *                 /checkout  /order-confirmation/:id
+ *                   — the completed commerce journey (Phase 12), behind
+ *                   RequireCustomer: checkout is for authenticated
+ *                   customers only, and the confirmation reads the order
+ *                   back through the same canonical book
+ *                 (planned: /stores)
  *   Admin         /admin       business operations dashboard
  *                 /admin/products[/:id]  /admin/orders[/:id]
  *                 /admin/customers[/:id] /admin/inventory
@@ -148,6 +153,22 @@ export const routeTree = [
       { path: "ai-studio", element: <AiStudioPage /> },
       { path: "virtual-try-on", element: <VirtualTryOnPage /> },
       { path: "cart", element: <CartPage /> },
+      {
+        path: "checkout",
+        element: (
+          <RequireCustomer>
+            <CheckoutPage />
+          </RequireCustomer>
+        ),
+      },
+      {
+        path: "order-confirmation/:id",
+        element: (
+          <RequireCustomer>
+            <OrderConfirmationPage />
+          </RequireCustomer>
+        ),
+      },
       {
         path: "login",
         element: (

@@ -21,6 +21,7 @@ export { tryOnRoom, tryOnSamples } from "./try-on/index.js";
 export { default as journalArticles } from "./journal/index.js";
 export { customerProfile, customerAddresses, customers, CUSTOMER_DEMO_PASSWORD } from "./customer/index.js";
 export { default as customerOrders } from "./orders/index.js";
+export { deliveryMethods, paymentMethods, checkoutScenarios } from "./checkout/index.js";
 export { default as mediaLibrary } from "./media/index.js";
 export { inventoryStock, inventoryMovements } from "./inventory/index.js";
 export { superAdminAccount, capabilityProfiles, STAFF_TEMP_PASSWORD } from "./staff/index.js";
