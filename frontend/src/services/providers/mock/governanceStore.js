@@ -27,7 +27,9 @@
 import * as db from "../../../mock/data/index.js";
 import { ROLES } from "../../../features/authentication/roles.js";
 import {
+  CAPABILITIES,
   FULL_BUSINESS_CAPABILITIES,
+  describeCapabilities,
   permissionsFromCapabilities,
   capabilitiesWithinAuthority,
 } from "../../../features/authentication/capabilities.js";
@@ -293,6 +295,24 @@ function applyProductPatch(store, product, patch = {}) {
   return toGovernanceProduct(store, product);
 }
 
+/**
+ * The catalogue boundary (Phase 10). Product governance — creating, editing,
+ * submitting, approving, rejecting and publishing — is head-office and
+ * platform work. A branch account operates the catalogue (lookup, availability
+ * and branch stock), it never governs it, and the provider says so in plain
+ * words even if a request arrives from outside the employee UI.
+ *
+ * Callers that predate Phase 10 pass a plain actor label string (or nothing);
+ * only a session-shaped actor carrying the employee role is refused.
+ */
+function assertCatalogueGovernanceAllowed(actor, action) {
+  if (actor && typeof actor === "object" && actor.role === ROLES.EMPLOYEE) {
+    fail(
+      `Branch accounts cannot ${action} — product governance belongs to head office and the platform owner.`
+    );
+  }
+}
+
 export function createGovernanceProduct(store, data = {}) {
   store.counters.product += 1;
   const id = `JWL-${String(store.counters.product).padStart(3, "0")}`;
@@ -338,6 +358,7 @@ export function createGovernanceProduct(store, data = {}) {
 }
 
 export function updateGovernanceProduct(store, id, data = {}, actor) {
+  assertCatalogueGovernanceAllowed(actor, "edit catalogue records");
   const product = findProduct(store, id);
   const updated = applyProductPatch(store, product, data);
   appendAudit(store, {
@@ -357,6 +378,7 @@ export function updateGovernanceProduct(store, id, data = {}, actor) {
  * rejection without a reason is refused — exactly what the API will enforce.
  */
 export function transitionGovernanceProduct(store, id, action, payload = {}, actor) {
+  assertCatalogueGovernanceAllowed(actor, "move products through the governance lifecycle");
   const product = findProduct(store, id);
   const rule = PRODUCT_TRANSITIONS[action];
 
@@ -1158,12 +1180,19 @@ export function authenticateStaff(store, credentials = {}) {
     );
   }
 
+  /* The session carries the account's branch summary for DISPLAY only
+     (branch name in the console chrome). Every authorization decision is
+     resolved again, store-side, in `resolveStaffScope` — the client never
+     supplies its own scope. */
+  const branch = store.branches.find((item) => item.id === account.branchId) ?? null;
+
   return emit({
     user: {
       id: account.id,
       name: account.name,
       email: account.email,
       branchId: account.branchId ?? null,
+      branchName: branch?.name ?? null,
     },
     role,
     permissions,
@@ -1446,8 +1475,12 @@ export function getAdminOrder(store, id) {
 /**
  * Move an order along the lifecycle. The flow table is enforced here — an
  * Admin cannot skip states, re-open a delivery, or cancel a shipped order.
+ *
+ * `branchId` is optional and only ever recorded on the audit entry: the
+ * employee contract passes the branch it already resolved from the session,
+ * so a branch action reads as one in the trail.
  */
-export function updateAdminOrderStatus(store, id, status, actor) {
+export function updateAdminOrderStatus(store, id, status, actor, branchId = null) {
   const order = findOrder(store, id);
   const allowed = ORDER_FLOW[order.status] ?? [];
   if (!allowed.includes(status)) {
@@ -1469,6 +1502,7 @@ export function updateAdminOrderStatus(store, id, status, actor) {
 
   appendAudit(store, {
     actor,
+    branchId,
     action: "order.status",
     entityType: "order",
     entityId: order.id,
@@ -1591,8 +1625,12 @@ export function listAdminInventory(store, query = {}) {
  * Adjust one stock row by a signed quantity. The adjustment is validated
  * exactly as the API will: whole pieces only, never below zero, and a
  * written reason — which travels into the movement log and the audit trail.
+ *
+ * `branchId` is optional and only ever recorded on the audit entry (see
+ * `updateAdminOrderStatus`); the employee contract passes the branch it
+ * resolved from the session.
  */
-export function adjustAdminInventory(store, stockId, adjustment = {}, actor) {
+export function adjustAdminInventory(store, stockId, adjustment = {}, actor, branchId = null) {
   const row = store.inventory.find((item) => item.id === stockId);
   if (!row) fail(`Stock record ${stockId} could not be found.`);
 
@@ -1626,6 +1664,7 @@ export function adjustAdminInventory(store, stockId, adjustment = {}, actor) {
   const stock = toAdminStock(store, row);
   appendAudit(store, {
     actor,
+    branchId,
     action: "inventory.adjust",
     entityType: "inventory",
     entityId: row.id,
@@ -1834,4 +1873,867 @@ export function adminOverview(store) {
       : null,
     recentActivity: store.auditLog.slice(0, 6),
   });
+}
+
+/* ----------------------------------------------------------------------- */
+/* Employee / branch operations (Phase 10)                                  */
+/* ----------------------------------------------------------------------- */
+
+/**
+ * STAFF SCOPE — who is asking, and what they may see.
+ *
+ * The employee contract never trusts a scope that arrives with a request.
+ * `actor` is the session identity only — `{ id, role, label }` — and every
+ * fact an authorization decision depends on is re-resolved, store-side, from
+ * the canonical records:
+ *
+ *   Super Admin   global — every branch may be named explicitly
+ *   Admin         head office — global, or its own boutique when the
+ *                 administrator account is branch-scoped
+ *   Employee      the branch on their OWN employee record, and the
+ *                 capabilities granted to that record
+ *
+ * A `branchId` in a query that differs from a scoped caller's branch is
+ * refused, never honoured: changing a URL parameter cannot widen anyone's
+ * reach. The resolved scope carries the permission claims the operations
+ * below check — the same `<group>.<level>` capability keys the Admin console
+ * uses, so there is exactly one authorization vocabulary in the platform.
+ */
+export function resolveStaffScope(store, actor = {}) {
+  const role = actor.role;
+
+  if (role === ROLES.SUPER_ADMIN) {
+    return {
+      role,
+      label: hasText(actor.label) ? actor.label : "Super Admin",
+      global: true,
+      branchId: null,
+      branch: null,
+      admin: null,
+      employee: null,
+      profile: null,
+      capabilities: FULL_BUSINESS_CAPABILITIES,
+      permissions: ["*"],
+    };
+  }
+
+  if (role === ROLES.ADMIN) {
+    const admin = hasText(actor.id)
+      ? store.admins.find((item) => item.id === actor.id) ?? null
+      : null;
+    if (hasText(actor.id) && !admin) fail("This administrator account could not be resolved.");
+    if (admin?.status === "disabled") fail("This administrator account is disabled.");
+
+    const branchId =
+      admin?.scope === "branch" && hasText(admin.branchId) ? admin.branchId : null;
+
+    return {
+      role,
+      label: hasText(actor.label) ? actor.label : `${admin?.name ?? "Admin"} — Admin`,
+      global: !branchId,
+      branchId,
+      branch: branchId ? branchOrFail(store, branchId) : null,
+      admin,
+      employee: null,
+      profile: null,
+      capabilities: FULL_BUSINESS_CAPABILITIES,
+      permissions: permissionsFromCapabilities(FULL_BUSINESS_CAPABILITIES),
+    };
+  }
+
+  if (role === ROLES.EMPLOYEE) {
+    const employee = store.employees.find((item) => item.id === actor.id) ?? null;
+    if (!employee) fail("This employee account could not be resolved.");
+    if (employee.status === "disabled") {
+      fail("This account is disabled. Contact head office to restore access.");
+    }
+
+    const branch = branchOrFail(store, employee.branchId);
+    const profile =
+      store.capabilityProfiles.find((item) => item.id === employee.profileId) ?? null;
+    const capabilities = { ...(profile?.capabilities ?? {}), ...(employee.capabilities ?? {}) };
+
+    return {
+      role,
+      label: hasText(actor.label) ? actor.label : `${employee.name} — Employee`,
+      global: false,
+      branchId: branch.id,
+      branch,
+      admin: null,
+      employee,
+      profile,
+      capabilities,
+      permissions: permissionsFromCapabilities(capabilities),
+    };
+  }
+
+  fail("This account has no branch operations access.");
+  return null;
+}
+
+function branchOrFail(store, id) {
+  const branch = store.branches.find((item) => item.id === id);
+  if (!branch) fail(`Branch ${id} could not be found.`);
+  return branch;
+}
+
+/**
+ * The one place a requested branch becomes an allowed one. A scoped caller may
+ * only ever name its own branch (normally it names none at all); a global
+ * caller may name any branch, or none for "the whole network".
+ */
+function resolveScopeBranch(store, scope, requested) {
+  if (!scope.global) {
+    if (hasText(requested) && requested !== scope.branchId) {
+      fail(`${scope.branch.name} is the only branch this account can work in.`);
+    }
+    return scope.branchId;
+  }
+  if (!hasText(requested)) return null;
+  return branchOrFail(store, requested).id;
+}
+
+/** The branch an intrinsically single-branch view opens on. */
+function defaultBranchId(store) {
+  const branch = store.branches.find((item) => item.status !== "disabled") ?? store.branches[0];
+  return branch?.id ?? null;
+}
+
+function requireScopeCapability(scope, key, subject) {
+  const granted = scope.permissions ?? [];
+  if (granted.includes("*") || granted.includes(key)) return;
+  fail(`This account does not have the ${subject} capability.`);
+}
+
+function hasScopeCapability(scope, key) {
+  const granted = scope.permissions ?? [];
+  return granted.includes("*") || granted.includes(key);
+}
+
+/**
+ * The mock's current BUSINESS DAY — the calendar date of the newest order in
+ * the book. The fixtures are dated, so deriving "today" from them keeps the
+ * operational screens alive whenever the demo runs; a real backend returns the
+ * server's business date here and nothing else changes.
+ */
+function businessDay(store) {
+  const newest = store.orders.reduce(
+    (latest, order) => (String(order.createdAt) > latest ? String(order.createdAt) : latest),
+    ""
+  );
+  return newest.slice(0, 10) || new Date().toISOString().slice(0, 10);
+}
+
+function onBusinessDay(iso, day) {
+  return String(iso ?? "").slice(0, 10) === day;
+}
+
+function daysBefore(day, count) {
+  const date = new Date(`${day}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() - count);
+  return date.toISOString().slice(0, 10);
+}
+
+/** Orders, pieces and value — cancelled orders never count as sales. */
+function summariseOrders(orders) {
+  const sold = orders.filter((order) => order.status !== "Cancelled");
+  return {
+    orders: sold.length,
+    units: sold.reduce(
+      (sum, order) => sum + order.items.reduce((count, item) => count + item.quantity, 0),
+      0
+    ),
+    value: sold.reduce((sum, order) => sum + order.total, 0),
+  };
+}
+
+function branchOrders(store, branchId) {
+  return branchId ? store.orders.filter((order) => order.branchId === branchId) : [...store.orders];
+}
+
+function branchStockRows(store, branchId) {
+  return branchId
+    ? store.inventory.filter((row) => row.branchId === branchId)
+    : [...store.inventory];
+}
+
+/* ----------------------------------------------------------------------- */
+/* Employee — orders                                                        */
+/* ----------------------------------------------------------------------- */
+
+/** The branch's order book, newest first (orders.view). */
+export function listEmployeeOrders(store, actor, query = {}) {
+  const scope = resolveStaffScope(store, actor);
+  requireScopeCapability(scope, CAPABILITIES.ORDERS_VIEW, "order");
+  const branchId = resolveScopeBranch(store, scope, query.branchId);
+
+  let list = branchOrders(store, branchId);
+  if (query.status) list = list.filter((order) => order.status === query.status);
+  if (query.search) {
+    const term = String(query.search).toLowerCase();
+    list = list.filter((order) => {
+      const customer = store.customers.find((item) => item.id === order.customerId);
+      return (
+        order.orderNumber.toLowerCase().includes(term) ||
+        order.id.toLowerCase().includes(term) ||
+        String(customer?.name ?? "").toLowerCase().includes(term)
+      );
+    });
+  }
+
+  list.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  return list.map((order) => toAdminOrder(store, order));
+}
+
+/** One order the branch fulfils; `null` when it does not exist at all. */
+export function getEmployeeOrder(store, actor, id) {
+  const scope = resolveStaffScope(store, actor);
+  requireScopeCapability(scope, CAPABILITIES.ORDERS_VIEW, "order");
+  const branchId = resolveScopeBranch(store, scope, null);
+
+  const order = store.orders.find((item) => item.id === id || item.orderNumber === id);
+  if (!order) return null;
+  if (branchId && order.branchId !== branchId) {
+    fail(
+      `“${order.orderNumber}” is fulfilled by another boutique — this account works ${scope.branch.name} only.`
+    );
+  }
+  return toAdminOrder(store, order);
+}
+
+/**
+ * Move a branch order along THE SAME lifecycle the business already uses —
+ * Placed → Processing → Shipped → Delivered, cancelled before shipping only.
+ * The flow table is enforced by `updateAdminOrderStatus`; this contract adds
+ * the branch boundary in front of it (orders.manage).
+ */
+export function updateEmployeeOrderStatus(store, actor, id, status) {
+  const scope = resolveStaffScope(store, actor);
+  requireScopeCapability(scope, CAPABILITIES.ORDERS_MANAGE, "order management");
+
+  const order = store.orders.find((item) => item.id === id || item.orderNumber === id);
+  if (!order) fail(`Order ${id} could not be found.`);
+  if (!scope.global && order.branchId !== scope.branchId) {
+    fail(
+      `“${order.orderNumber}” is fulfilled by another boutique — this account works ${scope.branch.name} only.`
+    );
+  }
+
+  return updateAdminOrderStatus(
+    store,
+    order.id,
+    status,
+    scope.label,
+    scope.branchId ?? order.branchId
+  );
+}
+
+/* ----------------------------------------------------------------------- */
+/* Employee — customers                                                     */
+/* ----------------------------------------------------------------------- */
+
+function branchCustomerIds(store, branchId) {
+  return new Set(branchOrders(store, branchId).map((order) => order.customerId));
+}
+
+/** Customer statistics as the branch itself sees them — its own orders only. */
+function branchCustomerStats(store, customerId, branchId) {
+  const orders = branchOrders(store, branchId).filter((order) => order.customerId === customerId);
+  const sorted = [...orders].sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  const purchased = orders.filter((order) => order.status !== "Cancelled");
+  return {
+    orderCount: orders.length,
+    totalSpent: purchased.reduce((sum, order) => sum + order.total, 0),
+    lastOrderAt: sorted[0]?.createdAt ?? null,
+  };
+}
+
+function toEmployeeCustomer(store, customer, branchId) {
+  return emit({ ...customer, ...branchCustomerStats(store, customer.id, branchId) });
+}
+
+/**
+ * The branch's customer book — the people this boutique has actually served,
+ * taken from the ONE canonical customer directory. Order counts and lifetime
+ * value are the branch's own slice, so nobody's cross-branch spend leaks.
+ */
+export function listEmployeeCustomers(store, actor, query = {}) {
+  const scope = resolveStaffScope(store, actor);
+  requireScopeCapability(scope, CAPABILITIES.ORDERS_VIEW, "customer");
+  const branchId = resolveScopeBranch(store, scope, query.branchId);
+
+  const ids = branchCustomerIds(store, branchId);
+  let list = store.customers.filter((customer) => ids.has(customer.id));
+
+  if (query.search) {
+    const term = String(query.search).toLowerCase();
+    list = list.filter((customer) =>
+      [customer.name, customer.email, customer.phone, customer.city].some((value) =>
+        String(value ?? "").toLowerCase().includes(term)
+      )
+    );
+  }
+
+  list.sort((a, b) => a.name.localeCompare(b.name));
+  return list.map((customer) => toEmployeeCustomer(store, customer, branchId));
+}
+
+/** One customer with the orders THIS branch has fulfilled for them. */
+export function getEmployeeCustomer(store, actor, id) {
+  const scope = resolveStaffScope(store, actor);
+  requireScopeCapability(scope, CAPABILITIES.ORDERS_VIEW, "customer");
+  const branchId = resolveScopeBranch(store, scope, null);
+
+  const customer = store.customers.find((item) => item.id === id);
+  if (!customer) return null;
+
+  const orders = branchOrders(store, branchId).filter((order) => order.customerId === id);
+  if (orders.length === 0 && !scope.global) {
+    fail(
+      `${customer.name} has no orders at ${scope.branch.name} — customer records are branch-scoped.`
+    );
+  }
+
+  orders.sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+  return emit({
+    ...toEmployeeCustomer(store, customer, branchId),
+    orders: orders.map((order) => toAdminOrder(store, order)),
+  });
+}
+
+/* ----------------------------------------------------------------------- */
+/* Employee — catalogue                                                     */
+/* ----------------------------------------------------------------------- */
+
+/** A piece's position in one branch — null when the branch does not stock it. */
+function branchStockFor(store, branchId, productId) {
+  if (!branchId) return null;
+  const row = store.inventory.find(
+    (item) => item.branchId === branchId && item.productId === productId
+  );
+  return row ? toAdminStock(store, row) : null;
+}
+
+/**
+ * The catalogue as an employee operates it: PUBLISHED pieces only, with the
+ * piece's price, SKU, availability, media — and, when the account also holds
+ * inventory visibility, its position in the account's own branch. Governance
+ * fields (lifecycle status detail, readiness, audit metadata) are deliberately
+ * absent: employees operate the catalogue, they never govern it.
+ */
+function toEmployeeProduct(store, scope, product, branchId) {
+  const category = store.categories.find((item) => item.id === product.categoryId);
+  const collection = store.collections.find((item) => item.id === product.collectionId);
+
+  return emit({
+    id: product.id,
+    sku: product.sku,
+    name: product.name,
+    description: product.description,
+    purity: product.purity,
+    price: product.price,
+    currency: product.currency,
+    weight: product.weight,
+    categoryId: product.categoryId,
+    collectionId: product.collectionId,
+    categoryName: category?.name ?? null,
+    collectionName: collection?.name ?? null,
+    availability: product.availability,
+    tryOnAvailable: product.tryOnAvailable,
+    images: product.images,
+    rating: product.rating,
+    href: product.href,
+    stock: hasScopeCapability(scope, CAPABILITIES.INVENTORY_VIEW)
+      ? branchStockFor(store, branchId, product.id)
+      : null,
+  });
+}
+
+export function listEmployeeCatalogue(store, actor, query = {}) {
+  const scope = resolveStaffScope(store, actor);
+  requireScopeCapability(scope, CAPABILITIES.CATALOGUE_VIEW, "catalogue");
+  const branchId = resolveScopeBranch(store, scope, query.branchId);
+  const stockBranch = branchId ?? (scope.global ? null : scope.branchId);
+
+  let list = store.products.filter((product) => product.status === "published");
+
+  if (query.categoryId) list = list.filter((product) => product.categoryId === query.categoryId);
+  if (query.collectionId) list = list.filter((product) => product.collectionId === query.collectionId);
+  if (query.availability) list = list.filter((product) => product.availability === query.availability);
+  if (query.search) {
+    const term = String(query.search).toLowerCase();
+    list = list.filter(
+      (product) =>
+        product.name.toLowerCase().includes(term) ||
+        product.sku.toLowerCase().includes(term) ||
+        product.id.toLowerCase().includes(term)
+    );
+  }
+  if (query.stock && stockBranch) {
+    list = list.filter((product) => {
+      const row = store.inventory.find(
+        (item) => item.branchId === stockBranch && item.productId === product.id
+      );
+      const state = row ? stockState(row) : "out";
+      return query.stock === "low" ? state !== "ok" : state === query.stock;
+    });
+  }
+
+  list.sort((a, b) => a.name.localeCompare(b.name));
+  return list.map((product) => toEmployeeProduct(store, scope, product, stockBranch));
+}
+
+export function getEmployeeProduct(store, actor, id) {
+  const scope = resolveStaffScope(store, actor);
+  requireScopeCapability(scope, CAPABILITIES.CATALOGUE_VIEW, "catalogue");
+  const branchId = resolveScopeBranch(store, scope, null);
+
+  const product = store.products.find((item) => item.id === id);
+  /* Drafts, submissions and rejections are governance states: an employee
+     never sees a piece the storefront cannot. */
+  if (!product || product.status !== "published") return null;
+
+  return toEmployeeProduct(store, scope, product, branchId ?? defaultBranchId(store));
+}
+
+/**
+ * Catalogue taxonomy for lookup (catalogue.view): the enabled categories in
+ * their display order, as id / name / slug. A branch account gets the labels
+ * it searches by — never the governance fields behind them.
+ */
+export function listEmployeeCategories(store, actor) {
+  const scope = resolveStaffScope(store, actor);
+  requireScopeCapability(scope, CAPABILITIES.CATALOGUE_VIEW, "catalogue");
+  return emit(
+    store.categories
+      .filter((category) => category.enabled !== false)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+      .map((category) => ({ id: category.id, name: category.name, slug: category.slug }))
+  );
+}
+
+/* ----------------------------------------------------------------------- */
+/* Employee — inventory                                                     */
+/* ----------------------------------------------------------------------- */
+
+/** The branch's stock lines (inventory.view). All branches only for a global caller. */
+export function listEmployeeInventory(store, actor, query = {}) {
+  const scope = resolveStaffScope(store, actor);
+  requireScopeCapability(scope, CAPABILITIES.INVENTORY_VIEW, "inventory");
+  const branchId = resolveScopeBranch(store, scope, query.branchId);
+  return listAdminInventory(store, { ...query, branchId: branchId ?? undefined });
+}
+
+/**
+ * Adjust one stock line (inventory.manage). The row must belong to the
+ * account's own branch — the branch is resolved from the session, never read
+ * from the request — and the adjustment keeps every rule head office already
+ * enforces: whole pieces, a written reason, never below zero, always audited.
+ */
+export function adjustEmployeeInventory(store, actor, stockId, adjustment = {}) {
+  const scope = resolveStaffScope(store, actor);
+  requireScopeCapability(scope, CAPABILITIES.INVENTORY_MANAGE, "inventory management");
+
+  const row = store.inventory.find((item) => item.id === stockId);
+  if (!row) fail(`Stock record ${stockId} could not be found.`);
+  if (!scope.global && row.branchId !== scope.branchId) {
+    fail(`${scope.branch.name} can only adjust its own stock — that line belongs to another boutique.`);
+  }
+
+  return adjustAdminInventory(store, stockId, adjustment, scope.label, row.branchId);
+}
+
+/** Movement history, restricted to the stock lines the account may see. */
+export function listEmployeeInventoryMovements(store, actor, query = {}) {
+  const scope = resolveStaffScope(store, actor);
+  requireScopeCapability(scope, CAPABILITIES.INVENTORY_VIEW, "inventory");
+  const branchId = resolveScopeBranch(store, scope, query.branchId);
+
+  const visible = new Set(branchStockRows(store, branchId).map((row) => row.id));
+  if (hasText(query.stockId) && !visible.has(query.stockId)) {
+    fail("That stock line belongs to another boutique.");
+  }
+
+  const limit = query.limit ?? 20;
+  const movements = listInventoryMovements(store, {
+    stockId: query.stockId,
+    limit: query.stockId ? limit : 200,
+  });
+  return movements.filter((movement) => visible.has(movement.stockId)).slice(0, limit);
+}
+
+/* ----------------------------------------------------------------------- */
+/* Employee — dashboard, branch operations, reports, profile               */
+/* ----------------------------------------------------------------------- */
+
+function employeeBranchSummary(branch) {
+  return {
+    id: branch.id,
+    name: branch.name,
+    city: branch.city,
+    state: branch.state,
+    status: branch.status,
+    flagship: Boolean(branch.flagship),
+    address: branch.address,
+    phone: branch.phone,
+    email: branch.email,
+    openingHours: branch.openingHours,
+    image: branch.image,
+  };
+}
+
+function recentBranchActivity(store, branchId, limit = 6) {
+  const visible = new Set(branchStockRows(store, branchId).map((row) => row.id));
+
+  const movements = store.inventoryMovements
+    .filter((movement) => visible.has(movement.stockId))
+    .map((movement) => ({
+      id: movement.id,
+      at: movement.at,
+      kind: movement.type,
+      label: `${movement.delta > 0 ? "+" : ""}${movement.delta} ${
+        Math.abs(movement.delta) === 1 ? "piece" : "pieces"
+      }`,
+      actor: movement.by,
+      detail: movement.note ?? "",
+    }));
+
+  /* Audit entries written by branch actions carry the branch they happened
+     in; head-office entries do not, and stay out of a branch's own feed. */
+  const entries = store.auditLog
+    .filter((entry) => entry.branchId === branchId)
+    .map((entry) => ({
+      id: entry.id,
+      at: entry.at,
+      kind: "audit",
+      label: entry.action,
+      actor: entry.actor,
+      detail: entry.detail,
+    }));
+
+  return [...movements, ...entries]
+    .sort((a, b) => String(b.at).localeCompare(String(a.at)))
+    .slice(0, limit);
+}
+
+/**
+ * THE BRANCH DASHBOARD — "what do I need to do at my branch today?".
+ * Deliberately operational: today's counter activity, what is waiting to be
+ * processed, the stock that needs attention and the pieces of work that carry
+ * a next step. Every block is capability-aware, so a profile without
+ * inventory visibility never receives stock figures at all.
+ */
+export function employeeOverview(store, actor) {
+  const scope = resolveStaffScope(store, actor);
+  const branchId = scope.branchId ?? defaultBranchId(store);
+  const branch = branchOrFail(store, branchId);
+  const day = businessDay(store);
+
+  const canOrders = hasScopeCapability(scope, CAPABILITIES.ORDERS_VIEW);
+  const canManageOrders = hasScopeCapability(scope, CAPABILITIES.ORDERS_MANAGE);
+  const canInventory = hasScopeCapability(scope, CAPABILITIES.INVENTORY_VIEW);
+  const canBranch = hasScopeCapability(scope, CAPABILITIES.BRANCHES_VIEW);
+
+  const orders = branchOrders(store, branchId);
+  const today = orders.filter((order) => onBusinessDay(order.createdAt, day));
+  const open = orders.filter((order) => OPEN_ORDER_STATUSES.includes(order.status));
+  const placed = orders.filter((order) => order.status === "Placed");
+  const processing = orders.filter((order) => order.status === "Processing");
+  const stock = branchStockRows(store, branchId);
+  const needsRestock = stock
+    .filter((row) => stockState(row) !== "ok")
+    .sort((a, b) => stockState(a).localeCompare(stockState(b)));
+
+  const attention = [];
+  if (canOrders && placed.length > 0) {
+    attention.push({
+      key: "orders-placed",
+      label: `${placed.length} order${placed.length === 1 ? "" : "s"} waiting to be confirmed`,
+      action: canManageOrders ? "Confirm" : "Review",
+      to: "/employee/orders?status=Placed",
+    });
+  }
+  if (canOrders && processing.length > 0) {
+    attention.push({
+      key: "orders-processing",
+      label: `${processing.length} order${processing.length === 1 ? "" : "s"} being prepared for the customer`,
+      action: canManageOrders ? "Fulfil" : "Review",
+      to: "/employee/orders?status=Processing",
+    });
+  }
+  if (canInventory && needsRestock.length > 0) {
+    attention.push({
+      key: "inventory-low",
+      label: `${needsRestock.length} stock line${needsRestock.length === 1 ? "" : "s"} at or below reorder level`,
+      action: "Restock",
+      to: "/employee/inventory?stock=low",
+    });
+  }
+
+  const team = store.employees.filter((item) => item.branchId === branchId);
+
+  return emit({
+    branch: employeeBranchSummary(branch),
+    businessDay: day,
+    employee: scope.employee
+      ? {
+          id: scope.employee.id,
+          name: scope.employee.name,
+          role: scope.employee.role,
+          profileName: scope.profile?.name ?? null,
+        }
+      : null,
+    /* Order-derived blocks exist only for an account with order visibility —
+       the payload carries nothing a profile cannot read. */
+    today: canOrders
+      ? {
+          orders: today.length,
+          customers: new Set(today.map((order) => order.customerId)).size,
+          ...summariseOrders(today),
+        }
+      : null,
+    openOrders: canOrders
+      ? {
+          count: open.length,
+          value: open.reduce((sum, order) => sum + order.total, 0),
+        }
+      : null,
+    awaiting: canOrders ? { count: placed.length + processing.length } : null,
+    inventory: canInventory
+      ? {
+          rows: stock.length,
+          units: stock.reduce((sum, row) => sum + row.available, 0),
+          lowCount: needsRestock.length,
+          outCount: stock.filter((row) => stockState(row) === "out").length,
+        }
+      : null,
+    lowStock: canInventory ? needsRestock.slice(0, 4).map((row) => toAdminStock(store, row)) : [],
+    team: canBranch ? { count: team.length, activeCount: team.filter((item) => item.status === "active").length } : null,
+    attention,
+    recentOrders: canOrders
+      ? [...orders]
+          .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+          .slice(0, 5)
+          .map((order) => toAdminOrder(store, order))
+      : [],
+  });
+}
+
+/**
+ * BRANCH OPERATIONS — the boutique's own operating picture: who works here,
+ * what stock it holds, what is open and what has been happening. Read-only:
+ * enabling a branch, moving employees or governing the catalogue stay with
+ * head office and the Super Admin.
+ */
+export function employeeBranchOperations(store, actor) {
+  const scope = resolveStaffScope(store, actor);
+  requireScopeCapability(scope, CAPABILITIES.BRANCHES_VIEW, "branch operations");
+  const branchId = scope.branchId ?? defaultBranchId(store);
+  const branch = branchOrFail(store, branchId);
+  const day = businessDay(store);
+
+  const orders = branchOrders(store, branchId);
+  const today = orders.filter((order) => onBusinessDay(order.createdAt, day));
+  const open = orders.filter((order) => OPEN_ORDER_STATUSES.includes(order.status));
+  const awaiting = orders
+    .filter((order) => order.status === "Placed" || order.status === "Processing")
+    .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
+  const stock = branchStockRows(store, branchId);
+  const needsRestock = stock.filter((row) => stockState(row) !== "ok");
+
+  const team = store.employees
+    .filter((item) => item.branchId === branchId)
+    .map((employee) => {
+      const profile =
+        store.capabilityProfiles.find((item) => item.id === employee.profileId) ?? null;
+      return {
+        id: employee.id,
+        name: employee.name,
+        role: employee.role,
+        profileName: profile?.name ?? null,
+        status: employee.status,
+      };
+    });
+
+  const canOrders = hasScopeCapability(scope, CAPABILITIES.ORDERS_VIEW);
+  const canInventory = hasScopeCapability(scope, CAPABILITIES.INVENTORY_VIEW);
+
+  return emit({
+    branch: employeeBranchSummary(branch),
+    businessDay: day,
+    team: {
+      count: team.length,
+      activeCount: team.filter((item) => item.status === "active").length,
+      members: team,
+    },
+    /* Each block is present only for the capability that owns it — a branch
+       view is not a licence to read the order book or the stock figures. */
+    inventory: canInventory
+      ? {
+          rows: stock.length,
+          units: stock.reduce((sum, row) => sum + row.available, 0),
+          lowCount: needsRestock.length,
+          outCount: stock.filter((row) => stockState(row) === "out").length,
+          lowStock: needsRestock.slice(0, 5).map((row) => toAdminStock(store, row)),
+        }
+      : null,
+    orders: canOrders
+      ? {
+          openCount: open.length,
+          openValue: open.reduce((sum, order) => sum + order.total, 0),
+          todayCount: today.length,
+          ...summariseOrders(today),
+          awaiting: awaiting.slice(0, 5).map((order) => toAdminOrder(store, order)),
+        }
+      : null,
+    /* Inventory movements are stock data: without inventory visibility only
+       the branch's audit trail remains in the feed. */
+    activity: recentBranchActivity(store, branchId).filter(
+      (entry) => canInventory || entry.kind === "audit"
+    ),
+  });
+}
+
+/**
+ * BRANCH REPORTS (reports.view) — the branch's own numbers, computed from the
+ * canonical order book and inventory: counter sales, the order book by status,
+ * the pieces that actually move and stock health. Head-office comparisons,
+ * other boutiques' performance and platform analytics are simply not part of
+ * this contract.
+ */
+export function employeeReports(store, actor) {
+  const scope = resolveStaffScope(store, actor);
+  requireScopeCapability(scope, CAPABILITIES.REPORTS_VIEW, "reports");
+  const branchId = scope.branchId ?? defaultBranchId(store);
+  const branch = branchOrFail(store, branchId);
+  const day = businessDay(store);
+  const weekStart = daysBefore(day, 6);
+
+  const orders = branchOrders(store, branchId);
+  const stock = branchStockRows(store, branchId);
+  const needsRestock = stock.filter((row) => stockState(row) !== "ok");
+
+  const ordersByStatus = ORDER_STATUS_LIST.map((status) => {
+    const list = orders.filter((order) => order.status === status);
+    return {
+      status,
+      count: list.length,
+      value: list.reduce((sum, order) => sum + order.total, 0),
+    };
+  });
+
+  const byProduct = new Map();
+  for (const order of orders) {
+    if (order.status === "Cancelled") continue;
+    for (const item of order.items) {
+      const entry = byProduct.get(item.id) ?? {
+        productId: item.id,
+        name: item.name,
+        sku: item.sku,
+        units: 0,
+        revenue: 0,
+      };
+      entry.units += item.quantity;
+      entry.revenue += item.price * item.quantity;
+      byProduct.set(item.id, entry);
+    }
+  }
+
+  const recentDays = [...Array(7)].map((_, index) => {
+    const date = daysBefore(day, 6 - index);
+    return {
+      date,
+      ...summariseOrders(orders.filter((order) => onBusinessDay(order.createdAt, date))),
+    };
+  });
+
+  return emit({
+    branch: employeeBranchSummary(branch),
+    businessDay: day,
+    sales: {
+      today: summariseOrders(orders.filter((order) => onBusinessDay(order.createdAt, day))),
+      week: summariseOrders(orders.filter((order) => String(order.createdAt).slice(0, 10) >= weekStart)),
+      all: summariseOrders(orders),
+    },
+    ordersByStatus,
+    recentDays,
+    topProducts: [...byProduct.values()]
+      .sort((a, b) => b.units - a.units || b.revenue - a.revenue)
+      .slice(0, 5),
+    inventory: {
+      rows: stock.length,
+      units: stock.reduce((sum, row) => sum + row.available, 0),
+      lowCount: needsRestock.length,
+      outCount: stock.filter((row) => stockState(row) === "out").length,
+      lowStock: needsRestock.slice(0, 5).map((row) => toAdminStock(store, row)),
+    },
+  });
+}
+
+/** MY PROFILE — the employee's own record, read-only apart from the phone number. */
+export function employeeProfile(store, actor) {
+  const scope = resolveStaffScope(store, actor);
+  if (!scope.employee) return null;
+
+  return emit({
+    id: scope.employee.id,
+    name: scope.employee.name,
+    email: scope.employee.email,
+    phone: scope.employee.phone,
+    title: scope.employee.role,
+    status: scope.employee.status,
+    branch: employeeBranchSummary(scope.branch),
+    profile: scope.profile
+      ? {
+          id: scope.profile.id,
+          name: scope.profile.name,
+          description: scope.profile.description,
+        }
+      : null,
+    capabilities: describeCapabilities(scope.capabilities),
+  });
+}
+
+/**
+ * SELF-SERVICE UPDATE — the phone number, and nothing else. Role, branch,
+ * capability profile and account status describe the employee's authority, so
+ * they are head-office decisions: the provider refuses them here exactly as
+ * the API will, rather than trusting a disabled field in the UI.
+ */
+export function updateEmployeeProfile(store, actor, patch = {}) {
+  const scope = resolveStaffScope(store, actor);
+  if (!scope.employee) fail("Only employee accounts have a counter profile.");
+
+  const protectedFields = [
+    "name",
+    "email",
+    "role",
+    "branchId",
+    "profileId",
+    "capabilities",
+    "status",
+  ].filter((field) => patch[field] !== undefined);
+
+  if (protectedFields.length > 0) {
+    fail(
+      "Only your phone number can be changed here — your branch, role, capabilities and account status are managed by head office."
+    );
+  }
+  if (patch.phone === undefined) fail("Nothing to update.");
+
+  const phone = String(patch.phone).trim();
+  if (!hasText(phone) || !/^[+\d][\d\s-]{7,}$/.test(phone)) fail("Enter a valid phone number.");
+  if (phone === scope.employee.phone) return employeeProfile(store, actor);
+
+  scope.employee.phone = phone;
+  appendAudit(store, {
+    actor: scope.label,
+    branchId: scope.branchId,
+    action: "employee.profile.update",
+    entityType: "employee",
+    entityId: scope.employee.id,
+    entityLabel: scope.employee.name,
+    detail: "Contact number updated from the employee profile.",
+  });
+  return employeeProfile(store, actor);
 }

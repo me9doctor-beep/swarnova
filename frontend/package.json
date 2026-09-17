@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --import ./src/__tests__/support/register-assets.mjs --test src/__tests__/*.test.mjs"
   },
   "dependencies": {
     "clsx": "2.1.1",
