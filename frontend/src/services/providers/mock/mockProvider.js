@@ -380,6 +380,109 @@ export const mockProvider = {
       image: { ...wearing },
     });
   },
+
+  /* --------------------------------------------------------------------------
+   * Customer account & commerce (Phase 7)
+   * ------------------------------------------------------------------------ */
+  _profile: null,
+  _addresses: null,
+  _orders: null,
+
+  getCustomerProfile() {
+    if (!this._profile) {
+      this._profile = emit(db.customerProfile);
+    }
+    return Promise.resolve(emit(this._profile));
+  },
+
+  updateCustomerProfile(data = {}) {
+    if (!this._profile) {
+      this._profile = emit(db.customerProfile);
+    }
+    this._profile = {
+      ...this._profile,
+      ...data,
+      preferences: {
+        ...this._profile.preferences,
+        ...(data.preferences || {}),
+      },
+    };
+    return Promise.resolve(emit(this._profile));
+  },
+
+  getCustomerAddresses() {
+    if (!this._addresses) {
+      this._addresses = emit(db.customerAddresses);
+    }
+    return Promise.resolve(emit(this._addresses));
+  },
+
+  addCustomerAddress(address = {}) {
+    if (!this._addresses) {
+      this._addresses = emit(db.customerAddresses);
+    }
+    const newAddress = {
+      ...address,
+      id: `ADDR-${Date.now()}`,
+      isDefault: Boolean(address.isDefault || this._addresses.length === 0),
+    };
+    if (newAddress.isDefault) {
+      this._addresses = this._addresses.map((a) => ({ ...a, isDefault: false }));
+    }
+    this._addresses = [newAddress, ...this._addresses];
+    return Promise.resolve(emit(newAddress));
+  },
+
+  updateCustomerAddress(address = {}) {
+    if (!this._addresses) {
+      this._addresses = emit(db.customerAddresses);
+    }
+    if (address.isDefault) {
+      this._addresses = this._addresses.map((a) => ({ ...a, isDefault: false }));
+    }
+    this._addresses = this._addresses.map((a) =>
+      a.id === address.id ? { ...a, ...address } : a
+    );
+    return Promise.resolve(emit(address));
+  },
+
+  deleteCustomerAddress(id) {
+    if (!this._addresses) {
+      this._addresses = emit(db.customerAddresses);
+    }
+    const target = this._addresses.find((a) => a.id === id);
+    this._addresses = this._addresses.filter((a) => a.id !== id);
+    if (target?.isDefault && this._addresses.length > 0) {
+      this._addresses[0].isDefault = true;
+    }
+    return Promise.resolve(emit(id));
+  },
+
+  setDefaultCustomerAddress(id) {
+    if (!this._addresses) {
+      this._addresses = emit(db.customerAddresses);
+    }
+    this._addresses = this._addresses.map((a) => ({
+      ...a,
+      isDefault: a.id === id,
+    }));
+    return Promise.resolve(emit(this._addresses));
+  },
+
+  getOrders() {
+    if (!this._orders) {
+      this._orders = emit(db.customerOrders);
+    }
+    return Promise.resolve(emit(this._orders));
+  },
+
+  getOrder(id) {
+    if (!this._orders) {
+      this._orders = emit(db.customerOrders);
+    }
+    const order = this._orders.find((o) => o.id === id || o.orderNumber === id);
+    return Promise.resolve(emit(order ?? null));
+  },
 };
 
 export default mockProvider;

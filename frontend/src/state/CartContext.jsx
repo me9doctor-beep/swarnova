@@ -4,21 +4,22 @@ import PropTypes from "prop-types";
 /**
  * Client-side shopping bag — the commerce boundary for the catalogue.
  *
- * It holds only what a customer browsing the catalogue needs: the bag lines,
- * the piece count and `add`. The bag screen, checkout, orders and payment
- * belong to the commerce phase; they will read and extend this same context,
- * so nothing rendered today changes when they arrive.
- *
- * A line keeps a snapshot of the product (name, price, imagery) rather than
- * only its id — the price a customer agreed to must survive a later catalogue
- * change. A future iteration syncs the bag with the commerce API, exactly as
- * the wishlist syncs with the customer account.
+ * Line items snapshot the product (name, sku, price, imagery) so later catalogue
+ * mutations do not affect what the customer agreed to.
+ * Extended in Phase 7 to support quantity increment, decrement, line removal,
+ * bag clear, subtotal calculation, and empty state support.
  */
 const CartContext = createContext({
   items: [],
   add: () => {},
+  updateQuantity: () => {},
+  increment: () => {},
+  decrement: () => {},
+  remove: () => {},
+  clear: () => {},
   quantityOf: () => 0,
   count: 0,
+  subtotal: 0,
 });
 
 export function CartProvider({ children }) {
@@ -34,8 +35,55 @@ export function CartProvider({ children }) {
     });
   }, []);
 
+  const updateQuantity = useCallback((id, quantity) => {
+    if (quantity <= 0) {
+      setItems((prev) => prev.filter((item) => item.id !== id));
+      return;
+    }
+    setItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, quantity } : item))
+    );
+  }, []);
+
+  const increment = useCallback((id) => {
+    setItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, quantity: item.quantity + 1 } : item))
+    );
+  }, []);
+
+  const decrement = useCallback((id) => {
+    setItems((prev) => {
+      const match = prev.find((item) => item.id === id);
+      if (!match) return prev;
+      if (match.quantity <= 1) {
+        return prev.filter((item) => item.id !== id);
+      }
+      return prev.map((item) =>
+        item.id === id ? { ...item, quantity: item.quantity - 1 } : item
+      );
+    });
+  }, []);
+
+  const remove = useCallback((id) => {
+    setItems((prev) => prev.filter((item) => item.id !== id));
+  }, []);
+
+  const clear = useCallback(() => {
+    setItems([]);
+  }, []);
+
   const quantityOf = useCallback(
     (id) => items.find((item) => item.id === id)?.quantity ?? 0,
+    [items]
+  );
+
+  const count = useMemo(
+    () => items.reduce((total, item) => total + item.quantity, 0),
+    [items]
+  );
+
+  const subtotal = useMemo(
+    () => items.reduce((total, item) => total + (item.product?.price ?? 0) * item.quantity, 0),
     [items]
   );
 
@@ -43,10 +91,16 @@ export function CartProvider({ children }) {
     () => ({
       items,
       add,
+      updateQuantity,
+      increment,
+      decrement,
+      remove,
+      clear,
       quantityOf,
-      count: items.reduce((total, item) => total + item.quantity, 0),
+      count,
+      subtotal,
     }),
-    [items, add, quantityOf]
+    [items, add, updateQuantity, increment, decrement, remove, clear, quantityOf, count, subtotal]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

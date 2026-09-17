@@ -6,7 +6,8 @@ export const site = {
   brand: {
     name: "SWARNOVA",
     word: "SWARNOVA",
-    subWord: "JEWELLERS",
+    subWord: "by MediXO",
+    attribution: "by MediXO",
     tagline: "Where Heritage Meets Innovation.",
   },
   announcement: {
@@ -71,7 +72,7 @@ export const site = {
     email: "care@swarnova.in",
     emailHref: "mailto:care@swarnova.in",
   },
-  copyright: "© 2026 Swarnova Jewellers. All Rights Reserved.",
+  copyright: "© 2026 Swarnova by MediXO. All Rights Reserved.",
 };
 
 export default site;

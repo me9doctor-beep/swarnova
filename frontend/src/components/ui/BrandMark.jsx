@@ -3,9 +3,19 @@ import { cn } from "../../utils/cn.js";
 
 /**
  * Swarnova house lockup — a faceted diamond mark with a serif wordmark
- * and a small tracking-wide sub-word. `tone="light"` is for wine backgrounds.
+ * and subtle parent-company attribution:
+ *
+ *   SWARNOVA
+ *   by MediXO
+ *
+ * `tone="light"` is for wine/dark surfaces.
  */
-export default function BrandMark({ tone = "dark", className, compact = false }) {
+export default function BrandMark({
+  tone = "dark",
+  className,
+  compact = false,
+  subWord = "by MediXO",
+}) {
   const isLight = tone === "light";
 
   return (
@@ -34,20 +44,24 @@ export default function BrandMark({ tone = "dark", className, compact = false })
       <span className="leading-none">
         <span
           className={cn(
-            "block font-serif text-[22px] font-semibold tracking-[0.24em]",
+            "block font-serif font-semibold tracking-[0.24em]",
+            compact ? "text-[18px]" : "text-[22px]",
             isLight ? "text-text-inverse" : "text-text-primary"
           )}
         >
           SWARNOVA
         </span>
-        <span
-          className={cn(
-            "mt-[5px] block text-[8px] font-medium tracking-[0.44em]",
-            isLight ? "text-brand-accent-soft/85" : "text-brand-accent"
-          )}
-        >
-          JEWELLERS
-        </span>
+        {subWord && (
+          <span
+            className={cn(
+              "mt-[4px] block font-sans font-medium tracking-[0.26em]",
+              compact ? "text-[7.5px]" : "text-[8.5px]",
+              isLight ? "text-brand-accent-soft/85" : "text-brand-accent-strong"
+            )}
+          >
+            {subWord}
+          </span>
+        )}
       </span>
     </span>
   );
@@ -57,4 +71,5 @@ BrandMark.propTypes = {
   tone: PropTypes.oneOf(["dark", "light"]),
   className: PropTypes.string,
   compact: PropTypes.bool,
+  subWord: PropTypes.string,
 };

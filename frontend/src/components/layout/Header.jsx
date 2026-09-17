@@ -12,13 +12,13 @@ import { useCart } from "../../state/CartContext.jsx";
 import { cn } from "../../utils/cn.js";
 
 const HEADER_ACTIONS = [
-  { label: "Search", href: "#search", Glyph: Search, size: 18 },
-  { label: "Wishlist", href: "#wishlist", Glyph: Heart, size: 18 },
-  { label: "Account", href: "#account", Glyph: User, size: 18 },
-  { label: "Shopping bag", href: "#cart", Glyph: ShoppingBag, size: 18 },
+  { label: "Search", href: "/products", Glyph: Search, size: 18 },
+  { label: "Wishlist", href: "/account/wishlist", Glyph: Heart, size: 18 },
+  { label: "Account", href: "/account", Glyph: User, size: 18 },
+  { label: "Shopping bag", href: "/cart", Glyph: ShoppingBag, size: 18 },
 ];
 
-function MobileMenu({ open, onClose, navigation }) {
+function MobileMenu({ open, onClose, navigation, badges = {} }) {
   useBodyScrollLock(open);
 
   /* A dialog closes on Escape. Registered above the early return so the hook
@@ -92,7 +92,14 @@ function MobileMenu({ open, onClose, navigation }) {
 
         <div className="mt-8 flex items-center gap-2 border-t border-border-default pt-6 text-text-primary/70">
           {HEADER_ACTIONS.map(({ label, href, Glyph }) => (
-            <IconButton key={label} label={label} href={href} size="touch">
+            <IconButton
+              key={label}
+              label={label}
+              href={href}
+              badge={badges[label] || undefined}
+              size="touch"
+              onClick={onClose}
+            >
               <Glyph size={19} strokeWidth={1.5} />
             </IconButton>
           ))}
@@ -230,6 +237,7 @@ export default function Header() {
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
         navigation={site.navigation}
+        badges={badges}
       />
     </>
   );

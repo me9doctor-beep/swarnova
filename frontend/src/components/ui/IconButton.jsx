@@ -1,4 +1,5 @@
 import PropTypes from "prop-types";
+import { Link } from "react-router-dom";
 import { cn } from "../../utils/cn.js";
 
 /**
@@ -36,6 +37,7 @@ export default function IconButton({
   size = "md",
   badge,
   href,
+  to,
   className,
   type = "button",
   ...rest
@@ -53,11 +55,20 @@ export default function IconButton({
     </>
   );
 
-  if (href) {
-    const external = /^https?:\/\//.test(href);
+  const target = href || to;
+  if (target) {
+    const isInternal = typeof target === "string" && target.startsWith("/") && !target.startsWith("//");
+    if (isInternal) {
+      return (
+        <Link to={target} aria-label={label} className={classes} {...rest}>
+          {content}
+        </Link>
+      );
+    }
+    const external = /^https?:\/\//.test(target);
     return (
       <a
-        href={href}
+        href={target}
         aria-label={label}
         className={classes}
         {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
@@ -85,5 +96,6 @@ IconButton.propTypes = {
   badge: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
   className: PropTypes.string,
   href: PropTypes.string,
+  to: PropTypes.string,
   type: PropTypes.string,
 };

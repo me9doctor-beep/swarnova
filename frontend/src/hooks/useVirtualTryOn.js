@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useDataProvider } from "../services/providers/DataProvider.jsx";
 import { virtualTryOnService } from "../services/virtualTryOnService.js";
+import { useSavedTryOns } from "../state/SavedTryOnsContext.jsx";
 import { useAsync } from "./useAsync.js";
 
 /** Phone photographs can be heavy; the room accepts up to 8 MB. */
@@ -65,7 +66,7 @@ export function useVirtualTryOn() {
   const [photo, setPhoto] = useState(null);
   const [photoError, setPhotoError] = useState(undefined);
   const [session, setSession] = useState(SESSION_IDLE);
-  const [savedResults, setSavedResults] = useState([]);
+  const { savedResults, saveResult: persistResult, hasResult, count: savedCount } = useSavedTryOns();
 
   const alive = useRef(true);
   useEffect(() => {
@@ -175,41 +176,15 @@ export function useVirtualTryOn() {
     [setSearchParams]
   );
 
-  /* Visit-scoped snapshots of finished previews — the same saveId/savedAt/
-     snapshot convention the saved-designs shelf uses, shaped so a future
-     try-on backend can persist them one-to-one. */
+  /* Visit-scoped snapshots of finished previews delegated to SavedTryOnsContext. */
   const isResultSaved = Boolean(
-    session.result && savedResults.some((entry) => entry.result.id === session.result.id)
+    session.result && hasResult(session.result.id)
   );
 
   const saveResult = useCallback(() => {
-    const result = session.result;
-    if (!result) return;
-    setSavedResults((previous) => {
-      if (previous.some((entry) => entry.result.id === result.id)) return previous;
-      return [
-        {
-          saveId: `${result.id}-${Date.now()}`,
-          savedAt: new Date().toISOString(),
-          result: JSON.parse(
-            JSON.stringify({
-              id: result.id,
-              sourceType: result.source.sourceType,
-              sourceId: result.source.sourceId,
-              jewellery: result.source.jewellery.name,
-              photoReference:
-                result.photo.origin === "sample"
-                  ? { origin: "sample", sampleId: result.photo.sampleId }
-                  : { origin: "upload", name: result.photo.name },
-              resultReference: result.image,
-              createdAt: result.createdAt,
-            })
-          ),
-        },
-        ...previous,
-      ];
-    });
-  }, [session.result]);
+    if (!session.result) return;
+    persistResult(session.result);
+  }, [session.result, persistResult]);
 
   return {
     /* Source */

@@ -5,6 +5,7 @@ import { AuthProvider } from "../features/authentication/AuthProvider.jsx";
 import { WishlistProvider } from "../state/WishlistContext.jsx";
 import { CartProvider } from "../state/CartContext.jsx";
 import { SavedDesignsProvider } from "../state/SavedDesignsContext.jsx";
+import { SavedTryOnsProvider } from "../state/SavedTryOnsContext.jsx";
 
 /**
  * PROVIDER STACK — the composition root for cross-cutting concerns.
@@ -16,6 +17,7 @@ import { SavedDesignsProvider } from "../state/SavedDesignsContext.jsx";
  *   WishlistProvider  client-side customer state
  *   CartProvider   client-side shopping bag
  *   SavedDesignsProvider  client-side AI studio designs
+ *   SavedTryOnsProvider   client-side virtual try-on snapshots
  *
  * Business state stays out of here: features add their own providers next to
  * their own code and are mounted from this file when their phase lands.
@@ -27,7 +29,9 @@ export default function AppProviders({ children }) {
         <AuthProvider>
           <WishlistProvider>
             <CartProvider>
-              <SavedDesignsProvider>{children}</SavedDesignsProvider>
+              <SavedDesignsProvider>
+                <SavedTryOnsProvider>{children}</SavedTryOnsProvider>
+              </SavedDesignsProvider>
             </CartProvider>
           </WishlistProvider>
         </AuthProvider>

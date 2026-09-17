@@ -12,6 +12,18 @@ import ProductsPage from "../pages/customer/catalogue/ProductsPage.jsx";
 import ProductDetailPage from "../pages/customer/product/ProductDetailPage.jsx";
 import AiStudioPage from "../pages/customer/ai-studio/AiStudioPage.jsx";
 import VirtualTryOnPage from "../pages/customer/virtual-try-on/VirtualTryOnPage.jsx";
+import CartPage from "../pages/customer/cart/CartPage.jsx";
+
+import AccountLayout from "../pages/customer/account/AccountLayout.jsx";
+import AccountOverviewPage from "../pages/customer/account/AccountOverviewPage.jsx";
+import ProfilePage from "../pages/customer/account/ProfilePage.jsx";
+import WishlistPage from "../pages/customer/account/WishlistPage.jsx";
+import SavedDesignsPage from "../pages/customer/account/SavedDesignsPage.jsx";
+import SavedTryOnsPage from "../pages/customer/account/SavedTryOnsPage.jsx";
+import AddressesPage from "../pages/customer/account/AddressesPage.jsx";
+import OrdersPage from "../pages/customer/account/OrdersPage.jsx";
+import OrderDetailPage from "../pages/customer/account/OrderDetailPage.jsx";
+
 import AdminDashboardPage from "../pages/admin/dashboard/AdminDashboardPage.jsx";
 import SuperAdminDashboardPage from "../pages/super-admin/dashboard/SuperAdminDashboardPage.jsx";
 import EmployeeDashboardPage from "../pages/employee/dashboard/EmployeeDashboardPage.jsx";
@@ -29,20 +41,17 @@ import { ROLES } from "../features/authentication/roles.js";
  *
  *   Customer      /            /collections  /collections/:slug
  *                 /category/:slug  /products  /product/:id  /ai-studio
- *                 /virtual-try-on
- *                 (planned: /stores  /cart  /checkout  /account)
+ *                 /virtual-try-on  /cart
+ *                 /account     /account/profile  /account/wishlist
+ *                 /account/saved-designs  /account/saved-try-ons
+ *                 /account/addresses  /account/orders  /account/orders/:id
+ *                 (planned: /stores  /checkout)
  *   Admin         /admin       /admin/products   /admin/inventory
  *                 /admin/orders    /admin/customers
  *   Super Admin   /super-admin /super-admin/users /super-admin/roles
  *                 /super-admin/branches
  *   Employee      /employee    /employee/sales   /employee/customers
  *                 /employee/inventory
- *
- * Only the routes whose screens exist are registered.
- *
- * Each console route also declares `handle.crumb`, the label the shared console
- * topbar shows as the breadcrumb — the place in the hierarchy is defined next
- * to the route instead of being pushed into the shell from the page.
  */
 export const routeTree = [
   {
@@ -57,6 +66,21 @@ export const routeTree = [
       { path: "product/:id", element: <ProductDetailPage /> },
       { path: "ai-studio", element: <AiStudioPage /> },
       { path: "virtual-try-on", element: <VirtualTryOnPage /> },
+      { path: "cart", element: <CartPage /> },
+      {
+        path: "account",
+        element: <AccountLayout />,
+        children: [
+          { index: true, element: <AccountOverviewPage /> },
+          { path: "profile", element: <ProfilePage /> },
+          { path: "wishlist", element: <WishlistPage /> },
+          { path: "saved-designs", element: <SavedDesignsPage /> },
+          { path: "saved-try-ons", element: <SavedTryOnsPage /> },
+          { path: "addresses", element: <AddressesPage /> },
+          { path: "orders", element: <OrdersPage /> },
+          { path: "orders/:id", element: <OrderDetailPage /> },
+        ],
+      },
       { path: "*", element: <NotFoundPage /> },
     ],
   },

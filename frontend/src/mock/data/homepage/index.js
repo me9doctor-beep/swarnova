@@ -85,7 +85,7 @@ export const homepage = {
       enabled: true,
       order: 4,
       content: {
-        eyebrow: "Our Promise",
+        eyebrow: "Our Promise · Swarnova by MediXO",
         title: {
           lines: [
             { text: "Crafted with Passion,", emphasis: false },

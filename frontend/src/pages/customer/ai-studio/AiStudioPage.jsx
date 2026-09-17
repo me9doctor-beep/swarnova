@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import AsyncBoundary from "../../../components/ui/AsyncBoundary.jsx";
 import Button from "../../../components/ui/Button.jsx";
 import Container from "../../../components/ui/Container.jsx";
@@ -30,6 +31,7 @@ export default function AiStudioPage() {
   const { status, data: atelier, error, retry } = useAiAtelier();
   const studio = useAiDesignSession();
   const { designs, save, remove, has } = useSavedDesigns();
+  const [searchParams] = useSearchParams();
 
   /* Quiet confirmations (save / share) — replaced by the next action. */
   const [note, setNote] = useState(null);
@@ -37,6 +39,16 @@ export default function AiStudioPage() {
   useDocumentTitle("AI Jewellery Studio — Swarnova");
 
   const concept = studio.concept;
+
+  const conceptParam = searchParams.get("concept");
+  useEffect(() => {
+    if (conceptParam && !studio.concept) {
+      const match = designs.find((d) => d.concept.id === conceptParam);
+      if (match) {
+        studio.load(match.concept);
+      }
+    }
+  }, [conceptParam, designs, studio]);
 
   /* A new concept supersedes the previous one's confirmations. */
   useEffect(() => {

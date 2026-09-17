@@ -7,7 +7,7 @@ import { cn } from "../../utils/cn.js";
  * catalogue listing. Two columns on phones (imagery stays readable), three on
  * laptops, four on wide desktops; the card owns its own 4:3 media ratio.
  */
-export default function ProductGrid({ products, className }) {
+export default function ProductGrid({ products, showTryOn = false, className }) {
   return (
     <div
       className={cn(
@@ -16,7 +16,7 @@ export default function ProductGrid({ products, className }) {
       )}
     >
       {products.map((product) => (
-        <ProductCard key={product.id} product={product} />
+        <ProductCard key={product.id} product={product} showTryOn={showTryOn} />
       ))}
     </div>
   );
@@ -24,5 +24,6 @@ export default function ProductGrid({ products, className }) {
 
 ProductGrid.propTypes = {
   products: PropTypes.arrayOf(PropTypes.shape({ id: PropTypes.string.isRequired })).isRequired,
+  showTryOn: PropTypes.bool,
   className: PropTypes.string,
 };
