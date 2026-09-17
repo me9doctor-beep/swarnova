@@ -34,8 +34,11 @@ import mockProvider from "./mock/mockProvider.js";
  * actions, every one of them resolved and scoped from the session actor
  * store-side; Phase 11 adds the customer authentication contract — sign-in,
  * registration, session and password reset against the customer registry,
- * with every account read/write re-scoped to the session customer. All are
- * declared optional so an API provider can land the sources independently.
+ * with every account read/write re-scoped to the session customer; Phase 12
+ * adds the checkout & commerce contract — canonical delivery/payment
+ * surfaces, the validated bag summary and the order-creating boundary, all
+ * resolved from the session customer store-side. All are declared optional
+ * so an API provider can land the sources independently.
  */
 const DataContext = createContext(mockProvider);
 
@@ -143,6 +146,11 @@ DataProvider.propTypes = {
     logoutCustomer: PropTypes.func,
     requestCustomerPasswordReset: PropTypes.func,
     resetCustomerPassword: PropTypes.func,
+    /* Phase 12 — checkout & commerce contract */
+    getDeliveryMethods: PropTypes.func,
+    getPaymentMethods: PropTypes.func,
+    getCheckoutSummary: PropTypes.func,
+    placeOrder: PropTypes.func,
   }),
   children: PropTypes.node.isRequired,
 };

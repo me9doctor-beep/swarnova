@@ -96,6 +96,16 @@
  *   authenticateCustomer(credentials)  registerCustomer(payload)
  *   getCurrentCustomer()               logoutCustomer()
  *   requestCustomerPasswordReset(id)   resetCustomerPassword(payload)
+ *
+ * CHECKOUT (Phase 12) — the commerce contract between the shopping bag and
+ * the canonical order book, fulfilled by the SAME shared governance store.
+ * The store enforces the entire business boundary (session, cart, product,
+ * quantity, price currency, address ownership, delivery/payment method,
+ * inventory) before ONE order enters the book with its full commercial
+ * snapshot; the payment processor is the gateway seam the API provider
+ * replaces one-to-one:
+ *   getDeliveryMethods()               getPaymentMethods()
+ *   getCheckoutSummary(items)          placeOrder(payload)
  */
 import * as db from "../../../mock/data/index.js";
 import * as gov from "./governanceStore.js";
@@ -117,6 +127,10 @@ function byOrder(a, b) {
  * A short latency makes the atelier's static creation state readable.
  * ------------------------------------------------------------------------ */
 const AI_RENDER_DELAY = 900;
+/* Checkout quotes settle quickly; placing an order takes a readable moment
+   so the processing state is honest rather than decorative. */
+const CHECKOUT_READ_DELAY = 350;
+const CHECKOUT_PLACE_DELAY = 900;
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -616,6 +630,38 @@ export const mockProvider = {
     return Promise.resolve(
       gov.getCustomerOrder(this.getStore(), this.customerSessionId(), id)
     );
+  },
+
+  /* --------------------------------------------------------------------------
+   * Customer checkout (Phase 12)
+   * --------------------------------------------------------------------------
+   * The commerce boundary between the shopping bag and the canonical order
+   * book. Every method re-resolves the caller from the customer session
+   * store-side; a guest has no summary and no order. The summary is a quote
+   * (validated lines, fulfilment branch, ONE totals calculation); placeOrder
+   * enforces the full boundary, settles the mock payment and returns
+   * `{ order, payment }` from the canonical book — a declined payment or an
+   * empty/invalid bag creates nothing.
+   * ------------------------------------------------------------------------ */
+
+  async getDeliveryMethods() {
+    await wait(CHECKOUT_READ_DELAY);
+    return Promise.resolve(emit(db.deliveryMethods));
+  },
+
+  async getPaymentMethods() {
+    await wait(CHECKOUT_READ_DELAY);
+    return Promise.resolve(emit(db.paymentMethods));
+  },
+
+  async getCheckoutSummary(items = []) {
+    await wait(CHECKOUT_READ_DELAY);
+    return gov.getCheckoutSummary(this.getStore(), this.customerSessionId(), items);
+  },
+
+  async placeOrder(payload = {}) {
+    await wait(CHECKOUT_PLACE_DELAY);
+    return gov.placeCheckoutOrder(this.getStore(), this.customerSessionId(), payload);
   },
 
   /* --------------------------------------------------------------------------

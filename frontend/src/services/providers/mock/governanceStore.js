@@ -33,8 +33,19 @@
  * never from a URL, a query string or a client-supplied claim — so the
  * Admin book, the branch book and the storefront account all read one
  * customer truth. Serializers strip credentials before anything leaves.
+ *
+ * Phase 12 extends the same store with CHECKOUT: the commerce boundary
+ * between the shopping bag and the order book. The checkout summary is a
+ * validated quote (published pieces at canonical prices, a store-resolved
+ * fulfilment branch, the ONE totals calculation), and placing an order
+ * enforces the full boundary — session, bag, address OWNERSHIP, canonical
+ * delivery/payment methods, inventory — before settling the mock payment
+ * and writing ONE snapshot order into the canonical book, with the minimal
+ * inventory allocation, a movement log entry and an audit record. An
+ * idempotency ledger replays a retried key's original result.
  */
 import * as db from "../../../mock/data/index.js";
+import { calculateTotals } from "../../pricingService.js";
 import { ROLES } from "../../../features/authentication/roles.js";
 import {
   CAPABILITIES,
@@ -130,9 +141,14 @@ export function createGovernanceStore() {
       order: highestSequence(db.customerOrders, "ORD-2026-"),
       customer: highestSequence(db.customers, "CUST-"),
       address: highestSequence(db.customerAddresses, "ADDR-"),
+      movement: highestSequence(db.inventoryMovements, "MV-2026-"),
       reset: 0,
       audit: 0,
     },
+    /* Phase 12 — checkout idempotency ledger: idempotencyKey → the order and
+       payment it already produced, so a retried submission replays its result
+       instead of creating a second order. */
+    checkoutKeys: {},
   };
 }
 
@@ -3229,6 +3245,446 @@ export function getCustomerOrder(store, customerId, id) {
       item.customerId === customerId
   );
   return emit(order ?? null);
+}
+
+/* ----------------------------------------------------------------------- */
+/* Customer checkout (Phase 12)                                             */
+/* ----------------------------------------------------------------------- */
+/**
+ * The commerce boundary between the shopping bag and the canonical order
+ * book. Everything a future backend must enforce, the store enforces here:
+ * authenticated session, cart validity, product purchasability, quantity,
+ * price currency, address OWNERSHIP (a supplied address id is a claim to
+ * verify, never authority), delivery/payment method validity, payment
+ * detail presence and inventory availability — then, and only then, the
+ * payment is settled through the provider-independent processor, ONE order
+ * is created in the canonical book with a full commercial snapshot, the
+ * branch inventory takes its minimal allocation effect, and the audit trail
+ * records the placement. A retried idempotency key replays its original
+ * result instead of creating a second order.
+ */
+
+/** Machine-readable checkout rejections — mirrors `checkoutErrors.js`. */
+export const CHECKOUT_CODES = {
+  SESSION_EXPIRED: "SESSION_EXPIRED",
+  CART_EMPTY: "CART_EMPTY",
+  PRODUCT_UNAVAILABLE: "PRODUCT_UNAVAILABLE",
+  INVALID_QUANTITY: "INVALID_QUANTITY",
+  PRICE_UNAVAILABLE: "PRICE_UNAVAILABLE",
+  ADDRESS_REQUIRED: "ADDRESS_REQUIRED",
+  ADDRESS_NOT_FOUND: "ADDRESS_NOT_FOUND",
+  DELIVERY_METHOD_INVALID: "DELIVERY_METHOD_INVALID",
+  PAYMENT_METHOD_INVALID: "PAYMENT_METHOD_INVALID",
+  PAYMENT_INFO_REQUIRED: "PAYMENT_INFO_REQUIRED",
+  OUT_OF_STOCK: "OUT_OF_STOCK",
+  PAYMENT_DECLINED: "PAYMENT_DECLINED",
+};
+
+const UPI_PATTERN = /^[\w.\-]{2,64}@[a-zA-Z]{2,32}$/;
+
+/** The deterministic mock-decline: a UPI handle beginning with the fixture's
+ *  documented decline prefix is declined; every other checkout settles. See
+ *  `mock/data/checkout` (`checkoutScenarios.declinedUpiPrefix`). */
+function isDeclinedUpi(upiId) {
+  const prefix = db.checkoutScenarios?.declinedUpiPrefix ?? "fail";
+  return new RegExp(`^${prefix}`, "i").test(String(upiId ?? "").trim());
+}
+
+/** Validated checkout lines — canonical products only, never client prices. */
+function checkoutLines(store, requestedItems) {
+  if (!Array.isArray(requestedItems) || requestedItems.length === 0) {
+    failWithCode(
+      CHECKOUT_CODES.CART_EMPTY,
+      "Your shopping bag is empty. Add a piece before checking out."
+    );
+  }
+
+  const lines = [];
+  const issues = [];
+  for (const entry of requestedItems) {
+    const productId = String(entry?.id ?? "").trim();
+    if (!productId) continue;
+    const quantity = Number(entry?.quantity);
+    if (!Number.isInteger(quantity) || quantity < 1) {
+      issues.push({
+        code: CHECKOUT_CODES.INVALID_QUANTITY,
+        productId,
+        message: "Choose a valid quantity for this piece.",
+      });
+      continue;
+    }
+    /* Purchasable = a published canonical piece. Draft/rejected lifecycle
+       records resolve exactly like unknown ids — the storefront can never
+       buy what the catalogue has not published. */
+    const product = store.products.find(
+      (item) => item.id === productId && item.status === "published"
+    );
+    if (!product) {
+      issues.push({
+        code: CHECKOUT_CODES.PRODUCT_UNAVAILABLE,
+        productId,
+        message: "One of the pieces in your bag is no longer available.",
+      });
+      continue;
+    }
+    if (!(typeof product.price === "number" && product.price > 0)) {
+      issues.push({
+        code: CHECKOUT_CODES.PRICE_UNAVAILABLE,
+        productId,
+        message: "A price for one of your pieces could not be confirmed.",
+      });
+      continue;
+    }
+    lines.push({ product, quantity });
+  }
+
+  if (lines.length === 0 && issues.length === 0) {
+    failWithCode(
+      CHECKOUT_CODES.CART_EMPTY,
+      "Your shopping bag is empty. Add a piece before checking out."
+    );
+  }
+  return { lines, issues };
+}
+
+function branchStockRow(store, branchId, productId) {
+  return (
+    store.inventory.find(
+      (row) => row.branchId === branchId && row.productId === productId
+    ) ?? null
+  );
+}
+
+/**
+ * Fulfilment resolution — the store, not the client, decides the fulfilling
+ * boutique. A branch qualifies when it holds every line's quantity free
+ * (`available`); the first canonical candidate fulfils. A client-supplied
+ * branch id is never trusted, so there is nothing to forge.
+ */
+function resolveFulfilment(store, lines) {
+  const branches = store.branches.filter((b) => b.status !== "disabled");
+  const fulfilment =
+    branches.find((branch) =>
+      lines.every(({ product, quantity }) => {
+        const row = branchStockRow(store, branch.id, product.id);
+        return row && row.available >= quantity;
+      })
+    ) ?? null;
+
+  const availability = lines.map(({ product, quantity }) => {
+    const row = fulfilment
+      ? branchStockRow(store, fulfilment.id, product.id)
+      : null;
+    const networkAvailable = branches.reduce(
+      (max, branch) =>
+        Math.max(max, branchStockRow(store, branch.id, product.id)?.available ?? 0),
+      0
+    );
+    return {
+      productId: product.id,
+      quantity,
+      available: row?.available ?? networkAvailable,
+      fulfilled: Boolean(row && row.available >= quantity),
+    };
+  });
+
+  return { fulfilment, availability, satisfiable: Boolean(fulfilment) };
+}
+
+function availabilityFor(availability, productId) {
+  return availability.find((item) => item.productId === productId) ?? null;
+}
+
+/** The checkout summary — a read-only quote of what the bag can become. */
+export function getCheckoutSummary(store, customerId, requestedItems) {
+  resolveCustomerScope(store, customerId);
+
+  const { lines, issues } = checkoutLines(store, requestedItems);
+  const { fulfilment, availability, satisfiable } = resolveFulfilment(store, lines);
+
+  if (lines.length > 0 && !satisfiable) {
+    const shortfall = lines
+      .filter(({ product, quantity }) => {
+        const info = availabilityFor(availability, product.id);
+        return !info || info.available < quantity;
+      })
+      .map(({ product, quantity }) => {
+        const info = availabilityFor(availability, product.id);
+        return `${product.name} — ${info?.available ?? 0} available, ${quantity} requested`;
+      })
+      .join("; ");
+    issues.unshift({
+      code: CHECKOUT_CODES.OUT_OF_STOCK,
+      message: `We cannot fulfil this bag from boutique stock at the moment (${shortfall}). Adjust the quantity or check back soon.`,
+    });
+  }
+
+  const delivery = db.deliveryMethods[0] ?? null;
+
+  const totals = calculateTotals({
+    items: lines.map(({ product, quantity }) => ({
+      unitPrice: product.price,
+      quantity,
+    })),
+    deliveryCharge: delivery?.charge ?? 0,
+  });
+
+  return emit({
+    items: lines.map(({ product, quantity }) => {
+      const info = availabilityFor(availability, product.id);
+      return {
+        id: product.id,
+        name: product.name,
+        sku: product.sku,
+        purity: product.purity,
+        unitPrice: product.price,
+        quantity,
+        lineTotal: product.price * quantity,
+        image: product.images[0] ? { ...product.images[0] } : null,
+        href: product.href,
+        available: info?.available ?? 0,
+        stockOk: Boolean(info?.fulfilled),
+      };
+    }),
+    count: lines.reduce((sum, line) => sum + line.quantity, 0),
+    totals,
+    delivery: delivery ? { ...delivery } : null,
+    fulfilment: fulfilment
+      ? {
+          branchId: fulfilment.id,
+          branchName: fulfilment.name,
+          city: fulfilment.city,
+        }
+      : null,
+    ready: lines.length > 0 && issues.length === 0,
+    issues,
+  });
+}
+
+/** The canonical order-book label for a checkout payment method. */
+function orderPaymentLabel(method) {
+  return method.orderMethodLabel ?? (method.mode === "prepaid" ? `Prepaid · ${method.label}` : method.label);
+}
+
+/**
+ * The mock payment processor — the seam a real gateway occupies. The UI
+ * names a canonical method and its client-safe detail; the processor alone
+ * decides the outcome. Deterministic: everything settles except the
+ * documented "fail…" UPI handle. No credential ever reaches this function,
+ * and no PAN/CVV shape exists anywhere in the contract.
+ */
+function processCheckoutPayment(method, amount, detail) {
+  if (method.id === "upi") {
+    const upiId = String(detail?.upiId ?? "").trim();
+    if (!UPI_PATTERN.test(upiId)) {
+      failWithCode(
+        CHECKOUT_CODES.PAYMENT_INFO_REQUIRED,
+        "Enter the UPI ID you would like to pay from — for example, yourname@bank."
+      );
+    }
+    if (isDeclinedUpi(upiId)) {
+      failWithCode(
+        CHECKOUT_CODES.PAYMENT_DECLINED,
+        "Your bank declined this UPI payment. No order was created and nothing was charged — try another UPI ID or payment method."
+      );
+    }
+  }
+
+  return {
+    id: `PAY-${Date.now()}`,
+    method: method.id,
+    label: orderPaymentLabel(method),
+    status: "success",
+    amount,
+    at: now(),
+  };
+}
+
+/**
+ * Place an order — the one domain operation of checkout. Validates the full
+ * business boundary, settles payment, writes the snapshot into the canonical
+ * order book, takes the minimal inventory allocation and audits the act.
+ * `idempotencyKey` replays the original result for a duplicate submission.
+ */
+export function placeCheckoutOrder(store, customerId, payload = {}) {
+  const record = resolveCustomerScope(store, customerId);
+
+  const idempotencyKey = String(payload.idempotencyKey ?? "").trim();
+  if (idempotencyKey && store.checkoutKeys[idempotencyKey]) {
+    const replay = store.checkoutKeys[idempotencyKey];
+    const order = store.orders.find((item) => item.id === replay.orderId);
+    if (order) {
+      return { order: emit(order), payment: emit(replay.payment), replay: true };
+    }
+  }
+
+  /* 1 · The bag — valid, purchasable, correctly quantified lines only. */
+  const { lines, issues } = checkoutLines(store, payload.items);
+  if (issues.length > 0) {
+    failWithCode(issues[0].code, issues[0].message);
+  }
+
+  /* 2 · The address — must exist in THIS customer's own address book. */
+  const addressId = String(payload.addressId ?? "").trim();
+  if (!addressId) {
+    failWithCode(
+      CHECKOUT_CODES.ADDRESS_REQUIRED,
+      "Choose a delivery address to continue."
+    );
+  }
+  const address = scopedAddresses(store, customerId).find(
+    (item) => item.id === addressId
+  );
+  if (!address) {
+    failWithCode(
+      CHECKOUT_CODES.ADDRESS_NOT_FOUND,
+      "We could not use that delivery address. Please choose one of your saved addresses."
+    );
+  }
+
+  /* 3 · The delivery method — must be a canonical method. */
+  const delivery = db.deliveryMethods.find(
+    (item) => item.id === payload.deliveryMethod
+  );
+  if (!delivery) {
+    failWithCode(
+      CHECKOUT_CODES.DELIVERY_METHOD_INVALID,
+      "Choose one of the available delivery methods."
+    );
+  }
+
+  /* 4 · The payment method — must be a canonical method… */
+  const paymentMethod = db.paymentMethods.find(
+    (item) => item.id === payload.paymentMethod
+  );
+  if (!paymentMethod) {
+    failWithCode(
+      CHECKOUT_CODES.PAYMENT_METHOD_INVALID,
+      "Choose one of the available payment methods."
+    );
+  }
+
+  /* 5 · Fulfilment — one boutique must hold every line in free stock. */
+  const { fulfilment, availability, satisfiable } = resolveFulfilment(store, lines);
+  if (!satisfiable) {
+    const shortfall = lines
+      .map(({ product, quantity }) => {
+        const info = availabilityFor(availability, product.id);
+        return `${product.name} — ${info?.available ?? 0} available`;
+      })
+      .join("; ");
+    failWithCode(
+      CHECKOUT_CODES.OUT_OF_STOCK,
+      `We cannot fulfil this bag from boutique stock at the moment (${shortfall}). Adjust the quantity and try again.`
+    );
+  }
+
+  /* 6 · The amount — calculated once, here, from canonical prices. */
+  const totals = calculateTotals({
+    items: lines.map(({ product, quantity }) => ({
+      unitPrice: product.price,
+      quantity,
+    })),
+    deliveryCharge: delivery.charge,
+  });
+
+  /* 7 · Payment — settled before the order exists; a decline creates nothing. */
+  const payment = processCheckoutPayment(
+    paymentMethod,
+    totals.grandTotal,
+    payload.paymentDetail
+  );
+
+  /* 8 · The canonical order — a full commercial snapshot. */
+  store.counters.order += 1;
+  const sequence = store.counters.order;
+  const order = {
+    id: `ORD-2026-${sequence}`,
+    orderNumber: `SWN-${sequence}-IN`,
+    createdAt: now(),
+    status: "Placed",
+    customerId,
+    branchId: fulfilment.id,
+    paymentStatus: "paid",
+    items: lines.map(({ product, quantity }) => ({
+      id: product.id,
+      name: product.name,
+      sku: product.sku,
+      purity: product.purity,
+      price: product.price,
+      quantity,
+      image: product.images[0] ? { ...product.images[0] } : null,
+      href: product.href,
+    })),
+    subtotal: totals.subtotal,
+    shipping: totals.deliveryCharge,
+    taxAmount: totals.taxAmount,
+    total: totals.grandTotal,
+    deliveryMethod: delivery.id,
+    shippingAddress: {
+      name: address.name,
+      phone: address.phone,
+      line1: address.line1,
+      line2: address.line2 ?? "",
+      city: address.city,
+      state: address.state,
+      postalCode: address.postalCode,
+      country: address.country || "India",
+    },
+    paymentMethod: orderPaymentLabel(paymentMethod),
+    courier: delivery.courier,
+    trackingNumber: null,
+  };
+  store.orders = [order, ...store.orders];
+
+  /* 9 · Inventory — the minimal allocation the model asks for: pieces move
+     from free stock to reserved against the new open order, and the
+     movement log records the allocation exactly as the branch book does. */
+  for (const line of lines) {
+    const row = branchStockRow(store, fulfilment.id, line.product.id);
+    if (!row || row.available < line.quantity) {
+      failWithCode(
+        CHECKOUT_CODES.OUT_OF_STOCK,
+        "Stock changed while your order was being placed. Please review your bag and try again."
+      );
+    }
+    row.available -= line.quantity;
+    row.reserved += line.quantity;
+    store.counters.movement += 1;
+    store.inventoryMovements = [
+      {
+        id: `MV-2026-${String(store.counters.movement).padStart(4, "0")}`,
+        stockId: row.id,
+        type: "sale",
+        delta: -line.quantity,
+        at: now(),
+        by: `${record.name} — Storefront`,
+        note: `Allocated to order ${order.orderNumber}.`,
+      },
+      ...store.inventoryMovements,
+    ].slice(0, 200);
+  }
+
+  /* 10 · The audit trail and the idempotency ledger. */
+  appendAudit(store, {
+    actor: `${record.name} — Storefront`,
+    branchId: fulfilment.id,
+    action: "order.place",
+    entityType: "order",
+    entityId: order.id,
+    entityLabel: order.orderNumber,
+    detail: `Checkout order placed — ${order.items.length} piece(s), ${order.paymentMethod}. Fulfilled by ${fulfilment.name}.`,
+  });
+
+  if (idempotencyKey) {
+    store.checkoutKeys[idempotencyKey] = {
+      orderId: order.id,
+      payment: emit(payment),
+      at: now(),
+    };
+  }
+
+  return { order: emit(order), payment: emit(payment), replay: false };
 }
 
 /* ---------------- Password reset (mock contract) ---------------- */
