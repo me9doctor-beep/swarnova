@@ -23,6 +23,16 @@
  * inventory, employee lifecycle and the business overview/reports — all
  * computed from the SAME canonical entities Super Admin governs and the
  * storefront reads. There is no second, admin-only database.
+ *
+ * Phase 11 extends the same store with CUSTOMER IDENTITY: the customer
+ * directory becomes the identity registry (credentials live on the records
+ * exactly where staff passwords already live — plain fixture form today,
+ * hashed server-side tomorrow), and per-customer profiles, addresses and
+ * password-reset tokens join the canonical state. Every customer-scoped
+ * read and write resolves ownership from the authenticated customer id —
+ * never from a URL, a query string or a client-supplied claim — so the
+ * Admin book, the branch book and the storefront account all read one
+ * customer truth. Serializers strip credentials before anything leaves.
  */
 import * as db from "../../../mock/data/index.js";
 import { ROLES } from "../../../features/authentication/roles.js";
@@ -52,6 +62,18 @@ function now() {
 
 function fail(message) {
   throw new Error(message);
+}
+
+/**
+ * A rejection that carries a stable machine-readable code alongside the
+ * customer/staff-readable message — the mock's stand-in for an API error
+ * envelope (`{ code, message }`). The UI translates `code` into the exact
+ * customer-facing copy; the message is already safe to show as a fallback.
+ */
+function failWithCode(code, message) {
+  const error = new Error(message);
+  error.code = code;
+  throw error;
 }
 
 function highestSequence(list, prefix, pattern = /(\d+)$/) {
@@ -91,20 +113,48 @@ export function createGovernanceStore() {
     admins: emit(db.platformAdmins),
     employees: emit(db.platformEmployees),
     capabilityProfiles: emit(db.capabilityProfiles),
-    customers: emit(db.customers),
+    customers: seedCustomerRegistry(),
     orders: emit(db.customerOrders),
     inventory: emit(db.inventoryStock),
     inventoryMovements: emit(db.inventoryMovements),
     auditLog: emit(db.governanceAuditLog),
     settings: emit(db.platformSettings),
+    /* Phase 11 — customer identity state, keyed by authenticated customer id. */
+    customerProfiles: { [db.customerProfile.id]: emit(db.customerProfile) },
+    customerAddresses: { [db.customerProfile.id]: emit(db.customerAddresses) },
+    customerResetTokens: {},
     counters: {
       product: highestSequence(products, "JWL-"),
       media: highestSequence(media, "MED-"),
       employee: highestSequence(db.platformEmployees, "EMP-"),
       order: highestSequence(db.customerOrders, "ORD-2026-"),
+      customer: highestSequence(db.customers, "CUST-"),
+      address: highestSequence(db.customerAddresses, "ADDR-"),
+      reset: 0,
       audit: 0,
     },
   };
+}
+
+/**
+ * The customer identity registry — the directory with one fixture credential
+ * per account, exactly where staff passwords already live (plain fixture
+ * form today, hashed server-side tomorrow). Serializers strip the credential
+ * before anything leaves the store.
+ */
+function seedCustomerRegistry() {
+  return emit(db.customers).map((customer) => ({
+    ...customer,
+    status: customer.status ?? "active",
+    password: db.CUSTOMER_DEMO_PASSWORD,
+  }));
+}
+
+/** Strip the credential (and only the credential) before serializing. */
+function withoutCredential(customer) {
+  if (!customer) return customer;
+  const { password: _password, ...publicFields } = customer;
+  return publicFields;
 }
 
 /* ----------------------------------------------------------------------- */
@@ -1533,7 +1583,8 @@ function customerStats(store, customerId) {
 }
 
 export function toAdminCustomer(store, customer) {
-  return emit({ ...customer, ...customerStats(store, customer.id) });
+  /* Credentials never leave the store — the Admin book sees the public record. */
+  return emit({ ...withoutCredential(customer), ...customerStats(store, customer.id) });
 }
 
 export function listAdminCustomers(store, query = {}) {
@@ -2149,7 +2200,8 @@ function branchCustomerStats(store, customerId, branchId) {
 }
 
 function toEmployeeCustomer(store, customer, branchId) {
-  return emit({ ...customer, ...branchCustomerStats(store, customer.id, branchId) });
+  /* Credentials never leave the store — the branch book sees the public record. */
+  return emit({ ...withoutCredential(customer), ...branchCustomerStats(store, customer.id, branchId) });
 }
 
 /**
@@ -2736,4 +2788,503 @@ export function updateEmployeeProfile(store, actor, patch = {}) {
     detail: "Contact number updated from the employee profile.",
   });
   return employeeProfile(store, actor);
+}
+
+/* ----------------------------------------------------------------------- */
+/* Customer identity & account (Phase 11)                                   */
+/* ----------------------------------------------------------------------- */
+/**
+ * CUSTOMER AUTHENTICATION + IDENTITY
+ * ----------------------------------------------------------------------------
+ * The customer directory (`store.customers`) doubles as the identity
+ * registry; per-customer profiles, addresses and reset tokens live beside it.
+ * The contract mirrors the future customer API one-to-one:
+ *
+ *   authenticateCustomer(store, { identifier, password })
+ *   registerCustomer(store, { name, email, phone, password })
+ *   resolveCustomerScope(store, customerId)
+ *   getCustomerProfile(store, customerId)
+ *   updateCustomerProfile(store, customerId, patch)
+ *   listCustomerAddresses(store, customerId)
+ *   addCustomerAddress(store, customerId, address)
+ *   updateCustomerAddress(store, customerId, address)
+ *   deleteCustomerAddress(store, customerId, addressId)
+ *   setDefaultCustomerAddress(store, customerId, addressId)
+ *   listCustomerOrders(store, customerId)
+ *   getCustomerOrder(store, customerId, id)
+ *   requestCustomerPasswordReset(store, identifier)
+ *   resetCustomerPassword(store, { token, password })
+ *
+ * Ownership is ALWAYS derived from the authenticated customer id handed in
+ * by the provider (which the provider itself resolved from its session —
+ * never from a URL, a query string or a client claim). A record that does
+ * not belong to the caller resolves to null / throws NOT_FOUND exactly as
+ * the API will, without disclosing that it exists.
+ *
+ * Customer identity is a separate domain from staff RBAC: these functions
+ * never issue roles, permissions or capabilities, and no staff function
+ * accepts a customer id as authority.
+ */
+
+/** Stable machine-readable codes for customer-auth rejections. */
+export const CUSTOMER_AUTH_CODES = {
+  INVALID_CREDENTIALS: "INVALID_CREDENTIALS",
+  EMAIL_TAKEN: "EMAIL_TAKEN",
+  PHONE_TAKEN: "PHONE_TAKEN",
+  VALIDATION_ERROR: "VALIDATION_ERROR",
+  SESSION_EXPIRED: "SESSION_EXPIRED",
+  NOT_FOUND: "NOT_FOUND",
+  RESET_FAILURE: "RESET_FAILURE",
+};
+
+export const CUSTOMER_PASSWORD_MIN_LENGTH = 8;
+
+/** The public customer shape — `{ id, name, email, phone, status }` plus the
+ *  membership summary the account masthead renders. Never the credential. */
+export function toCustomerPublic(customer) {
+  const record = withoutCredential(customer);
+  if (!record) return null;
+  return emit({
+    id: record.id,
+    name: record.name,
+    email: record.email,
+    phone: record.phone,
+    city: record.city ?? null,
+    state: record.state ?? null,
+    tier: record.tier ?? "Swarnova Classic",
+    memberSince: record.memberSince ?? null,
+    status: record.status ?? "active",
+  });
+}
+
+function normalizeEmail(value) {
+  return String(value ?? "").trim().toLowerCase();
+}
+
+/** Phone numbers compare on digits alone — "+91 98765 43210" and
+ *  "919876543210" are the same account. */
+function normalizePhone(value) {
+  return String(value ?? "").replace(/\D/g, "");
+}
+
+function isEmailLike(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value ?? "").trim());
+}
+
+function isPhoneLike(value) {
+  return /^[+\d][\d\s-]{7,}$/.test(String(value ?? "").trim());
+}
+
+function assertPassword(password) {
+  if (
+    typeof password !== "string" ||
+    password.length < CUSTOMER_PASSWORD_MIN_LENGTH
+  ) {
+    failWithCode(
+      CUSTOMER_AUTH_CODES.VALIDATION_ERROR,
+      `Choose a password of at least ${CUSTOMER_PASSWORD_MIN_LENGTH} characters.`
+    );
+  }
+}
+
+/** Resolve an email address or phone number to its registry record. */
+export function findCustomerByIdentifier(store, identifier) {
+  const raw = String(identifier ?? "").trim();
+  if (!raw) return null;
+  if (raw.includes("@")) {
+    const email = normalizeEmail(raw);
+    return (
+      store.customers.find((item) => normalizeEmail(item.email) === email) ?? null
+    );
+  }
+  const digits = normalizePhone(raw);
+  if (!digits) return null;
+  return (
+    store.customers.find((item) => normalizePhone(item.phone) === digits) ?? null
+  );
+}
+
+/**
+ * Sign in with email-or-phone + password. Unknown identifiers and wrong
+ * passwords reject identically — the response never discloses which half
+ * failed, exactly as the API will.
+ */
+export function authenticateCustomer(store, credentials = {}) {
+  const identifier = String(
+    credentials.identifier ?? credentials.email ?? ""
+  ).trim();
+  const password = String(credentials.password ?? "");
+
+  if (!identifier || !password) {
+    failWithCode(
+      CUSTOMER_AUTH_CODES.VALIDATION_ERROR,
+      "Enter your email or phone number and password."
+    );
+  }
+
+  const record = findCustomerByIdentifier(store, identifier);
+  if (!record || record.status === "disabled" || record.password !== password) {
+    failWithCode(
+      CUSTOMER_AUTH_CODES.INVALID_CREDENTIALS,
+      "We could not sign you in with those details. Check your email or phone number and password, then try again."
+    );
+  }
+
+  return { customer: toCustomerPublic(record) };
+}
+
+/**
+ * Create a customer account. The new record joins the ONE canonical
+ * directory, so the Admin and branch books see the customer immediately —
+ * there is no separate registration database.
+ */
+export function registerCustomer(store, payload = {}) {
+  const name = String(payload.name ?? "").trim();
+  const email = String(payload.email ?? "").trim();
+  const phone = String(payload.phone ?? "").trim();
+  const password = String(payload.password ?? "");
+
+  if (!hasText(name) || name.length < 2) {
+    failWithCode(CUSTOMER_AUTH_CODES.VALIDATION_ERROR, "Enter your full name.");
+  }
+  if (!isEmailLike(email)) {
+    failWithCode(
+      CUSTOMER_AUTH_CODES.VALIDATION_ERROR,
+      "Enter a valid email address."
+    );
+  }
+  if (!isPhoneLike(phone)) {
+    failWithCode(
+      CUSTOMER_AUTH_CODES.VALIDATION_ERROR,
+      "Enter a valid phone number."
+    );
+  }
+  assertPassword(password);
+
+  if (findCustomerByIdentifier(store, email)) {
+    failWithCode(
+      CUSTOMER_AUTH_CODES.EMAIL_TAKEN,
+      "An account already exists with this email address. Try signing in instead."
+    );
+  }
+  if (findCustomerByIdentifier(store, phone)) {
+    failWithCode(
+      CUSTOMER_AUTH_CODES.PHONE_TAKEN,
+      "An account already exists with this phone number. Try signing in instead."
+    );
+  }
+
+  store.counters.customer += 1;
+  const memberSince = new Date().toLocaleDateString("en-IN", {
+    month: "long",
+    year: "numeric",
+  });
+  const record = {
+    id: `CUST-${store.counters.customer}`,
+    name,
+    email,
+    phone,
+    city: null,
+    state: null,
+    tier: "Swarnova Classic",
+    memberSince,
+    status: "active",
+    password,
+  };
+  store.customers = [...store.customers, record];
+  return { customer: toCustomerPublic(record) };
+}
+
+/**
+ * Re-resolve the authenticated customer for every scoped call — the
+ * customer-side twin of `resolveStaffScope`. An unknown, missing or
+ * disabled id is an expired session, never an authorization decision the
+ * client can influence.
+ */
+export function resolveCustomerScope(store, customerId) {
+  const record =
+    store.customers.find((item) => item.id === customerId) ?? null;
+  if (!record || record.status === "disabled") {
+    failWithCode(
+      CUSTOMER_AUTH_CODES.SESSION_EXPIRED,
+      "Your session has expired. Please sign in again."
+    );
+  }
+  return record;
+}
+
+/** The rich profile the account experience renders; directory customers
+ *  without a stored profile resolve a derived default, never null. */
+export function getCustomerProfile(store, customerId) {
+  const record = resolveCustomerScope(store, customerId);
+  const stored = store.customerProfiles[record.id];
+  if (stored) return emit(stored);
+  return emit({
+    id: record.id,
+    name: record.name,
+    email: record.email,
+    phone: record.phone,
+    dateOfBirth: "",
+    preferences: { preferredMetal: "", ringSize: "", favouriteStyle: "" },
+    memberSince: record.memberSince,
+    tier: record.tier,
+  });
+}
+
+/**
+ * Update the caller's own profile. Membership facts (id, tier, memberSince)
+ * are server-owned and ignored; email/phone changes are uniqueness-checked
+ * and synced back to the directory record so the identity registry and the
+ * profile never disagree.
+ */
+export function updateCustomerProfile(store, customerId, patch = {}) {
+  const record = resolveCustomerScope(store, customerId);
+  const current = getCustomerProfile(store, record.id);
+
+  const next = {
+    ...current,
+    ...(patch.name !== undefined ? { name: String(patch.name).trim() } : {}),
+    ...(patch.dateOfBirth !== undefined
+      ? { dateOfBirth: String(patch.dateOfBirth) }
+      : {}),
+    preferences: {
+      ...current.preferences,
+      ...(patch.preferences || {}),
+    },
+  };
+
+  if (!hasText(next.name) || next.name.length < 2) {
+    failWithCode(CUSTOMER_AUTH_CODES.VALIDATION_ERROR, "Enter your full name.");
+  }
+
+  if (patch.email !== undefined && String(patch.email).trim() !== record.email) {
+    const email = String(patch.email).trim();
+    if (!isEmailLike(email)) {
+      failWithCode(
+        CUSTOMER_AUTH_CODES.VALIDATION_ERROR,
+        "Enter a valid email address."
+      );
+    }
+    const clash = findCustomerByIdentifier(store, email);
+    if (clash && clash.id !== record.id) {
+      failWithCode(
+        CUSTOMER_AUTH_CODES.EMAIL_TAKEN,
+        "Another account already uses this email address."
+      );
+    }
+    next.email = email;
+    record.email = email;
+  }
+
+  if (patch.phone !== undefined && String(patch.phone).trim() !== record.phone) {
+    const phone = String(patch.phone).trim();
+    if (!isPhoneLike(phone)) {
+      failWithCode(
+        CUSTOMER_AUTH_CODES.VALIDATION_ERROR,
+        "Enter a valid phone number."
+      );
+    }
+    const clash = findCustomerByIdentifier(store, phone);
+    if (clash && clash.id !== record.id) {
+      failWithCode(
+        CUSTOMER_AUTH_CODES.PHONE_TAKEN,
+        "Another account already uses this phone number."
+      );
+    }
+    next.phone = phone;
+    record.phone = phone;
+  }
+
+  record.name = next.name;
+  store.customerProfiles[record.id] = emit(next);
+  return emit(next);
+}
+
+/* ---------------- Customer addresses (scoped) ---------------- */
+
+function scopedAddresses(store, customerId) {
+  resolveCustomerScope(store, customerId);
+  return store.customerAddresses[customerId] ?? [];
+}
+
+export function listCustomerAddresses(store, customerId) {
+  return emit(scopedAddresses(store, customerId));
+}
+
+function assertAddressShape(address = {}) {
+  const required = [
+    ["name", "Enter the recipient name."],
+    ["phone", "Enter a contact number for this address."],
+    ["line1", "Enter the street address."],
+    ["city", "Enter the city."],
+    ["state", "Enter the state."],
+    ["postalCode", "Enter the postal code."],
+  ];
+  for (const [field, message] of required) {
+    if (!hasText(address[field])) {
+      failWithCode(CUSTOMER_AUTH_CODES.VALIDATION_ERROR, message);
+    }
+  }
+  if (!isPhoneLike(address.phone)) {
+    failWithCode(
+      CUSTOMER_AUTH_CODES.VALIDATION_ERROR,
+      "Enter a valid contact number for this address."
+    );
+  }
+}
+
+export function addCustomerAddress(store, customerId, address = {}) {
+  resolveCustomerScope(store, customerId);
+  assertAddressShape(address);
+
+  const list = scopedAddresses(store, customerId);
+  store.counters.address += 1;
+  const record = {
+    ...address,
+    id: `ADDR-${String(store.counters.address).padStart(3, "0")}`,
+    country: address.country || "India",
+    isDefault: Boolean(address.isDefault || list.length === 0),
+  };
+  store.customerAddresses[customerId] = record.isDefault
+    ? [record, ...list.map((item) => ({ ...item, isDefault: false }))]
+    : [...list, record];
+  return emit(record);
+}
+
+export function updateCustomerAddress(store, customerId, address = {}) {
+  resolveCustomerScope(store, customerId);
+  const list = scopedAddresses(store, customerId);
+  /* A foreign id resolves as missing — never as someone else's address. */
+  if (!address.id || !list.some((item) => item.id === address.id)) {
+    failWithCode(
+      CUSTOMER_AUTH_CODES.NOT_FOUND,
+      "We could not find that address."
+    );
+  }
+  const merged = { ...list.find((item) => item.id === address.id), ...address };
+  assertAddressShape(merged);
+  store.customerAddresses[customerId] = list.map((item) =>
+    item.id === address.id
+      ? merged
+      : address.isDefault
+        ? { ...item, isDefault: false }
+        : item
+  );
+  return emit(merged);
+}
+
+export function deleteCustomerAddress(store, customerId, addressId) {
+  resolveCustomerScope(store, customerId);
+  const list = scopedAddresses(store, customerId);
+  if (!list.some((item) => item.id === addressId)) {
+    failWithCode(
+      CUSTOMER_AUTH_CODES.NOT_FOUND,
+      "We could not find that address."
+    );
+  }
+  const target = list.find((item) => item.id === addressId);
+  const rest = list.filter((item) => item.id !== addressId);
+  if (target?.isDefault && rest.length > 0) rest[0].isDefault = true;
+  store.customerAddresses[customerId] = rest;
+  return emit(addressId);
+}
+
+export function setDefaultCustomerAddress(store, customerId, addressId) {
+  resolveCustomerScope(store, customerId);
+  const list = scopedAddresses(store, customerId);
+  if (!list.some((item) => item.id === addressId)) {
+    failWithCode(
+      CUSTOMER_AUTH_CODES.NOT_FOUND,
+      "We could not find that address."
+    );
+  }
+  store.customerAddresses[customerId] = list.map((item) => ({
+    ...item,
+    isDefault: item.id === addressId,
+  }));
+  return emit(store.customerAddresses[customerId]);
+}
+
+/* ---------------- Customer orders (scoped) ---------------- */
+
+/** The caller's own slice of the ONE canonical order book, most recent first. */
+export function listCustomerOrders(store, customerId) {
+  resolveCustomerScope(store, customerId);
+  return emit(
+    store.orders
+      .filter((order) => order.customerId === customerId)
+      .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
+  );
+}
+
+/**
+ * One order by id or order number — resolved to null unless it belongs to
+ * the caller, exactly as a 404 would. Ownership is never taken from the URL.
+ */
+export function getCustomerOrder(store, customerId, id) {
+  resolveCustomerScope(store, customerId);
+  const order = store.orders.find(
+    (item) =>
+      (item.id === id || item.orderNumber === id) &&
+      item.customerId === customerId
+  );
+  return emit(order ?? null);
+}
+
+/* ---------------- Password reset (mock contract) ---------------- */
+
+/**
+ * Request a reset for an email or phone number. ALWAYS resolves
+ * `{ requested: true }` — the response never discloses whether an account
+ * exists for the identifier, exactly as the API will.
+ *
+ * `devReference` is mock-only: the deterministic stand-in for the token the
+ * real email/SMS channel would deliver, shown solely inside the same
+ * explicit "Demo access" disclosure the staff login uses. The API provider
+ * omits it; UI treats it as optional.
+ */
+export function requestCustomerPasswordReset(store, identifier) {
+  const record = findCustomerByIdentifier(store, identifier);
+  if (!record || record.status === "disabled") {
+    return { requested: true, devReference: null };
+  }
+  store.counters.reset += 1;
+  const token = `SWN-RST-${record.id.replace(/\D/g, "").slice(-4)}-${String(
+    store.counters.reset
+  ).padStart(4, "0")}`;
+  store.customerResetTokens[token] = {
+    token,
+    customerId: record.id,
+    createdAt: now(),
+    usedAt: null,
+  };
+  return { requested: true, devReference: token };
+}
+
+/**
+ * Consume a reset token. The token is single-use and opaque to the UI — it
+ * is never validated client-side, only handed to the provider, which is the
+ * authority here exactly as the backend will be.
+ */
+export function resetCustomerPassword(store, payload = {}) {
+  const token = String(payload.token ?? "").trim();
+  const entry = store.customerResetTokens[token];
+  if (!token || !entry || entry.usedAt) {
+    failWithCode(
+      CUSTOMER_AUTH_CODES.RESET_FAILURE,
+      "This reset link is invalid or has already been used. Request a new one to continue."
+    );
+  }
+  assertPassword(String(payload.password ?? ""));
+  const record =
+    store.customers.find((item) => item.id === entry.customerId) ?? null;
+  if (!record || record.status === "disabled") {
+    failWithCode(
+      CUSTOMER_AUTH_CODES.RESET_FAILURE,
+      "This reset link is invalid or has already been used. Request a new one to continue."
+    );
+  }
+  record.password = String(payload.password);
+  entry.usedAt = now();
+  return { reset: true };
 }

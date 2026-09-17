@@ -19,7 +19,7 @@ export { default as goldRateBoard } from "./gold-rates/index.js";
 export { aiStudio, aiAtelier, aiDesigns } from "./ai/index.js";
 export { tryOnRoom, tryOnSamples } from "./try-on/index.js";
 export { default as journalArticles } from "./journal/index.js";
-export { customerProfile, customerAddresses, customers } from "./customer/index.js";
+export { customerProfile, customerAddresses, customers, CUSTOMER_DEMO_PASSWORD } from "./customer/index.js";
 export { default as customerOrders } from "./orders/index.js";
 export { default as mediaLibrary } from "./media/index.js";
 export { inventoryStock, inventoryMovements } from "./inventory/index.js";

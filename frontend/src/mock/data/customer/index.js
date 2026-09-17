@@ -7,7 +7,15 @@
  * customer book reads it, and every order in `mock/data/orders` references
  * one of these ids. The storefront profile below is simply the customer
  * whose browser session is signed in (CUST-84920).
+ *
+ * Phase 11: the same directory becomes the customer identity registry — the
+ * governance store issues every fixture account the shared demo credential
+ * below (mirroring `STAFF_TEMP_PASSWORD` for staff), exactly where a future
+ * backend keeps credentials: here in plain fixture form, later hashed
+ * server-side. The demo credential is surfaced only through the same
+ * explicit "Demo access" disclosure the staff login already uses.
  */
+export const CUSTOMER_DEMO_PASSWORD = "Swarnova@123";
 export const customerProfile = {
   id: "CUST-84920",
   name: "Aadya Sharma",

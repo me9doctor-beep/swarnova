@@ -1,7 +1,10 @@
-import { Outlet, Link } from "react-router-dom";
+import { useState } from "react";
+import { Outlet, Link, useNavigate } from "react-router-dom";
 import Container from "../../../components/ui/Container.jsx";
 import Eyebrow from "../../../components/ui/Eyebrow.jsx";
+import Button from "../../../components/ui/Button.jsx";
 import AccountNavigation from "../../../components/account/AccountNavigation.jsx";
+import { useCustomerAuth } from "../../../features/customer-auth/useCustomerAuth.js";
 import { useCustomerProfile } from "../../../hooks/useCustomerProfile.js";
 import { Mail, Phone, ShieldCheck } from "lucide-react";
 
@@ -13,12 +16,30 @@ import { Mail, Phone, ShieldCheck } from "lucide-react";
  * - Desktop: Refined side navigation beside the active view
  * - Mobile: Thumb-friendly horizontal navigation bar
  * - Personal Concierge support block
+ *
+ * Phase 11: the masthead reads the AUTHENTICATED customer (the session is
+ * guaranteed by `RequireCustomer`), and the rail signs the customer out —
+ * clearing the session and returning to the public storefront.
  */
 export default function AccountLayout() {
+  const navigate = useNavigate();
+  const { signOut } = useCustomerAuth();
   const { profile } = useCustomerProfile();
+  const [signingOut, setSigningOut] = useState(false);
 
   const customerName = profile?.name ?? "Valued Client";
   const tier = profile?.tier ?? "Swarnova Privé";
+  const memberSince = profile?.memberSince;
+
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    try {
+      await signOut();
+    } finally {
+      /* The storefront is the right landing — the session is already clear. */
+      navigate("/", { replace: true });
+    }
+  };
 
   return (
     <div className="bg-surface-secondary/40 pb-20 pt-[132px] sm:pb-28 sm:pt-[152px] lg:pt-[168px]">
@@ -49,9 +70,19 @@ export default function AccountLayout() {
                 <ShieldCheck size={14} className="text-brand-accent" aria-hidden="true" />
                 {tier}
               </span>
-              <span className="font-sans text-caption text-text-muted">
-                Demo Account Mode
-              </span>
+              {memberSince ? (
+                <span className="font-sans text-caption text-text-muted">
+                  Client since {memberSince}
+                </span>
+              ) : null}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSignOut}
+                disabled={signingOut}
+              >
+                {signingOut ? "Signing out…" : "Sign out"}
+              </Button>
             </div>
           </div>
         </div>
