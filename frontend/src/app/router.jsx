@@ -13,6 +13,8 @@ import ProductDetailPage from "../pages/customer/product/ProductDetailPage.jsx";
 import AiStudioPage from "../pages/customer/ai-studio/AiStudioPage.jsx";
 import VirtualTryOnPage from "../pages/customer/virtual-try-on/VirtualTryOnPage.jsx";
 import CartPage from "../pages/customer/cart/CartPage.jsx";
+import CheckoutPage from "../pages/customer/checkout/CheckoutPage.jsx";
+import OrderConfirmationPage from "../pages/customer/checkout/OrderConfirmationPage.jsx";
 
 import CustomerLoginPage from "../pages/customer/auth/CustomerLoginPage.jsx";
 import CustomerRegisterPage from "../pages/customer/auth/CustomerRegisterPage.jsx";
@@ -56,6 +58,7 @@ import CampaignsPage from "../pages/super-admin/content/CampaignsPage.jsx";
 import AiTryOnGovernancePage from "../pages/super-admin/platform/AiTryOnGovernancePage.jsx";
 import GoldRatePage from "../pages/super-admin/platform/GoldRatePage.jsx";
 import BranchesPage from "../pages/super-admin/organization/BranchesPage.jsx";
+import BranchDrillDownPage from "../pages/super-admin/organization/BranchDrillDownPage.jsx";
 import AdminsPage from "../pages/super-admin/organization/AdminsPage.jsx";
 import EmployeesPage from "../pages/super-admin/organization/EmployeesPage.jsx";
 import RolesPage from "../pages/super-admin/governance/RolesPage.jsx";
@@ -348,6 +351,12 @@ export const routeTree = [
         index: true,
         element: <SuperAdminDashboardPage />,
         handle: { crumb: "Command Centre" },
+      },
+      {
+        // Global view → one branch → back, through the platform's branch contract.
+        path: "branches/:branchId",
+        element: <BranchDrillDownPage />,
+        handle: { crumb: "Branch Drill-down" },
       },
       { path: "products", element: <GovernanceProductsPage />, handle: { crumb: "Products" } },
       { path: "products/new", element: <GovernanceProductEditorPage />, handle: { crumb: "New Product" } },

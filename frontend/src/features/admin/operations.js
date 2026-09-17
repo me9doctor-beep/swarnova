@@ -59,7 +59,8 @@ export const ORDER_ACTIONS = {
     label: "Mark Shipped",
     confirmTitle: "Mark this order as shipped?",
     confirmBody:
-      "The order leaves the branch for the customer. Delivery completes the flow.",
+      "The allocated pieces leave the branch for the customer and their " +
+      "reservation is retired. Delivery completes the flow.",
     confirmLabel: "Mark Shipped",
     variant: "primary",
   },
@@ -74,7 +75,9 @@ export const ORDER_ACTIONS = {
     label: "Cancel Order",
     confirmTitle: "Cancel this order?",
     confirmBody:
-      "The order is cancelled and its payment marked for refund. An order cannot be cancelled once it has shipped.",
+      "The order is cancelled, its payment is marked for refund and any pieces " +
+      "it reserved return to the branch's free stock. An order cannot be " +
+      "cancelled once it has shipped.",
     confirmLabel: "Cancel Order",
     variant: "danger",
   },

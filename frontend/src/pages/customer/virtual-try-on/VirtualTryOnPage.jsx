@@ -12,10 +12,10 @@ import TryOnJewellerySelector from "../../../components/virtual-try-on/TryOnJewe
 import TryOnPhotoPicker from "../../../components/virtual-try-on/TryOnPhotoPicker.jsx";
 import TryOnPhotoPreview from "../../../components/virtual-try-on/TryOnPhotoPreview.jsx";
 import TryOnResult from "../../../components/virtual-try-on/TryOnResult.jsx";
+import { useAddProductToBag } from "../../../hooks/useAddProductToBag.js";
 import { useDocumentTitle } from "../../../hooks/useDocumentTitle.js";
 import { useTryOnRoom } from "../../../hooks/useTryOnRoom.js";
 import { useVirtualTryOn } from "../../../hooks/useVirtualTryOn.js";
-import { useCart } from "../../../state/CartContext.jsx";
 
 /**
  * VIRTUAL TRY-ON — the shared digital fitting room at `/virtual-try-on`.
@@ -33,7 +33,7 @@ import { useCart } from "../../../state/CartContext.jsx";
 export default function VirtualTryOnPage() {
   const roomState = useTryOnRoom();
   const fitting = useVirtualTryOn();
-  const { add } = useCart();
+  const { addCanonical } = useAddProductToBag();
 
   /* Quiet confirmations (save / share / bag) — replaced by the next action. */
   const [note, setNote] = useState(null);
@@ -71,9 +71,11 @@ export default function VirtualTryOnPage() {
       ? room.savedMessage
       : note === "bagged"
         ? room.baggedMessage
-        : note
-          ? room.share?.[note]
-          : null;
+        : note === "bagUnavailable"
+          ? room.bagUnavailableMessage
+          : note
+            ? room.share?.[note]
+            : null;
 
   const handleSave = () => {
     if (!fitting.result || fitting.isResultSaved) return;
@@ -111,12 +113,15 @@ export default function VirtualTryOnPage() {
     }
   };
 
-  /* Catalogue pieces join the bag through the existing cart; AI concepts
-     never pretend to be purchasable, so this path is product-only. */
-  const handleAddToBag = () => {
+  /* Catalogue pieces join the bag through the existing cart, and the bag line
+     is the CANONICAL piece — the room's own summary is a preview of the
+     jewellery, not a commerce record, and a concept that is not a published
+     product never becomes a bag line at all. AI designs never pretend to be
+     purchasable, so this path stays product-only. */
+  const handleAddToBag = async () => {
     if (!fitting.jewellery) return;
-    add(fitting.jewellery);
-    setNote("bagged");
+    const { added } = await addCanonical(fitting.jewellery.id);
+    setNote(added ? "bagged" : "bagUnavailable");
   };
 
   const handleSelectJewellery = (productId) => {

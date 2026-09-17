@@ -1,4 +1,5 @@
 import PropTypes from "prop-types";
+import ContentLink from "./ContentLink.jsx";
 import { cn } from "../../utils/cn.js";
 
 /**
@@ -39,9 +40,9 @@ function CardMedia({ ratio = "4/3", href, ariaLabel, overlay, className, childre
     const frame = cn("block overflow-hidden bg-surface-secondary", aspect, className);
 
     return href ? (
-      <a href={href} aria-label={ariaLabel} className={frame}>
+      <ContentLink href={href} aria-label={ariaLabel} className={frame}>
         {children}
-      </a>
+      </ContentLink>
     ) : (
       <div className={frame}>{children}</div>
     );
@@ -52,9 +53,9 @@ function CardMedia({ ratio = "4/3", href, ariaLabel, overlay, className, childre
   return (
     <div className={cn("relative overflow-hidden bg-surface-secondary", className)}>
       {href ? (
-        <a href={href} aria-label={ariaLabel} className={inner}>
+        <ContentLink href={href} aria-label={ariaLabel} className={inner}>
           {children}
-        </a>
+        </ContentLink>
       ) : (
         <div className={inner}>{children}</div>
       )}

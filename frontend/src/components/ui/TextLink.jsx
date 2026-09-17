@@ -1,8 +1,14 @@
 import PropTypes from "prop-types";
 import { ArrowRight } from "lucide-react";
+import ContentLink from "./ContentLink.jsx";
 import { cn } from "../../utils/cn.js";
 
-/** Uppercase text link with a fine arrow — the quiet tertiary action. */
+/**
+ * Uppercase text link with a fine arrow — the quiet tertiary action.
+ *
+ * Content supplies a plain `href`; ContentLink decides whether the router owns
+ * it, so a card or CTA never has to know how it is being rendered.
+ */
 export default function TextLink({
   children,
   href = "#",
@@ -12,7 +18,7 @@ export default function TextLink({
   ...rest
 }) {
   return (
-    <a
+    <ContentLink
       href={href}
       className={cn(
         "group inline-flex items-center gap-2 border-b border-transparent font-sans text-[11px] font-medium uppercase tracking-[0.24em] transition-colors duration-200",
@@ -32,7 +38,7 @@ export default function TextLink({
           aria-hidden="true"
         />
       )}
-    </a>
+    </ContentLink>
   );
 }
 

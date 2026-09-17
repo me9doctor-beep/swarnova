@@ -11,8 +11,14 @@ import { media } from "../../assets/index.js";
  *   status                  — Placed → Processing → Shipped → Delivered,
  *                             with Cancelled as the one exit before delivery
  *   paymentStatus           — "paid" | "refunded"
+ *   subtotal / shipping /
+ *   taxAmount / total       — the commercial snapshot, in the shape
+ *                             `pricingService.calculateTotals` produces (tax
+ *                             extracted from an inclusive total, never added)
  *
- * Items reference canonical catalogue ids (JWL-…). Amounts are whole rupees.
+ * Items reference canonical catalogue ids (JWL-…) and snapshot the piece as
+ * the catalogue held it — the same record `placeCheckoutOrder` writes for a
+ * storefront order, so one list renders both. Amounts are whole rupees.
  */
 export const customerOrders = [
   /* ----------------------------------------------------------------------
@@ -43,6 +49,7 @@ export const customerOrders = [
     ],
     subtotal: 112500,
     shipping: 0,
+    taxAmount: 3277,
     total: 112500,
     shippingAddress: {
       name: "Ritika Sengupta",
@@ -83,6 +90,7 @@ export const customerOrders = [
     ],
     subtotal: 64300,
     shipping: 0,
+    taxAmount: 1873,
     total: 64300,
     shippingAddress: {
       name: "Ipsita Mohanty",
@@ -122,6 +130,7 @@ export const customerOrders = [
     ],
     subtotal: 72400,
     shipping: 0,
+    taxAmount: 2109,
     total: 72400,
     shippingAddress: {
       name: "Meenal Agrawal",
@@ -162,6 +171,7 @@ export const customerOrders = [
     ],
     subtotal: 112500,
     shipping: 0,
+    taxAmount: 3277,
     total: 112500,
     shippingAddress: {
       name: "Sourav Patnaik",
@@ -215,6 +225,7 @@ export const customerOrders = [
     ],
     subtotal: 122000,
     shipping: 0,
+    taxAmount: 3553,
     total: 122000,
     shippingAddress: {
       name: "Meenal Agrawal",
@@ -256,6 +267,7 @@ export const customerOrders = [
     ],
     subtotal: 142000,
     shipping: 0,
+    taxAmount: 4136,
     total: 142000,
     shippingAddress: {
       name: "Ritika Sengupta",
@@ -287,21 +299,22 @@ export const customerOrders = [
     items: [
       {
         id: "JWL-003",
-        name: "Vriksha Solitaire Ring",
-        sku: "SWN-RNG-002",
+        name: "Aabharan Drop Earrings",
+        sku: "SWN-ERG-022",
         purity: "22K",
-        price: 64500,
+        price: 84900,
         quantity: 1,
         image: {
-          src: media.productSolitaireRing,
-          alt: "Vriksha Solitaire Ring",
+          src: media.productDropEarrings,
+          alt: "Aabharan Drop Earrings",
         },
         href: "/product/JWL-003",
       },
     ],
-    subtotal: 64500,
+    subtotal: 84900,
     shipping: 0,
-    total: 64500,
+    taxAmount: 2473,
+    total: 84900,
     shippingAddress: {
       name: "Aadya Sharma (Studio)",
       phone: "+91 98765 43211",
@@ -341,21 +354,22 @@ export const customerOrders = [
       },
       {
         id: "JWL-004",
-        name: "Tara Diamond Drop Earrings",
-        sku: "SWN-ERG-008",
+        name: "Lumina Tennis Bracelet",
+        sku: "SWN-BRC-008",
         purity: "22K",
-        price: 84200,
+        price: 112500,
         quantity: 1,
         image: {
-          src: media.productDropEarrings,
-          alt: "Tara Diamond Drop Earrings",
+          src: media.productTennisBracelet,
+          alt: "Lumina Tennis Bracelet",
         },
         href: "/product/JWL-004",
       },
     ],
-    subtotal: 141000,
+    subtotal: 169300,
     shipping: 0,
-    total: 141000,
+    taxAmount: 4931,
+    total: 169300,
     shippingAddress: {
       name: "Aadya Sharma",
       phone: "+91 98765 43210",
@@ -396,6 +410,7 @@ export const customerOrders = [
     ],
     subtotal: 72400,
     shipping: 0,
+    taxAmount: 2109,
     total: 72400,
     shippingAddress: {
       name: "Aadya Sharma",
@@ -441,6 +456,7 @@ export const customerOrders = [
     ],
     subtotal: 84900,
     shipping: 0,
+    taxAmount: 2473,
     total: 84900,
     shippingAddress: {
       name: "Debasish Rout",
@@ -482,6 +498,7 @@ export const customerOrders = [
     ],
     subtotal: 98700,
     shipping: 0,
+    taxAmount: 2875,
     total: 98700,
     shippingAddress: {
       name: "Sourav Patnaik",
@@ -523,6 +540,7 @@ export const customerOrders = [
     ],
     subtotal: 49600,
     shipping: 0,
+    taxAmount: 1445,
     total: 49600,
     shippingAddress: {
       name: "Debasish Rout",

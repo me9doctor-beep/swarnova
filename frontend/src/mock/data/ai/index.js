@@ -62,7 +62,7 @@ export const aiStudio = {
     alt: "Three-stage jewellery design storyboard — gemstones and sketches, an AI-rendered gold necklace concept, and the finished piece on a velvet bust",
   },
   cta: { label: "Create Your Design", href: "/ai-studio" },
-  secondaryCta: { label: "See How It Works", href: "/our-story#ai" },
+  secondaryCta: { label: "See How It Works", href: "/#our-story" },
   sampleConcept: {
     id: "AI-001",
     title: "Contemporary Lotus Temple Necklace",

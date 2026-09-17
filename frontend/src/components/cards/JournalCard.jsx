@@ -1,5 +1,6 @@
 import PropTypes from "prop-types";
 import Card from "../ui/Card.jsx";
+import ContentLink from "../ui/ContentLink.jsx";
 import Eyebrow from "../ui/Eyebrow.jsx";
 import TextLink from "../ui/TextLink.jsx";
 
@@ -30,9 +31,9 @@ export default function JournalCard({ article }) {
         </div>
 
         <h3 className="mt-3 font-serif text-h3 leading-tight">
-          <a href={article.href} className="transition-colors duration-200 hover:text-brand-primary">
+          <ContentLink href={article.href} className="transition-colors duration-200 hover:text-brand-primary">
             {article.title}
-          </a>
+          </ContentLink>
         </h3>
 
         <p className="mt-3 text-body leading-relaxed text-text-secondary">{article.excerpt}</p>

@@ -1,20 +1,36 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import { Camera, Eye, Trash2, Share2, ShoppingBag, X, Check } from "lucide-react";
+import { Camera, Eye, Trash2, Share2, ShoppingBag, Check } from "lucide-react";
 import Button from "../../../components/ui/Button.jsx";
 import Card from "../../../components/ui/Card.jsx";
+import Dialog from "../../../components/ui/Dialog.jsx";
 import EmptyState from "../../../components/ui/EmptyState.jsx";
 import IconButton from "../../../components/ui/IconButton.jsx";
 import Badge from "../../../components/ui/Badge.jsx";
 import { useSavedTryOns } from "../../../state/SavedTryOnsContext.jsx";
-import { useCart } from "../../../state/CartContext.jsx";
+import { useAddProductToBag } from "../../../hooks/useAddProductToBag.js";
 import { useDocumentTitle } from "../../../hooks/useDocumentTitle.js";
+import { cn } from "../../../utils/cn.js";
 
+/* The two quiet confirmations the bag action can leave behind. */
+const BAG_ADDED_NOTE = "Added to bag";
+const BAG_UNAVAILABLE_NOTE = "This piece is no longer in the catalogue.";
+
+/**
+ * SAVED TRY-ONS — the customer's own fitting-room shelf.
+ *
+ * Each entry reopens the room it came from through the room's own arrival
+ * contract (`?product=` for a catalogue piece, `?design=` for an atelier
+ * concept), so a saved preview is a route back into the fitting room rather
+ * than a second copy of it. Catalogue pieces can also join the bag — always
+ * the canonical piece, re-resolved through the product contract, never the
+ * snapshot the preview was dressed with. AI concepts keep their own route back
+ * to the atelier and never become a bag line at all.
+ */
 export default function SavedTryOnsPage() {
   useDocumentTitle("Saved Try-Ons — Swarnova");
 
   const { savedResults, removeResult, count } = useSavedTryOns();
-  const { add } = useCart();
+  const { addCanonical } = useAddProductToBag();
   const [activeModalResult, setActiveModalResult] = useState(null);
   const [shareNote, setShareNote] = useState({});
   const [bagNote, setBagNote] = useState({});
@@ -53,19 +69,22 @@ export default function SavedTryOnsPage() {
     }
   };
 
-  const handleAddToBag = (entry) => {
-    const details = entry.result?.jewelleryDetails;
-    if (details) {
-      add(details);
-      setBagNote((prev) => ({ ...prev, [entry.saveId]: "Added to bag" }));
-      setTimeout(() => {
-        setBagNote((prev) => {
-          const next = { ...prev };
-          delete next[entry.saveId];
-          return next;
-        });
-      }, 3000);
-    }
+  /* The snapshot a saved fitting carries is a memory of the preview, not a
+     commerce record — the bag line is always the canonical piece the catalogue
+     offers today, re-resolved through the product contract. */
+  const handleAddToBag = async (entry) => {
+    const { added } = await addCanonical(entry.result?.sourceId);
+    setBagNote((prev) => ({
+      ...prev,
+      [entry.saveId]: added ? BAG_ADDED_NOTE : BAG_UNAVAILABLE_NOTE,
+    }));
+    setTimeout(() => {
+      setBagNote((prev) => {
+        const next = { ...prev };
+        delete next[entry.saveId];
+        return next;
+      });
+    }, 3000);
   };
 
   return (
@@ -161,8 +180,16 @@ export default function SavedTryOnsPage() {
                     </p>
                   )}
                   {addedToBag && (
-                    <p className="mt-2 text-caption text-state-success flex items-center gap-1">
-                      <Check size={12} /> {addedToBag}
+                    <p
+                      role={addedToBag === BAG_ADDED_NOTE ? "status" : "alert"}
+                      className={cn(
+                        "mt-2 text-caption",
+                        addedToBag === BAG_ADDED_NOTE
+                          ? "text-state-success"
+                          : "text-state-warning"
+                      )}
+                    >
+                      {addedToBag}
                     </p>
                   )}
 
@@ -188,8 +215,8 @@ export default function SavedTryOnsPage() {
                       </Button>
                     </div>
 
-                    <div className="flex gap-2">
-                      {isProduct && result.jewelleryDetails ? (
+                      <div className="flex gap-2">
+                      {isProduct ? (
                         <Button
                           variant="outline"
                           size="sm"
@@ -198,15 +225,6 @@ export default function SavedTryOnsPage() {
                         >
                           <ShoppingBag size={12} strokeWidth={1.5} aria-hidden="true" />
                           Add to Bag
-                        </Button>
-                      ) : isProduct ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1"
-                          href={`/product/${result.sourceId}`}
-                        >
-                          View Piece
                         </Button>
                       ) : (
                         <Button
@@ -237,24 +255,20 @@ export default function SavedTryOnsPage() {
         </div>
       )}
 
-      {/* Preview Detail Modal */}
-      {activeModalResult && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="preview-modal-title"
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 p-4"
-        >
-          <div className="relative max-h-[90vh] w-full max-w-xl overflow-y-auto bg-surface-primary p-6 sm:p-8 border border-border-default">
-            <button
-              type="button"
-              onClick={() => setActiveModalResult(null)}
-              className="absolute right-4 top-4 text-text-muted hover:text-text-primary"
-              aria-label="Close dialog"
-            >
-              <X size={20} />
-            </button>
-
+      {/* The preview overlay is the shared Dialog primitive — the same
+          escape / backdrop / focus behaviour the consoles get, and the panel
+          owns its own scroll. */}
+      <Dialog
+        open={Boolean(activeModalResult)}
+        onClose={() => setActiveModalResult(null)}
+        title={
+          activeModalResult?.result.sourceType === "product"
+            ? "Catalogue Jewellery"
+            : "AI Studio Concept"
+        }
+      >
+        {activeModalResult ? (
+          <div className="space-y-6">
             <div className="aspect-[3/4] w-full overflow-hidden border border-border-default bg-surface-secondary">
               <img
                 src={
@@ -266,40 +280,33 @@ export default function SavedTryOnsPage() {
               />
             </div>
 
-            <div className="mt-6">
-              <p className="font-sans text-label uppercase tracking-[0.28em] text-brand-accent-strong">
-                {activeModalResult.result.sourceType === "product"
-                  ? "Catalogue Jewellery"
-                  : "AI Studio Concept"}
-              </p>
-              <h3 id="preview-modal-title" className="mt-1 font-serif text-h2 text-text-primary">
-                {activeModalResult.result.jewellery}
-              </h3>
+            <h3 className="font-serif text-h2 text-text-primary">
+              {activeModalResult.result.jewellery}
+            </h3>
 
-              <div className="mt-6 flex flex-wrap gap-3 border-t border-border-default pt-6">
+            <div className="flex flex-wrap gap-3 border-t border-border-default pt-6">
+              <Button
+                href={`/virtual-try-on?${
+                  activeModalResult.result.sourceType === "product"
+                    ? `product=${activeModalResult.result.sourceId}`
+                    : `design=${activeModalResult.result.sourceId}`
+                }`}
+              >
+                <Camera size={13} strokeWidth={1.5} aria-hidden="true" />
+                Reopen in Fitting Room
+              </Button>
+              {activeModalResult.result.sourceType === "product" && (
                 <Button
-                  href={`/virtual-try-on?${
-                    activeModalResult.result.sourceType === "product"
-                      ? `product=${activeModalResult.result.sourceId}`
-                      : `design=${activeModalResult.result.sourceId}`
-                  }`}
+                  variant="outline"
+                  href={`/product/${activeModalResult.result.sourceId}`}
                 >
-                  <Camera size={13} aria-hidden="true" />
-                  Reopen in Fitting Room
+                  View Product Details
                 </Button>
-                {activeModalResult.result.sourceType === "product" && (
-                  <Button
-                    variant="outline"
-                    href={`/product/${activeModalResult.result.sourceId}`}
-                  >
-                    View Product Details
-                  </Button>
-                )}
-              </div>
+              )}
             </div>
           </div>
-        </div>
-      )}
+        ) : null}
+      </Dialog>
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import PropTypes from "prop-types";
 import { Link } from "react-router-dom";
 import { cn } from "../../utils/cn.js";
+import { externalLinkProps, isExternalUrl, isInternalPath } from "../../utils/links.js";
 
 /**
  * ICON BUTTON — the single square action primitive for icon-only controls:
@@ -57,21 +58,19 @@ export default function IconButton({
 
   const target = href || to;
   if (target) {
-    const isInternal = typeof target === "string" && target.startsWith("/") && !target.startsWith("//");
-    if (isInternal) {
+    if (isInternalPath(target)) {
       return (
         <Link to={target} aria-label={label} className={classes} {...rest}>
           {content}
         </Link>
       );
     }
-    const external = /^https?:\/\//.test(target);
     return (
       <a
         href={target}
         aria-label={label}
         className={classes}
-        {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+        {...(isExternalUrl(target) ? externalLinkProps : {})}
         {...rest}
       >
         {content}

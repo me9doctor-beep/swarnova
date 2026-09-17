@@ -31,15 +31,23 @@ export function useEmployeeActor() {
   );
 }
 
-/** The branch dashboard — what needs doing at my boutique today. */
-export function useEmployeeOverview() {
+/**
+ * The branch dashboard — what needs doing at my boutique today.
+ *
+ * An optional query (`{ branchId }`) is the global account's way of opening
+ * one boutique's dashboard; a branch account's scope is resolved from its
+ * session regardless, so the parameter only ever narrows, never widens.
+ */
+export function useEmployeeOverview(query = {}) {
   const provider = useDataProvider();
   const actor = useEmployeeActor();
+  const key = JSON.stringify(query);
   const task = useCallback(
-    () => employeeOperationsService.getOverview(provider, actor),
-    [provider, actor]
+    () => employeeOperationsService.getOverview(provider, actor, query),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [provider, actor, key]
   );
-  return useAsync(task, [provider, actor]);
+  return useAsync(task, [provider, actor, key]);
 }
 
 /** The branch order book for a query object ({ search, status }). */
@@ -152,25 +160,29 @@ export function useEmployeeInventoryMovements(query = {}) {
 }
 
 /** The branch's own operating picture — team, stock, orders, activity. */
-export function useEmployeeBranchOperations() {
+export function useEmployeeBranchOperations(query = {}) {
   const provider = useDataProvider();
   const actor = useEmployeeActor();
+  const key = JSON.stringify(query);
   const task = useCallback(
-    () => employeeOperationsService.getBranchOperations(provider, actor),
-    [provider, actor]
+    () => employeeOperationsService.getBranchOperations(provider, actor, query),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [provider, actor, key]
   );
-  return useAsync(task, [provider, actor]);
+  return useAsync(task, [provider, actor, key]);
 }
 
 /** Branch-scoped operational reporting (reports.view). */
-export function useEmployeeReports() {
+export function useEmployeeReports(query = {}) {
   const provider = useDataProvider();
   const actor = useEmployeeActor();
+  const key = JSON.stringify(query);
   const task = useCallback(
-    () => employeeOperationsService.getReports(provider, actor),
-    [provider, actor]
+    () => employeeOperationsService.getReports(provider, actor, query),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [provider, actor, key]
   );
-  return useAsync(task, [provider, actor]);
+  return useAsync(task, [provider, actor, key]);
 }
 
 /** The employee's own record. */

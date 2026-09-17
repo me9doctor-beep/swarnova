@@ -13,17 +13,25 @@
  *
  * Product and branch ids are the canonical catalogue/network ids — there is
  * no separate inventory product list.
+ *
+ * THE INVARIANT (Phase 13): `reserved` on a row equals the quantity the OPEN
+ * order book has allocated at that boutique — every piece of every order in
+ * Placed or Processing, and nothing else. A shipped or delivered piece has
+ * left the vitrine, so it is in neither column; a cancelled order returns its
+ * pieces to `available`. `placeCheckoutOrder` and the order-lifecycle
+ * transitions maintain it, and the seed obeys it, so a branch never counts a
+ * phantom piece as stock or loses one it still holds.
  */
 
 export const inventoryStock = [
   /* ---------------------------- JWL-001 ------------------------------- */
-  { id: "STK-001-BR-001", productId: "JWL-001", branchId: "BR-001", available: 6, reserved: 1, reorderLevel: 3 },
-  { id: "STK-001-BR-002", productId: "JWL-001", branchId: "BR-002", available: 2, reserved: 0, reorderLevel: 3 },
+  { id: "STK-001-BR-001", productId: "JWL-001", branchId: "BR-001", available: 6, reserved: 0, reorderLevel: 3 },
+  { id: "STK-001-BR-002", productId: "JWL-001", branchId: "BR-002", available: 0, reserved: 2, reorderLevel: 3 },
   { id: "STK-001-BR-003", productId: "JWL-001", branchId: "BR-003", available: 4, reserved: 0, reorderLevel: 2 },
 
   /* ---------------------------- JWL-002 ------------------------------- */
-  { id: "STK-002-BR-001", productId: "JWL-002", branchId: "BR-001", available: 8, reserved: 2, reorderLevel: 3 },
-  { id: "STK-002-BR-002", productId: "JWL-002", branchId: "BR-002", available: 5, reserved: 1, reorderLevel: 2 },
+  { id: "STK-002-BR-001", productId: "JWL-002", branchId: "BR-001", available: 8, reserved: 0, reorderLevel: 3 },
+  { id: "STK-002-BR-002", productId: "JWL-002", branchId: "BR-002", available: 5, reserved: 0, reorderLevel: 2 },
   { id: "STK-002-BR-003", productId: "JWL-002", branchId: "BR-003", available: 1, reserved: 0, reorderLevel: 2 },
 
   /* ---------------------------- JWL-003 ------------------------------- */
@@ -31,23 +39,23 @@ export const inventoryStock = [
   { id: "STK-003-BR-002", productId: "JWL-003", branchId: "BR-002", available: 0, reserved: 0, reorderLevel: 2 },
 
   /* ---------------------------- JWL-004 ------------------------------- */
-  { id: "STK-004-BR-001", productId: "JWL-004", branchId: "BR-001", available: 4, reserved: 0, reorderLevel: 2 },
+  { id: "STK-004-BR-001", productId: "JWL-004", branchId: "BR-001", available: 3, reserved: 1, reorderLevel: 2 },
   { id: "STK-004-BR-002", productId: "JWL-004", branchId: "BR-002", available: 2, reserved: 0, reorderLevel: 2 },
   { id: "STK-004-BR-003", productId: "JWL-004", branchId: "BR-003", available: 1, reserved: 1, reorderLevel: 2 },
 
   /* ---------------------------- JWL-005 ------------------------------- */
   { id: "STK-005-BR-001", productId: "JWL-005", branchId: "BR-001", available: 2, reserved: 0, reorderLevel: 2 },
   { id: "STK-005-BR-002", productId: "JWL-005", branchId: "BR-002", available: 1, reserved: 0, reorderLevel: 1 },
-  { id: "STK-005-BR-003", productId: "JWL-005", branchId: "BR-003", available: 3, reserved: 1, reorderLevel: 2 },
+  { id: "STK-005-BR-003", productId: "JWL-005", branchId: "BR-003", available: 3, reserved: 0, reorderLevel: 2 },
 
   /* ---------------------------- JWL-006 ------------------------------- */
-  { id: "STK-006-BR-001", productId: "JWL-006", branchId: "BR-001", available: 7, reserved: 0, reorderLevel: 3 },
+  { id: "STK-006-BR-001", productId: "JWL-006", branchId: "BR-001", available: 6, reserved: 1, reorderLevel: 3 },
   { id: "STK-006-BR-002", productId: "JWL-006", branchId: "BR-002", available: 1, reserved: 0, reorderLevel: 2 },
   { id: "STK-006-BR-003", productId: "JWL-006", branchId: "BR-003", available: 3, reserved: 0, reorderLevel: 2 },
 
   /* ---------------------------- JWL-007 ------------------------------- */
-  { id: "STK-007-BR-001", productId: "JWL-007", branchId: "BR-001", available: 5, reserved: 1, reorderLevel: 3 },
-  { id: "STK-007-BR-002", productId: "JWL-007", branchId: "BR-002", available: 2, reserved: 0, reorderLevel: 3 },
+  { id: "STK-007-BR-001", productId: "JWL-007", branchId: "BR-001", available: 6, reserved: 0, reorderLevel: 3 },
+  { id: "STK-007-BR-002", productId: "JWL-007", branchId: "BR-002", available: 1, reserved: 1, reorderLevel: 3 },
   { id: "STK-007-BR-003", productId: "JWL-007", branchId: "BR-003", available: 4, reserved: 0, reorderLevel: 2 },
 
   /* ---------------------------- JWL-008 ------------------------------- */

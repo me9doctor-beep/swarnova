@@ -1,6 +1,7 @@
 import PropTypes from "prop-types";
 import AsyncBoundary from "../../../components/ui/AsyncBoundary.jsx";
 import Button from "../../../components/ui/Button.jsx";
+import ContentLink from "../../../components/ui/ContentLink.jsx";
 import Container from "../../../components/ui/Container.jsx";
 import SectionHeading from "../../../components/ui/SectionHeading.jsx";
 import CollectionCard from "../../../components/cards/CollectionCard.jsx";
@@ -102,7 +103,7 @@ function CollectionTile({ collection, image, count }) {
   const href = `/collections/${collection.slug}`;
   return (
     <article className="group text-center">
-      <a
+      <ContentLink
         href={href}
         aria-label={`View the ${collection.name} collection`}
         className="block overflow-hidden bg-surface-secondary"
@@ -113,11 +114,11 @@ function CollectionTile({ collection, image, count }) {
           loading="lazy"
           className="aspect-[4/5] w-full object-cover"
         />
-      </a>
+      </ContentLink>
       <h3 className="mt-5 font-serif text-h3 leading-snug">
-        <a href={href} className="transition-colors duration-200 hover:text-brand-primary">
+        <ContentLink href={href} className="transition-colors duration-200 hover:text-brand-primary">
           {collection.name}
-        </a>
+        </ContentLink>
       </h3>
       {collection.description && (
         <p className="mx-auto mt-2 max-w-[300px] text-body-sm leading-relaxed text-text-secondary">

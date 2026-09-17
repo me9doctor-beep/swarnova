@@ -7,6 +7,11 @@ import { media } from "../../assets/index.js";
  * `status` (Phase 8) is the platform governance state: "active" branches
  * trade and appear on the storefront; "disabled" branches are hidden from
  * the storefront but never deleted — their history stays attached.
+ *
+ * `href` is the boutique's published destination. Store detail is the homepage
+ * Stores section (there is no per-branch page yet), so it carries the anchor
+ * rather than a route nobody serves; `id` remains the stable identity a future
+ * `/stores/:id` would resolve.
  */
 export const branches = [
   {
@@ -28,7 +33,7 @@ export const branches = [
       alt: "Warm cream and gold interior of the Swarnova Bhubaneswar flagship boutique",
     },
     directionsUrl: "https://maps.google.com/?q=Swarnova+Bhubaneswar",
-    href: "/stores/bhubaneswar",
+    href: "/#stores",
     featured: true,
   },
   {
@@ -50,7 +55,7 @@ export const branches = [
       alt: "Warm cream marble and gold interior of a Swarnova boutique with glass vitrines",
     },
     directionsUrl: "https://maps.google.com/?q=Swarnova+Cuttack",
-    href: "/stores/cuttack",
+    href: "/#stores",
     featured: true,
   },
   {
@@ -72,7 +77,7 @@ export const branches = [
       alt: "Inviting cream and champagne gold Swarnova boutique interior with display cases",
     },
     directionsUrl: "https://maps.google.com/?q=Swarnova+Rourkela",
-    href: "/stores/rourkela",
+    href: "/#stores",
     featured: true,
   },
 ];
