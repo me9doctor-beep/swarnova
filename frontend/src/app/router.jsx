@@ -24,7 +24,21 @@ import AddressesPage from "../pages/customer/account/AddressesPage.jsx";
 import OrdersPage from "../pages/customer/account/OrdersPage.jsx";
 import OrderDetailPage from "../pages/customer/account/OrderDetailPage.jsx";
 
+import StaffLoginPage from "../pages/staff/StaffLoginPage.jsx";
 import AdminDashboardPage from "../pages/admin/dashboard/AdminDashboardPage.jsx";
+import AdminProductsPage from "../pages/admin/products/AdminProductsPage.jsx";
+import AdminProductDetailPage from "../pages/admin/products/AdminProductDetailPage.jsx";
+import AdminOrdersPage from "../pages/admin/orders/AdminOrdersPage.jsx";
+import AdminOrderDetailPage from "../pages/admin/orders/AdminOrderDetailPage.jsx";
+import AdminCustomersPage from "../pages/admin/customers/AdminCustomersPage.jsx";
+import AdminCustomerDetailPage from "../pages/admin/customers/AdminCustomerDetailPage.jsx";
+import AdminInventoryPage from "../pages/admin/inventory/AdminInventoryPage.jsx";
+import AdminHomepagePage from "../pages/admin/content/AdminHomepagePage.jsx";
+import AdminCampaignsPage from "../pages/admin/content/AdminCampaignsPage.jsx";
+import AdminCollectionsPage from "../pages/admin/content/AdminCollectionsPage.jsx";
+import AdminBranchesPage from "../pages/admin/organization/AdminBranchesPage.jsx";
+import AdminEmployeesPage from "../pages/admin/organization/AdminEmployeesPage.jsx";
+import AdminReportsPage from "../pages/admin/reports/AdminReportsPage.jsx";
 import SuperAdminDashboardPage from "../pages/super-admin/dashboard/SuperAdminDashboardPage.jsx";
 import GovernanceProductsPage from "../pages/super-admin/products/ProductsPage.jsx";
 import GovernanceProductDetailPage from "../pages/super-admin/products/ProductDetailPage.jsx";
@@ -46,7 +60,9 @@ import EmployeeDashboardPage from "../pages/employee/dashboard/EmployeeDashboard
 import NotFoundPage from "../pages/NotFoundPage.jsx";
 
 import RoleBoundary from "../features/authentication/RoleBoundary.jsx";
-import { ROLES } from "../features/authentication/roles.js";
+import RequireCapability from "../features/authentication/RequireCapability.jsx";
+import { ROLES, STAFF_LOGIN_PATH } from "../features/authentication/roles.js";
+import { CAPABILITIES } from "../features/authentication/capabilities.js";
 
 /**
  * ROUTE TABLE — all routes for all four experiences live here.
@@ -55,6 +71,11 @@ import { ROLES } from "../features/authentication/roles.js";
  * (for the management experiences) in a RoleBoundary. Child routes are relative
  * and are added as their phases land — no route exists before its screen does.
  *
+ *   Staff login   /staff/login  — ONE shared login for every staff role;
+ *                 the account resolves the role and its console:
+ *                 SUPER_ADMIN → /super-admin · ADMIN → /admin ·
+ *                 EMPLOYEE → /employee
+ *
  *   Customer      /            /collections  /collections/:slug
  *                 /category/:slug  /products  /product/:id  /ai-studio
  *                 /virtual-try-on  /cart
@@ -62,8 +83,11 @@ import { ROLES } from "../features/authentication/roles.js";
  *                 /account/saved-designs  /account/saved-try-ons
  *                 /account/addresses  /account/orders  /account/orders/:id
  *                 (planned: /stores  /checkout)
- *   Admin         /admin       /admin/products   /admin/inventory
- *                 /admin/orders    /admin/customers
+ *   Admin         /admin       business operations dashboard
+ *                 /admin/products[/:id]  /admin/orders[/:id]
+ *                 /admin/customers[/:id] /admin/inventory
+ *                 /admin/homepage  /admin/campaigns  /admin/collections
+ *                 /admin/branches  /admin/employees  /admin/reports
  *   Super Admin   /super-admin               command centre
  *                 /super-admin/products[/new|/:id|/:id/edit]
  *                 /super-admin/media         /super-admin/categories
@@ -77,6 +101,10 @@ import { ROLES } from "../features/authentication/roles.js";
  *                 /employee/inventory
  */
 export const routeTree = [
+  {
+    path: STAFF_LOGIN_PATH,
+    element: <StaffLoginPage />,
+  },
   {
     path: "/",
     element: <CustomerLayout />,
@@ -116,6 +144,123 @@ export const routeTree = [
     ),
     children: [
       { index: true, element: <AdminDashboardPage />, handle: { crumb: "Overview" } },
+      {
+        path: "products",
+        element: (
+          <RequireCapability capability={CAPABILITIES.CATALOGUE_VIEW}>
+            <AdminProductsPage />
+          </RequireCapability>
+        ),
+        handle: { crumb: "Products" },
+      },
+      {
+        path: "products/:id",
+        element: (
+          <RequireCapability capability={CAPABILITIES.CATALOGUE_VIEW}>
+            <AdminProductDetailPage />
+          </RequireCapability>
+        ),
+        handle: { crumb: "Product" },
+      },
+      {
+        path: "orders",
+        element: (
+          <RequireCapability capability={CAPABILITIES.ORDERS_VIEW}>
+            <AdminOrdersPage />
+          </RequireCapability>
+        ),
+        handle: { crumb: "Orders" },
+      },
+      {
+        path: "orders/:id",
+        element: (
+          <RequireCapability capability={CAPABILITIES.ORDERS_VIEW}>
+            <AdminOrderDetailPage />
+          </RequireCapability>
+        ),
+        handle: { crumb: "Order" },
+      },
+      {
+        path: "customers",
+        element: (
+          <RequireCapability capability={CAPABILITIES.ORDERS_VIEW}>
+            <AdminCustomersPage />
+          </RequireCapability>
+        ),
+        handle: { crumb: "Customers" },
+      },
+      {
+        path: "customers/:id",
+        element: (
+          <RequireCapability capability={CAPABILITIES.ORDERS_VIEW}>
+            <AdminCustomerDetailPage />
+          </RequireCapability>
+        ),
+        handle: { crumb: "Customer" },
+      },
+      {
+        path: "inventory",
+        element: (
+          <RequireCapability capability={CAPABILITIES.INVENTORY_VIEW}>
+            <AdminInventoryPage />
+          </RequireCapability>
+        ),
+        handle: { crumb: "Inventory" },
+      },
+      {
+        path: "homepage",
+        element: (
+          <RequireCapability capability={CAPABILITIES.CONTENT_VIEW}>
+            <AdminHomepagePage />
+          </RequireCapability>
+        ),
+        handle: { crumb: "Homepage" },
+      },
+      {
+        path: "campaigns",
+        element: (
+          <RequireCapability capability={CAPABILITIES.CONTENT_VIEW}>
+            <AdminCampaignsPage />
+          </RequireCapability>
+        ),
+        handle: { crumb: "Campaigns" },
+      },
+      {
+        path: "collections",
+        element: (
+          <RequireCapability capability={CAPABILITIES.CONTENT_VIEW}>
+            <AdminCollectionsPage />
+          </RequireCapability>
+        ),
+        handle: { crumb: "Collections" },
+      },
+      {
+        path: "branches",
+        element: (
+          <RequireCapability capability={CAPABILITIES.BRANCHES_VIEW}>
+            <AdminBranchesPage />
+          </RequireCapability>
+        ),
+        handle: { crumb: "Branches" },
+      },
+      {
+        path: "employees",
+        element: (
+          <RequireCapability capability={CAPABILITIES.STAFF_MANAGE}>
+            <AdminEmployeesPage />
+          </RequireCapability>
+        ),
+        handle: { crumb: "Employees" },
+      },
+      {
+        path: "reports",
+        element: (
+          <RequireCapability capability={CAPABILITIES.REPORTS_VIEW}>
+            <AdminReportsPage />
+          </RequireCapability>
+        ),
+        handle: { crumb: "Reports" },
+      },
     ],
   },
   {

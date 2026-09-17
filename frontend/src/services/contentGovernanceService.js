@@ -12,8 +12,8 @@ export const contentGovernanceService = {
   getHomepage(provider) {
     return provider.getGovernanceHomepage();
   },
-  updateSection(provider, id, patch) {
-    return provider.updateHomepageSection(id, patch);
+  updateSection(provider, id, patch, actor) {
+    return provider.updateHomepageSection(id, patch, actor);
   },
   moveSection(provider, id, direction) {
     return provider.moveHomepageSection(id, direction);
@@ -21,8 +21,8 @@ export const contentGovernanceService = {
   getCampaigns(provider) {
     return provider.getGovernanceCampaigns();
   },
-  updateCampaignStatus(provider, id, status) {
-    return provider.updateCampaignStatus(id, status);
+  updateCampaignStatus(provider, id, status, actor) {
+    return provider.updateCampaignStatus(id, status, actor);
   },
 };
 

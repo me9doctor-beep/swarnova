@@ -3,6 +3,7 @@ import PropTypes from "prop-types";
 import { Link, useMatches } from "react-router-dom";
 import { ChevronDown, Menu } from "lucide-react";
 import Badge from "../ui/Badge.jsx";
+import Button from "../ui/Button.jsx";
 import IconButton from "../ui/IconButton.jsx";
 
 /**
@@ -146,9 +147,14 @@ export default function ConsoleTopbar({
           ) : (
             <>
               <Badge variant="brand">{role}</Badge>
-              <Badge variant="neutral" dot className="hidden sm:inline-flex">
-                Not signed in
-              </Badge>
+              <Button
+                variant="secondary"
+                size="sm"
+                href="/staff/login"
+                className="hidden sm:inline-flex"
+              >
+                Staff Sign In
+              </Button>
             </>
           )}
         </div>

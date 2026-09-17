@@ -73,6 +73,19 @@
  *   getGovernanceEmployees()         updateGovernanceEmployee(id, d)
  *   updateGoldRates(rates)           getPlatformSettings()
  *   updatePlatformSettings(patch)    getAuditLogs(query)
+ *
+ * ADMIN / HEAD OFFICE OPERATIONS (Phase 9) — the business-operations
+ * contract, fulfilled by the SAME shared governance store. One staff login
+ * serves every staff role; orders, customers, inventory, branches,
+ * employees, reports and the business overview all read the canonical
+ * entities:
+ *   authenticateStaff(credentials)   getAdminOverview()
+ *   getAdminOrders(query)            getAdminOrder(id)
+ *   updateAdminOrderStatus(id, s, actor)   getAdminCustomers(query)
+ *   getAdminCustomer(id)             getAdminInventory(query)
+ *   adjustInventoryStock(id, adj, actor)   getInventoryMovements(query)
+ *   getBranchOperations()            getAdminReports()
+ *   getCapabilityProfiles()          createGovernanceEmployee(d, actor)
  */
 import * as db from "../../../mock/data/index.js";
 import * as gov from "./governanceStore.js";
@@ -428,7 +441,6 @@ export const mockProvider = {
    * ------------------------------------------------------------------------ */
   _profile: null,
   _addresses: null,
-  _orders: null,
 
   getCustomerProfile() {
     if (!this._profile) {
@@ -511,18 +523,22 @@ export const mockProvider = {
     return Promise.resolve(emit(this._addresses));
   },
 
+  /* The storefront account sees its own slice of the ONE canonical order
+     book — the Admin console operates the whole book from the same store. */
   getOrders() {
-    if (!this._orders) {
-      this._orders = emit(db.customerOrders);
-    }
-    return Promise.resolve(emit(this._orders));
+    const customerId = db.customerProfile.id;
+    const orders = this.getStore()
+      .orders.filter((order) => order.customerId === customerId)
+      .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)));
+    return Promise.resolve(emit(orders));
   },
 
   getOrder(id) {
-    if (!this._orders) {
-      this._orders = emit(db.customerOrders);
-    }
-    const order = this._orders.find((o) => o.id === id || o.orderNumber === id);
+    const customerId = db.customerProfile.id;
+    const order = this.getStore().orders.find(
+      (item) =>
+        (item.id === id || item.orderNumber === id) && item.customerId === customerId
+    );
     return Promise.resolve(emit(order ?? null));
   },
 
@@ -550,12 +566,14 @@ export const mockProvider = {
     return Promise.resolve(gov.createGovernanceProduct(this.getStore(), data));
   },
 
-  updateGovernanceProduct(id, data = {}) {
-    return Promise.resolve(gov.updateGovernanceProduct(this.getStore(), id, data));
+  updateGovernanceProduct(id, data = {}, actor) {
+    return Promise.resolve(gov.updateGovernanceProduct(this.getStore(), id, data, actor));
   },
 
-  transitionGovernanceProduct(id, action, payload = {}) {
-    return Promise.resolve(gov.transitionGovernanceProduct(this.getStore(), id, action, payload));
+  transitionGovernanceProduct(id, action, payload = {}, actor) {
+    return Promise.resolve(
+      gov.transitionGovernanceProduct(this.getStore(), id, action, payload, actor)
+    );
   },
 
   getMediaLibrary(query = {}) {
@@ -602,8 +620,8 @@ export const mockProvider = {
     return Promise.resolve(gov.getGovernanceHomepage(this.getStore()));
   },
 
-  updateHomepageSection(id, patch = {}) {
-    return Promise.resolve(gov.updateHomepageSection(this.getStore(), id, patch));
+  updateHomepageSection(id, patch = {}, actor) {
+    return Promise.resolve(gov.updateHomepageSection(this.getStore(), id, patch, actor));
   },
 
   moveHomepageSection(id, direction) {
@@ -614,8 +632,8 @@ export const mockProvider = {
     return Promise.resolve(gov.listGovernanceCampaigns(this.getStore()));
   },
 
-  updateCampaignStatus(id, status) {
-    return Promise.resolve(gov.updateCampaignStatus(this.getStore(), id, status));
+  updateCampaignStatus(id, status, actor) {
+    return Promise.resolve(gov.updateCampaignStatus(this.getStore(), id, status, actor));
   },
 
   getGovernanceBranches() {
@@ -630,8 +648,8 @@ export const mockProvider = {
     return Promise.resolve(gov.listGovernanceAdmins(this.getStore()));
   },
 
-  createGovernanceAdmin(data = {}) {
-    return Promise.resolve(gov.createGovernanceAdmin(this.getStore(), data));
+  createGovernanceAdmin(data = {}, actor) {
+    return Promise.resolve(gov.createGovernanceAdmin(this.getStore(), data, actor));
   },
 
   updateGovernanceAdmin(id, data = {}) {
@@ -642,8 +660,12 @@ export const mockProvider = {
     return Promise.resolve(gov.listGovernanceEmployees(this.getStore()));
   },
 
-  updateGovernanceEmployee(id, data = {}) {
-    return Promise.resolve(gov.updateGovernanceEmployee(this.getStore(), id, data));
+  updateGovernanceEmployee(id, data = {}, actor) {
+    return Promise.resolve(gov.updateGovernanceEmployee(this.getStore(), id, data, actor));
+  },
+
+  createGovernanceEmployee(data = {}, actor) {
+    return Promise.resolve(gov.createEmployee(this.getStore(), data, actor));
   },
 
   updateGoldRates(rates = []) {
@@ -660,6 +682,67 @@ export const mockProvider = {
 
   getAuditLogs(query = {}) {
     return Promise.resolve(gov.listAuditLogs(this.getStore(), query));
+  },
+
+  /* --------------------------------------------------------------------------
+   * Admin / head office operations (Phase 9)
+   * --------------------------------------------------------------------------
+   * One staff login for every staff role, then the business-operations
+   * surface: the order book, the customer directory, branch inventory,
+   * branch coordination, employees, reports and the business overview.
+   * Every read/write crosses into the same shared governance store.
+   * ------------------------------------------------------------------------ */
+
+  authenticateStaff(credentials = {}) {
+    return Promise.resolve(gov.authenticateStaff(this.getStore(), credentials));
+  },
+
+  getAdminOverview() {
+    return Promise.resolve(gov.adminOverview(this.getStore()));
+  },
+
+  getAdminOrders(query = {}) {
+    return Promise.resolve(gov.listAdminOrders(this.getStore(), query));
+  },
+
+  getAdminOrder(id) {
+    return Promise.resolve(gov.getAdminOrder(this.getStore(), id));
+  },
+
+  updateAdminOrderStatus(id, status, actor) {
+    return Promise.resolve(gov.updateAdminOrderStatus(this.getStore(), id, status, actor));
+  },
+
+  getAdminCustomers(query = {}) {
+    return Promise.resolve(gov.listAdminCustomers(this.getStore(), query));
+  },
+
+  getAdminCustomer(id) {
+    return Promise.resolve(gov.getAdminCustomer(this.getStore(), id));
+  },
+
+  getAdminInventory(query = {}) {
+    return Promise.resolve(gov.listAdminInventory(this.getStore(), query));
+  },
+
+  adjustInventoryStock(stockId, adjustment = {}, actor) {
+    return Promise.resolve(gov.adjustAdminInventory(this.getStore(), stockId, adjustment, actor));
+  },
+
+  getInventoryMovements(query = {}) {
+    return Promise.resolve(gov.listInventoryMovements(this.getStore(), query));
+  },
+
+  getBranchOperations() {
+    return Promise.resolve(gov.listBranchOperations(this.getStore()));
+  },
+
+  getAdminReports() {
+    return Promise.resolve(gov.adminReports(this.getStore()));
+  },
+
+  getCapabilityProfiles() {
+    return Promise.resolve(emit(this.getStore().capabilityProfiles));
   },
 };
 

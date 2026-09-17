@@ -19,12 +19,12 @@ export const productGovernanceService = {
   createProduct(provider, data) {
     return provider.createGovernanceProduct(data);
   },
-  updateProduct(provider, id, data) {
-    return provider.updateGovernanceProduct(id, data);
+  updateProduct(provider, id, data, actor) {
+    return provider.updateGovernanceProduct(id, data, actor);
   },
   /** One method for every lifecycle move: submit | approve | reject | publish. */
-  transition(provider, id, action, payload = {}) {
-    return provider.transitionGovernanceProduct(id, action, payload);
+  transition(provider, id, action, payload = {}, actor) {
+    return provider.transitionGovernanceProduct(id, action, payload, actor);
   },
 };
 
