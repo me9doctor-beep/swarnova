@@ -57,6 +57,17 @@ import RolesPage from "../pages/super-admin/governance/RolesPage.jsx";
 import AuditLogsPage from "../pages/super-admin/governance/AuditLogsPage.jsx";
 import SettingsPage from "../pages/super-admin/governance/SettingsPage.jsx";
 import EmployeeDashboardPage from "../pages/employee/dashboard/EmployeeDashboardPage.jsx";
+import EmployeeOrdersPage from "../pages/employee/orders/EmployeeOrdersPage.jsx";
+import EmployeeOrderDetailPage from "../pages/employee/orders/EmployeeOrderDetailPage.jsx";
+import EmployeeCustomersPage from "../pages/employee/customers/EmployeeCustomersPage.jsx";
+import EmployeeCustomerDetailPage from "../pages/employee/customers/EmployeeCustomerDetailPage.jsx";
+import EmployeeProductsPage from "../pages/employee/products/EmployeeProductsPage.jsx";
+import EmployeeProductDetailPage from "../pages/employee/products/EmployeeProductDetailPage.jsx";
+import EmployeeInventoryPage from "../pages/employee/inventory/EmployeeInventoryPage.jsx";
+import EmployeeBranchPage from "../pages/employee/branch/EmployeeBranchPage.jsx";
+import EmployeeReportsPage from "../pages/employee/reports/EmployeeReportsPage.jsx";
+import EmployeeProfilePage from "../pages/employee/profile/EmployeeProfilePage.jsx";
+import EmployeeNotFoundPage from "../pages/employee/EmployeeNotFoundPage.jsx";
 import NotFoundPage from "../pages/NotFoundPage.jsx";
 
 import RoleBoundary from "../features/authentication/RoleBoundary.jsx";
@@ -97,8 +108,15 @@ import { CAPABILITIES } from "../features/authentication/capabilities.js";
  *                 /super-admin/admins        /super-admin/employees
  *                 /super-admin/roles         /super-admin/audit-logs
  *                 /super-admin/settings
- *   Employee      /employee    /employee/sales   /employee/customers
- *                 /employee/inventory
+ *   Employee      /employee               branch dashboard
+ *                 /employee/orders[/:id]  /employee/customers[/:id]
+ *                 /employee/products[/:id] /employee/inventory
+ *                 /employee/branch        /employee/reports
+ *                 /employee/profile
+ *                 Every module is wrapped in the capability its profile has to
+ *                 grant (RequireCapability → the Access Denied state), and the
+ *                 provider resolves the branch and capabilities again from the
+ *                 signed-in account on every call.
  */
 export const routeTree = [
   {
@@ -303,7 +321,94 @@ export const routeTree = [
       </RoleBoundary>
     ),
     children: [
-      { index: true, element: <EmployeeDashboardPage />, handle: { crumb: "Overview" } },
+      { index: true, element: <EmployeeDashboardPage />, handle: { crumb: "Dashboard" } },
+      {
+        path: "orders",
+        element: (
+          <RequireCapability capability={CAPABILITIES.ORDERS_VIEW}>
+            <EmployeeOrdersPage />
+          </RequireCapability>
+        ),
+        handle: { crumb: "Orders" },
+      },
+      {
+        path: "orders/:id",
+        element: (
+          <RequireCapability capability={CAPABILITIES.ORDERS_VIEW}>
+            <EmployeeOrderDetailPage />
+          </RequireCapability>
+        ),
+        handle: { crumb: "Order" },
+      },
+      {
+        path: "customers",
+        element: (
+          <RequireCapability capability={CAPABILITIES.ORDERS_VIEW}>
+            <EmployeeCustomersPage />
+          </RequireCapability>
+        ),
+        handle: { crumb: "Customers" },
+      },
+      {
+        path: "customers/:id",
+        element: (
+          <RequireCapability capability={CAPABILITIES.ORDERS_VIEW}>
+            <EmployeeCustomerDetailPage />
+          </RequireCapability>
+        ),
+        handle: { crumb: "Customer" },
+      },
+      {
+        path: "products",
+        element: (
+          <RequireCapability capability={CAPABILITIES.CATALOGUE_VIEW}>
+            <EmployeeProductsPage />
+          </RequireCapability>
+        ),
+        handle: { crumb: "Products" },
+      },
+      {
+        path: "products/:id",
+        element: (
+          <RequireCapability capability={CAPABILITIES.CATALOGUE_VIEW}>
+            <EmployeeProductDetailPage />
+          </RequireCapability>
+        ),
+        handle: { crumb: "Product" },
+      },
+      {
+        path: "inventory",
+        element: (
+          <RequireCapability capability={CAPABILITIES.INVENTORY_VIEW}>
+            <EmployeeInventoryPage />
+          </RequireCapability>
+        ),
+        handle: { crumb: "Inventory" },
+      },
+      {
+        path: "branch",
+        element: (
+          <RequireCapability capability={CAPABILITIES.BRANCHES_VIEW}>
+            <EmployeeBranchPage />
+          </RequireCapability>
+        ),
+        handle: { crumb: "Branch Operations" },
+      },
+      {
+        path: "reports",
+        element: (
+          <RequireCapability capability={CAPABILITIES.REPORTS_VIEW}>
+            <EmployeeReportsPage />
+          </RequireCapability>
+        ),
+        handle: { crumb: "Reports" },
+      },
+      {
+        path: "profile",
+        element: <EmployeeProfilePage />,
+        handle: { crumb: "My Profile" },
+      },
+      { path: "*", element: <EmployeeNotFoundPage /> },
     ],
   },
 ];

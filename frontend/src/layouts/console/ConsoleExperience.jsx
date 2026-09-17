@@ -4,8 +4,8 @@ import PropTypes from "prop-types";
 import ConsoleShell from "../../components/layout/ConsoleShell.jsx";
 import { ROLES, roleLabel } from "../../features/authentication/roles.js";
 import { useAuth } from "../../features/authentication/useAuth.js";
-import { can } from "../../features/authentication/permissions.js";
 import { CONSOLE_CONFIG } from "./config.js";
+import { filterNavigation } from "./navigation.js";
 
 /**
  * CONSOLE EXPERIENCE — resolves one management experience's configuration and
@@ -19,19 +19,15 @@ import { CONSOLE_CONFIG } from "./config.js";
  * `capability` only renders for sessions that hold it, and groups left empty
  * disappear entirely. The account sees its own console — never someone
  * else's menus.
+ *
+ * `contextLabel` (Phase 10) is optional display context appended to the
+ * experience label — the Employee console names its branch there, so a
+ * counter account always knows which boutique it is working in. It is
+ * presentation only: scope is resolved provider-side from the session.
  */
 const EXPERIENCE_ROLES = [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.EMPLOYEE];
 
-function filterNavigation(navigation, permissions) {
-  return navigation
-    .map((group) => ({
-      ...group,
-      items: group.items.filter((item) => !item.capability || can(permissions, item.capability)),
-    }))
-    .filter((group) => group.items.length > 0);
-}
-
-export default function ConsoleExperience({ role }) {
+export default function ConsoleExperience({ role, contextLabel = null }) {
   const { user, permissions, signOut } = useAuth();
   const { label, homePath, navigation } = CONSOLE_CONFIG[role];
 
@@ -42,7 +38,7 @@ export default function ConsoleExperience({ role }) {
 
   return (
     <ConsoleShell
-      experience={label}
+      experience={contextLabel ? `${label} · ${contextLabel}` : label}
       homePath={homePath}
       navigation={visibleNavigation}
       role={roleLabel(role)}
@@ -56,4 +52,6 @@ export default function ConsoleExperience({ role }) {
 
 ConsoleExperience.propTypes = {
   role: PropTypes.oneOf(EXPERIENCE_ROLES).isRequired,
+  /** Display-only context appended to the experience label (e.g. a branch). */
+  contextLabel: PropTypes.string,
 };

@@ -38,17 +38,21 @@ export const inventoryStock = [
   /* ---------------------------- JWL-005 ------------------------------- */
   { id: "STK-005-BR-001", productId: "JWL-005", branchId: "BR-001", available: 2, reserved: 0, reorderLevel: 2 },
   { id: "STK-005-BR-002", productId: "JWL-005", branchId: "BR-002", available: 1, reserved: 0, reorderLevel: 1 },
+  { id: "STK-005-BR-003", productId: "JWL-005", branchId: "BR-003", available: 3, reserved: 1, reorderLevel: 2 },
 
   /* ---------------------------- JWL-006 ------------------------------- */
   { id: "STK-006-BR-001", productId: "JWL-006", branchId: "BR-001", available: 7, reserved: 0, reorderLevel: 3 },
+  { id: "STK-006-BR-002", productId: "JWL-006", branchId: "BR-002", available: 1, reserved: 0, reorderLevel: 2 },
   { id: "STK-006-BR-003", productId: "JWL-006", branchId: "BR-003", available: 3, reserved: 0, reorderLevel: 2 },
 
   /* ---------------------------- JWL-007 ------------------------------- */
   { id: "STK-007-BR-001", productId: "JWL-007", branchId: "BR-001", available: 5, reserved: 1, reorderLevel: 3 },
   { id: "STK-007-BR-002", productId: "JWL-007", branchId: "BR-002", available: 2, reserved: 0, reorderLevel: 3 },
+  { id: "STK-007-BR-003", productId: "JWL-007", branchId: "BR-003", available: 4, reserved: 0, reorderLevel: 2 },
 
   /* ---------------------------- JWL-008 ------------------------------- */
   { id: "STK-008-BR-001", productId: "JWL-008", branchId: "BR-001", available: 3, reserved: 0, reorderLevel: 2 },
+  { id: "STK-008-BR-002", productId: "JWL-008", branchId: "BR-002", available: 0, reserved: 0, reorderLevel: 2 },
   { id: "STK-008-BR-003", productId: "JWL-008", branchId: "BR-003", available: 0, reserved: 0, reorderLevel: 1 },
 ];
 
@@ -58,6 +62,33 @@ export const inventoryStock = [
  * exactly as the audit trail records them.
  */
 export const inventoryMovements = [
+  {
+    id: "MV-2026-0107",
+    stockId: "STK-006-BR-002",
+    type: "sale",
+    delta: -1,
+    at: "2026-09-17T11:25:00+05:30",
+    by: "Bikash Behera — Employee",
+    note: "Sold against order SWN-9371-IN.",
+  },
+  {
+    id: "MV-2026-0106",
+    stockId: "STK-004-BR-003",
+    type: "sale",
+    delta: -1,
+    at: "2026-09-17T10:20:00+05:30",
+    by: "Sasmita Pradhan — Employee",
+    note: "Allocated to order SWN-9388-IN.",
+  },
+  {
+    id: "MV-2026-0105",
+    stockId: "STK-001-BR-002",
+    type: "adjustment",
+    delta: 1,
+    at: "2026-09-17T09:40:00+05:30",
+    by: "Bikash Behera — Employee",
+    note: "Counter count correction — pendant returned to the vitrine.",
+  },
   {
     id: "MV-2026-0104",
     stockId: "STK-003-BR-002",

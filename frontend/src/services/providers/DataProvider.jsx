@@ -29,8 +29,11 @@ import mockProvider from "./mock/mockProvider.js";
  * governance contract (products lifecycle, media library, catalogue, content,
  * organisation, platform settings and audit); Phase 9 adds the shared staff
  * login and the Admin / head-office operations contract (orders, customers,
- * inventory, branches, employees, reports, business overview) — all declared
- * optional so an API provider can land the sources independently.
+ * inventory, branches, employees, reports, business overview); Phase 10 adds
+ * the Employee / branch operations contract — the counter-side reads and
+ * actions, every one of them resolved and scoped from the session actor
+ * store-side. All are declared optional so an API provider can land the
+ * sources independently.
  */
 const DataContext = createContext(mockProvider);
 
@@ -115,6 +118,22 @@ DataProvider.propTypes = {
     getAdminReports: PropTypes.func,
     getCapabilityProfiles: PropTypes.func,
     createGovernanceEmployee: PropTypes.func,
+    /* Phase 10 — Employee / branch operations contract */
+    getEmployeeOverview: PropTypes.func,
+    getEmployeeOrders: PropTypes.func,
+    getEmployeeOrder: PropTypes.func,
+    updateEmployeeOrderStatus: PropTypes.func,
+    getEmployeeCustomers: PropTypes.func,
+    getEmployeeCustomer: PropTypes.func,
+    getEmployeeCatalogue: PropTypes.func,
+    getEmployeeProduct: PropTypes.func,
+    getEmployeeInventory: PropTypes.func,
+    adjustEmployeeInventory: PropTypes.func,
+    getEmployeeInventoryMovements: PropTypes.func,
+    getEmployeeBranchOperations: PropTypes.func,
+    getEmployeeReports: PropTypes.func,
+    getEmployeeProfile: PropTypes.func,
+    updateEmployeeProfile: PropTypes.func,
   }),
   children: PropTypes.node.isRequired,
 };

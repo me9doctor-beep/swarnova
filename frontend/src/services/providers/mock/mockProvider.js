@@ -744,6 +744,96 @@ export const mockProvider = {
   getCapabilityProfiles() {
     return Promise.resolve(emit(this.getStore().capabilityProfiles));
   },
+
+  /* --------------------------------------------------------------------------
+   * Employee / branch operations (Phase 10)
+   * --------------------------------------------------------------------------
+   * The counter-side contract. Every method receives the session actor
+   * (`{ id, role, label }`) and re-resolves the employee's branch and
+   * capabilities store-side — a `branchId` that arrives in a query is treated
+   * as a request to validate, never as authority. A Super Admin stays global
+   * and may name any branch; an Admin works head-office-wide, or its own
+   * boutique when the administrator account is branch-scoped.
+   *
+   *   employeeOverview(actor)
+   *   employeeOrders(actor, query)            employeeOrder(actor, id)
+   *   employeeOrderStatus(actor, id, status)
+   *   employeeCustomers(actor, query)         employeeCustomer(actor, id)
+   *   employeeCatalogue(actor, query)         employeeProduct(actor, id)
+   *   employeeCategories(actor)
+   *   employeeInventory(actor, query)         employeeInventoryMovements(actor, query)
+   *   employeeStockAdjustment(actor, stockId, adjustment)
+   *   employeeBranchOperations(actor)         employeeReports(actor)
+   *   employeeProfile(actor)                  updateEmployeeProfile(actor, patch)
+   * ------------------------------------------------------------------------ */
+
+  getEmployeeOverview(actor) {
+    return Promise.resolve(gov.employeeOverview(this.getStore(), actor));
+  },
+
+  getEmployeeOrders(actor, query = {}) {
+    return Promise.resolve(gov.listEmployeeOrders(this.getStore(), actor, query));
+  },
+
+  getEmployeeOrder(actor, id) {
+    return Promise.resolve(gov.getEmployeeOrder(this.getStore(), actor, id));
+  },
+
+  updateEmployeeOrderStatus(actor, id, status) {
+    return Promise.resolve(gov.updateEmployeeOrderStatus(this.getStore(), actor, id, status));
+  },
+
+  getEmployeeCustomers(actor, query = {}) {
+    return Promise.resolve(gov.listEmployeeCustomers(this.getStore(), actor, query));
+  },
+
+  getEmployeeCustomer(actor, id) {
+    return Promise.resolve(gov.getEmployeeCustomer(this.getStore(), actor, id));
+  },
+
+  getEmployeeCatalogue(actor, query = {}) {
+    return Promise.resolve(gov.listEmployeeCatalogue(this.getStore(), actor, query));
+  },
+
+  getEmployeeProduct(actor, id) {
+    return Promise.resolve(gov.getEmployeeProduct(this.getStore(), actor, id));
+  },
+
+  getEmployeeCategories(actor) {
+    return Promise.resolve(gov.listEmployeeCategories(this.getStore(), actor));
+  },
+
+  getEmployeeInventory(actor, query = {}) {
+    return Promise.resolve(gov.listEmployeeInventory(this.getStore(), actor, query));
+  },
+
+  adjustEmployeeInventory(actor, stockId, adjustment = {}) {
+    return Promise.resolve(
+      gov.adjustEmployeeInventory(this.getStore(), actor, stockId, adjustment)
+    );
+  },
+
+  getEmployeeInventoryMovements(actor, query = {}) {
+    return Promise.resolve(
+      gov.listEmployeeInventoryMovements(this.getStore(), actor, query)
+    );
+  },
+
+  getEmployeeBranchOperations(actor) {
+    return Promise.resolve(gov.employeeBranchOperations(this.getStore(), actor));
+  },
+
+  getEmployeeReports(actor) {
+    return Promise.resolve(gov.employeeReports(this.getStore(), actor));
+  },
+
+  getEmployeeProfile(actor) {
+    return Promise.resolve(gov.employeeProfile(this.getStore(), actor));
+  },
+
+  updateEmployeeProfile(actor, patch = {}) {
+    return Promise.resolve(gov.updateEmployeeProfile(this.getStore(), actor, patch));
+  },
 };
 
 export default mockProvider;

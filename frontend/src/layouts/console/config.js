@@ -15,6 +15,7 @@ import {
   ShoppingBag,
   Store,
   Tags,
+  User,
   UserCog,
   Users,
   WandSparkles,
@@ -136,13 +137,33 @@ export const CONSOLE_CONFIG = {
       },
     ],
   },
+  /**
+   * The Employee console is deliberately the smallest of the three: the work
+   * a branch colleague does in a day, and their own record — nothing about
+   * the organisation, the platform or other branches. Every item is
+   * capability-tagged, so a profile only ever sees the surfaces it can
+   * operate, and an account with no reports capability never sees Reports.
+   */
   [ROLES.EMPLOYEE]: {
     label: "Employee",
     homePath: "/employee",
     navigation: [
       {
+        label: "My Work",
         items: [
-          { label: "Overview", to: "/employee", end: true, icon: LayoutDashboard },
+          { label: "Dashboard", to: "/employee", end: true, icon: LayoutDashboard },
+          { label: "Orders", to: "/employee/orders", icon: ClipboardList, capability: CAPABILITIES.ORDERS_VIEW },
+          { label: "Customers", to: "/employee/customers", icon: ShoppingBag, capability: CAPABILITIES.ORDERS_VIEW },
+          { label: "Products", to: "/employee/products", icon: Package, capability: CAPABILITIES.CATALOGUE_VIEW },
+          { label: "Inventory", to: "/employee/inventory", icon: Boxes, capability: CAPABILITIES.INVENTORY_VIEW },
+          { label: "Branch Operations", to: "/employee/branch", icon: Store, capability: CAPABILITIES.BRANCHES_VIEW },
+          { label: "Reports", to: "/employee/reports", icon: BarChart3, capability: CAPABILITIES.REPORTS_VIEW },
+        ],
+      },
+      {
+        label: "Account",
+        items: [
+          { label: "My Profile", to: "/employee/profile", icon: User },
         ],
       },
     ],

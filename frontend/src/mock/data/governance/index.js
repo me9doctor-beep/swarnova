@@ -205,6 +205,59 @@ export const platformEmployees = [
     },
     status: "active",
   },
+  {
+    id: "EMP-008",
+    name: "Bikash Behera",
+    email: "bikash.behera@swarnova.in",
+    password: "Swarnova@123",
+    phone: "+91 94371 20032",
+    role: "Sales Consultant",
+    branchId: "BR-002",
+    profileId: "PROF-BRANCH-SALES",
+    capabilities: {
+      catalogue: "view",
+      orders: "manage",
+      inventory: "view",
+      branches: "view",
+    },
+    status: "active",
+  },
+  {
+    id: "EMP-009",
+    name: "Sasmita Pradhan",
+    email: "sasmita.pradhan@swarnova.in",
+    password: "Swarnova@123",
+    phone: "+91 94371 20041",
+    role: "Inventory Associate",
+    branchId: "BR-003",
+    profileId: "PROF-INVENTORY",
+    capabilities: {
+      catalogue: "view",
+      inventory: "manage",
+      branches: "view",
+    },
+    status: "active",
+  },
+  {
+    /* Branch Sales profile with one personal adjustment: the front desk
+       looks orders up for customers but never moves them along. The stored
+       capability object is the resolved set the account actually holds. */
+    id: "EMP-010",
+    name: "Rakesh Nayak",
+    email: "rakesh.nayak@swarnova.in",
+    password: "Swarnova@123",
+    phone: "+91 94371 20057",
+    role: "Front Desk Associate",
+    branchId: "BR-001",
+    profileId: "PROF-BRANCH-SALES",
+    capabilities: {
+      catalogue: "view",
+      orders: "view",
+      inventory: "view",
+      branches: "view",
+    },
+    status: "active",
+  },
 ];
 
 /**

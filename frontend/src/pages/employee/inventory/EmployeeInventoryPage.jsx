@@ -3,82 +3,71 @@ import { Link, useSearchParams } from "react-router-dom";
 import PageHeader from "../../../components/layout/PageHeader.jsx";
 import Button from "../../../components/ui/Button.jsx";
 import Badge from "../../../components/ui/Badge.jsx";
-import AdjustStockDialog from "../../../components/console/AdjustStockDialog.jsx";
-import StockMovementsDialog from "../../../components/console/StockMovementsDialog.jsx";
 import EmptyState from "../../../components/ui/EmptyState.jsx";
 import AsyncBoundary from "../../../components/ui/AsyncBoundary.jsx";
 import Table from "../../../components/ui/Table.jsx";
 import FilterBar from "../../../components/super-admin/FilterBar.jsx";
+import AdjustStockDialog from "../../../components/console/AdjustStockDialog.jsx";
+import StockMovementsDialog from "../../../components/console/StockMovementsDialog.jsx";
 import {
-  useAdminInventory,
-  useInventoryMovements,
-} from "../../../hooks/useAdminOperations.js";
-import { useGovernanceBranches } from "../../../hooks/useGovernanceOrganization.js";
+  useEmployeeActor,
+  useEmployeeInventory,
+  useEmployeeInventoryMovements,
+} from "../../../hooks/useEmployeeOperations.js";
 import { useGovernanceMutation } from "../../../hooks/useGovernanceMutation.js";
 import { useDocumentTitle } from "../../../hooks/useDocumentTitle.js";
-import { useAuth } from "../../../features/authentication/useAuth.js";
 import { useCapability } from "../../../features/authentication/useCapability.js";
 import { CAPABILITIES } from "../../../features/authentication/capabilities.js";
-import { actorLabel } from "../../../features/authentication/roles.js";
-import { adminOperationsService } from "../../../services/adminOperationsService.js";
+import { employeeOperationsService } from "../../../services/employeeOperationsService.js";
 import { STOCK_FILTER_OPTIONS, STOCK_STATE_META } from "../../../features/admin/operations.js";
 
 /**
- * INVENTORY OPERATIONS (Phase 9) — branch stock for the business.
+ * BRANCH INVENTORY (Phase 10)
+ * -----------------------------------------------------------------------------
+ * The boutique's own stock: what is on the floor, what is already spoken for,
+ * the reorder level and the state that follows from them.
  *
- * One table: piece × branch, with available, reserved and reorder level,
- * the derived stock state, and the two operational tools head office
- * needs — an adjustment (always reasoned, always logged) and the
- * movement history behind every line. No warehouse system, by design.
+ * Inventory View reads; Inventory Manage additionally corrects a line — always
+ * with a written reason, always against this branch only, and always carrying
+ * the signed-in colleague's name into the movement log and the audit trail.
+ * The branch itself is never chosen here: the provider resolves it from the
+ * session, so there is no branch to mistype or tamper with.
  */
-export default function AdminInventoryPage() {
-  useDocumentTitle("Inventory — Swarnova Admin");
+export default function EmployeeInventoryPage() {
+  useDocumentTitle("Inventory — Swarnova Employee");
 
   const [searchParams] = useSearchParams();
   const [search, setSearch] = useState("");
   const [stockFilter, setStockFilter] = useState(searchParams.get("stock") ?? "all");
-  const [branchFilter, setBranchFilter] = useState(searchParams.get("branch") ?? "all");
-  const { user, role } = useAuth();
   const { can: canDo } = useCapability();
+  const actor = useEmployeeActor();
   const mutation = useGovernanceMutation();
-  const [adjusting, setAdjusting] = useState(null); // stock row being adjusted
-  const [movementsFor, setMovementsFor] = useState(null); // stock row showing history
+  const [adjusting, setAdjusting] = useState(null); // the stock row being adjusted
+  const [movementsFor, setMovementsFor] = useState(null); // the row whose history is open
 
-  /* Dashboard deep-links (?stock=low, ?branch=BR-001) refresh the filters. */
+  /* Dashboard deep-links (?stock=low) refresh the filter. */
   useEffect(() => {
     setStockFilter(searchParams.get("stock") ?? "all");
-    setBranchFilter(searchParams.get("branch") ?? "all");
   }, [searchParams]);
 
   const query = useMemo(
     () => ({
       search: search.trim() || undefined,
       stock: stockFilter === "all" ? undefined : stockFilter,
-      branchId: branchFilter === "all" ? undefined : branchFilter,
     }),
-    [search, stockFilter, branchFilter]
+    [search, stockFilter]
   );
 
-  const { status, data: inventory, error, retry } = useAdminInventory(query);
-  const branches = useGovernanceBranches();
-
+  const { status, data: inventory, error, retry } = useEmployeeInventory(query);
   const canManage = canDo(CAPABILITIES.INVENTORY_MANAGE);
-
-  const branchOptions = [
-    { value: "all", label: "All branches" },
-    ...(branches.data ?? []).map((branch) => ({
-      value: branch.id,
-      label: branch.name,
-    })),
-  ];
 
   const adjust = async (adjustment) => {
     try {
       await mutation.run(
-        adminOperationsService.adjustInventory,
+        employeeOperationsService.adjustInventory,
+        actor,
         adjusting.id,
-        adjustment,
-        actorLabel(user, role)
+        adjustment
       );
       setAdjusting(null);
       retry();
@@ -90,9 +79,9 @@ export default function AdminInventoryPage() {
   return (
     <>
       <PageHeader
-        eyebrow="Business · Inventory"
-        title="Inventory"
-        description="Physical stock across the boutique network — available, reserved and reorder levels per piece per branch, with every adjustment logged."
+        eyebrow="My Work · Inventory"
+        title="Branch Inventory"
+        description="Everything on this boutique's floor — available, reserved and reorder levels, with every movement recorded against your name."
       />
 
       <div className="mt-6 space-y-5">
@@ -109,13 +98,6 @@ export default function AdminInventoryPage() {
               onChange: setStockFilter,
               options: STOCK_FILTER_OPTIONS,
             },
-            {
-              id: "branch",
-              label: "Branch",
-              value: branchFilter,
-              onChange: setBranchFilter,
-              options: branchOptions,
-            },
           ]}
         />
 
@@ -127,16 +109,15 @@ export default function AdminInventoryPage() {
         >
           {!inventory || inventory.length === 0 ? (
             <EmptyState title="No stock lines match">
-              Adjust the search or filters — or clear them to see every
-              branch stock line.
+              Adjust the search or filters — or clear them to see every line
+              this boutique holds.
             </EmptyState>
           ) : (
             <Table
               caption="Branch inventory"
               hideCaption
               headers={[
-                { label: "Product" },
-                { label: "Branch" },
+                { label: "Piece" },
                 { label: "Available", align: "right" },
                 { label: "Reserved", align: "right" },
                 { label: "Reorder", align: "right" },
@@ -160,7 +141,7 @@ export default function AdminInventoryPage() {
                         ) : null}
                         <span>
                           <Link
-                            to={`/admin/products/${row.productId}`}
+                            to={`/employee/products/${row.productId}`}
                             className="block font-sans text-body-sm font-medium text-text-primary transition-colors duration-200 hover:text-brand-primary"
                           >
                             {row.productName}
@@ -170,9 +151,6 @@ export default function AdminInventoryPage() {
                           </span>
                         </span>
                       </span>
-                    </Table.Cell>
-                    <Table.Cell className="text-text-secondary">
-                      {row.branchName}
                     </Table.Cell>
                     <Table.Cell align="right">{row.available}</Table.Cell>
                     <Table.Cell align="right">{row.reserved}</Table.Cell>
@@ -228,9 +206,9 @@ export default function AdminInventoryPage() {
   );
 }
 
-/** The movement history behind one stock line — fetched through the Admin contract. */
+/** The movement history behind one stock line — fetched through the branch contract. */
 function MovementsDialog({ row, onClose }) {
-  const { status, data: movements, error, retry } = useInventoryMovements({
+  const { status, data: movements, error, retry } = useEmployeeInventoryMovements({
     stockId: row.id,
     limit: 20,
   });
