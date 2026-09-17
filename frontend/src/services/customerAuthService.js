@@ -60,6 +60,36 @@ export const customerAuthService = {
       password: String(payload.password ?? ""),
     });
   },
+
+  /**
+   * Initiate Google OAuth flow for a customer (Phase 13.5).
+   * Hands { returnTo } to the provider. The provider/backend initiates the
+   * authorization redirect or returns the redirect URL.
+   */
+  initiateGoogleOAuth(provider, options = {}) {
+    if (!provider?.initiateCustomerGoogleOAuth) {
+      const error = new Error("Google sign-in is not supported by this provider.");
+      error.code = "PROVIDER_UNAVAILABLE";
+      return Promise.reject(error);
+    }
+    return provider.initiateCustomerGoogleOAuth({
+      returnTo: String(options.returnTo ?? "").trim() || "/account",
+    });
+  },
+
+  /**
+   * Complete Google OAuth flow upon return/callback from Google/backend.
+   * Hands payload (e.g. { code, token, error, returnTo }) to the provider to
+   * establish the customer session.
+   */
+  completeGoogleOAuth(provider, payload = {}) {
+    if (!provider?.completeCustomerGoogleOAuth) {
+      const error = new Error("Google sign-in is not supported by this provider.");
+      error.code = "PROVIDER_UNAVAILABLE";
+      return Promise.reject(error);
+    }
+    return provider.completeCustomerGoogleOAuth(payload);
+  },
 };
 
 export default customerAuthService;

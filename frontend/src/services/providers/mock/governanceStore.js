@@ -3112,6 +3112,69 @@ export function registerCustomer(store, payload = {}) {
 }
 
 /**
+ * Authenticate or link a customer via Google OAuth (Phase 13.5).
+ *
+ * Identity rules:
+ * - Requires a verified email address from the OAuth verification payload.
+ * - If an account exists with that email:
+ *   - If disabled: rejects with INVALID_CREDENTIALS.
+ *   - Otherwise: returns the existing customer (no duplicate customer created).
+ * - If no account exists:
+ *   - Creates a new directory customer record with Google identity attributes
+ *     (status: "active", tier: "Swarnova Classic", oauthProvider: "google", etc.).
+ * - Returns { customer: toCustomerPublic(record), isNewAccount }.
+ */
+export function authenticateOrLinkGoogleCustomer(store, payload = {}) {
+  const rawEmail = String(payload.email ?? payload.customer?.email ?? "").trim();
+  if (!rawEmail || !isEmailLike(rawEmail)) {
+    failWithCode(
+      CUSTOMER_AUTH_CODES.VALIDATION_ERROR,
+      "A verified email address is required from Google."
+    );
+  }
+
+  const email = normalizeEmail(rawEmail);
+  const existing = store.customers.find(
+    (item) => normalizeEmail(item.email) === email
+  );
+
+  if (existing) {
+    if (existing.status === "disabled") {
+      failWithCode(
+        CUSTOMER_AUTH_CODES.INVALID_CREDENTIALS,
+        "We could not sign you in with those details. Check your email or phone number and password, then try again."
+      );
+    }
+    return { customer: toCustomerPublic(existing), isNewAccount: false };
+  }
+
+  store.counters.customer += 1;
+  const memberSince = new Date().toLocaleDateString("en-IN", {
+    month: "long",
+    year: "numeric",
+  });
+  const name =
+    String(payload.name ?? payload.customer?.name ?? "Valued Client").trim() ||
+    "Valued Client";
+  const record = {
+    id: `CUST-${store.counters.customer}`,
+    name,
+    email,
+    phone: String(payload.phone ?? payload.customer?.phone ?? "").trim(),
+    city: null,
+    state: null,
+    tier: "Swarnova Classic",
+    memberSince,
+    status: "active",
+    password: null,
+    oauthProvider: "google",
+    googleSubjectId: payload.googleSubjectId ?? payload.sub ?? null,
+  };
+  store.customers = [...store.customers, record];
+  return { customer: toCustomerPublic(record), isNewAccount: true };
+}
+
+/**
  * Re-resolve the authenticated customer for every scoped call — the
  * customer-side twin of `resolveStaffScope`. An unknown, missing or
  * disabled id is an expired session, never an authorization decision the

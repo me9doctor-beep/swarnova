@@ -19,6 +19,12 @@ export const CUSTOMER_AUTH_ERROR_CODES = {
   SESSION_EXPIRED: "SESSION_EXPIRED",
   NOT_FOUND: "NOT_FOUND",
   RESET_FAILURE: "RESET_FAILURE",
+  /* Phase 13.5: Google OAuth codes */
+  OAUTH_CANCELLED: "OAUTH_CANCELLED",
+  OAUTH_FAILED: "OAUTH_FAILED",
+  OAUTH_ACCOUNT_CONFLICT: "OAUTH_ACCOUNT_CONFLICT",
+  BACKEND_UNAVAILABLE: "BACKEND_UNAVAILABLE",
+  PROVIDER_UNAVAILABLE: "PROVIDER_UNAVAILABLE",
 };
 
 const FALLBACK_MESSAGE =
@@ -40,6 +46,16 @@ const MESSAGES = {
   [CUSTOMER_AUTH_ERROR_CODES.NETWORK_ERROR]:
     "We could not reach Swarnova. Check your connection and try again.",
   [CUSTOMER_AUTH_ERROR_CODES.SERVER_ERROR]: FALLBACK_MESSAGE,
+  [CUSTOMER_AUTH_ERROR_CODES.OAUTH_CANCELLED]:
+    "Google sign-in was cancelled. Please try again.",
+  [CUSTOMER_AUTH_ERROR_CODES.OAUTH_FAILED]:
+    "We could not sign you in with Google. Please try again or sign in with your email or phone.",
+  [CUSTOMER_AUTH_ERROR_CODES.OAUTH_ACCOUNT_CONFLICT]:
+    "An account already exists with this email address. Please sign in with your password.",
+  [CUSTOMER_AUTH_ERROR_CODES.BACKEND_UNAVAILABLE]:
+    "Google sign-in is currently unavailable. Please sign in with your email or phone number and password.",
+  [CUSTOMER_AUTH_ERROR_CODES.PROVIDER_UNAVAILABLE]:
+    "Google sign-in is currently unavailable. Please try again in a moment or use your email and password.",
 };
 
 /**

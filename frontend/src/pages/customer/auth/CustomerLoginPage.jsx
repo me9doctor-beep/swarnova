@@ -1,11 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import AuthAlert from "../../../components/auth/AuthAlert.jsx";
 import AuthShell from "../../../components/auth/AuthShell.jsx";
 import DemoAccessBox from "../../../components/auth/DemoAccessBox.jsx";
+import GoogleSignInButton from "../../../components/auth/GoogleSignInButton.jsx";
 import Button from "../../../components/ui/Button.jsx";
 import Input from "../../../components/ui/Input.jsx";
 import { useCustomerLogin } from "../../../features/customer-auth/useCustomerLogin.js";
+import { useCustomerGoogleAuth } from "../../../features/customer-auth/useCustomerGoogleAuth.js";
 import { translateCustomerAuthError } from "../../../features/customer-auth/customerAuthErrors.js";
 import {
   CUSTOMER_FORGOT_PASSWORD_PATH,
@@ -22,6 +24,9 @@ import { validateLogin } from "./authValidation.js";
  * The storefront's own gateway (staff signs in at `/staff/login`, a
  * separate audience with a separate session). A successful sign-in lands
  * back where the customer was headed (`?returnTo=…`) or in their account.
+ *
+ * Phase 13.5: Adds backend-ready Google OAuth initiation ("Continue with Google")
+ * exclusively for customer authentication.
  */
 
 /** Demo accounts surfaced until a real identity provider lands. */
@@ -35,15 +40,34 @@ export default function CustomerLoginPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
   const returnTo = safeReturnTo(params.get("returnTo"));
-  const { login, busy, error, clearError } = useCustomerLogin();
+  const { login, busy: loginBusy, error: loginError, clearError: clearLoginError } = useCustomerLogin();
+  const {
+    initiateGoogleAuth,
+    isRedirecting,
+    error: googleError,
+    clearError: clearGoogleError,
+  } = useCustomerGoogleAuth();
 
   const [form, setForm] = useState({ identifier: "", password: "" });
   const [errors, setErrors] = useState({});
+  const [urlError, setUrlError] = useState(null);
+
+  useEffect(() => {
+    const errorParam = params.get("oauth_error") || params.get("error");
+    if (errorParam) {
+      setUrlError({
+        code: errorParam === "access_denied" ? "OAUTH_CANCELLED" : "OAUTH_FAILED",
+        message: params.get("error_description") || undefined,
+      });
+    }
+  }, [params]);
 
   const update = (field) => (event) => {
     setForm((prev) => ({ ...prev, [field]: event.target.value }));
     setErrors((prev) => ({ ...prev, [field]: undefined }));
-    if (error) clearError();
+    if (loginError) clearLoginError();
+    if (googleError) clearGoogleError();
+    if (urlError) setUrlError(null);
   };
 
   const submit = async (event) => {
@@ -55,9 +79,22 @@ export default function CustomerLoginPage() {
       await login(form);
       navigate(returnTo, { replace: true });
     } catch {
-      /* `error` renders the translated provider message below. */
+      /* `loginError` renders the translated provider message below. */
     }
   };
+
+  const handleGoogleSignIn = async () => {
+    if (loginError) clearLoginError();
+    if (urlError) setUrlError(null);
+    try {
+      await initiateGoogleAuth({ returnTo });
+    } catch {
+      /* `googleError` renders the translated message below. */
+    }
+  };
+
+  const activeError = loginError || googleError || urlError;
+  const busy = loginBusy || isRedirecting;
 
   return (
     <AuthShell
@@ -112,14 +149,20 @@ export default function CustomerLoginPage() {
           placeholder="Your password"
         />
 
-        {error ? (
-          <AuthAlert>{translateCustomerAuthError(error)}</AuthAlert>
+        {activeError ? (
+          <AuthAlert>{translateCustomerAuthError(activeError)}</AuthAlert>
         ) : null}
 
         <Button type="submit" className="w-full" disabled={busy}>
-          {busy ? "Signing in…" : "Sign In"}
+          {loginBusy ? "Signing in…" : "Sign In"}
         </Button>
       </form>
+
+      <GoogleSignInButton
+        onClick={handleGoogleSignIn}
+        busy={isRedirecting}
+        disabled={busy}
+      />
 
       <div className="mt-6 space-y-3 border-t border-border-subtle pt-6 text-center">
         <p className="font-sans text-body-sm text-text-secondary">

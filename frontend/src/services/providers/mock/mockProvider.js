@@ -567,6 +567,61 @@ export const mockProvider = {
   },
 
   /* --------------------------------------------------------------------------
+   * Customer Google OAuth (Phase 13.5)
+   * --------------------------------------------------------------------------
+   * Backend-ready seam:
+   *   UI → useCustomerGoogleAuth → customerAuthService → DataProvider →
+   *   Future Backend OAuth Endpoint → Google.
+   *
+   * In a live deployment, initiateCustomerGoogleOAuth obtains the authorization
+   * URL from the backend and completes the exchange upon callback. In this
+   * mock-only environment without an active backend server, initiate rejects
+   * with BACKEND_UNAVAILABLE honestly rather than faking Google authentication.
+   * Tests and verified callback exchanges can invoke completeCustomerGoogleOAuth
+   * with verified identity payloads.
+   * ------------------------------------------------------------------------ */
+  initiateCustomerGoogleOAuth(options = {}) {
+    const returnTo = options?.returnTo ?? "/account";
+    if (typeof window !== "undefined" && window.__SWARNOVA_MOCK_OAUTH_REDIRECT__) {
+      return Promise.resolve({
+        redirectUrl: `/auth/callback?mock=true&returnTo=${encodeURIComponent(returnTo)}`,
+      });
+    }
+    const error = new Error(
+      "Google sign-in requires the backend identity service scheduled for Phase 14."
+    );
+    error.code = "BACKEND_UNAVAILABLE";
+    return Promise.reject(error);
+  },
+
+  completeCustomerGoogleOAuth(payload = {}) {
+    if (payload.error === "access_denied" || payload.error === "cancelled") {
+      const err = new Error("Google sign-in was cancelled.");
+      err.code = "OAUTH_CANCELLED";
+      return Promise.reject(err);
+    }
+    if (payload.error) {
+      const err = new Error("Authentication with Google failed.");
+      err.code = "OAUTH_FAILED";
+      return Promise.reject(err);
+    }
+
+    if (payload.customer || payload.email) {
+      const result = gov.authenticateOrLinkGoogleCustomer(this.getStore(), payload);
+      this.setCustomerSession(result.customer.id);
+      return Promise.resolve({
+        authenticated: true,
+        customer: emit(result.customer),
+        isNewAccount: result.isNewAccount,
+      });
+    }
+
+    const err = new Error("Google authentication requires backend token verification.");
+    err.code = "BACKEND_UNAVAILABLE";
+    return Promise.reject(err);
+  },
+
+  /* --------------------------------------------------------------------------
    * Customer account & commerce (Phase 7 reads, Phase 11 ownership)
    * --------------------------------------------------------------------------
    * Signatures are unchanged — hooks and services call them exactly as

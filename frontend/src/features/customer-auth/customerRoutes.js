@@ -16,6 +16,7 @@ export const CUSTOMER_LOGIN_PATH = "/login";
 export const CUSTOMER_REGISTER_PATH = "/register";
 export const CUSTOMER_FORGOT_PASSWORD_PATH = "/forgot-password";
 export const CUSTOMER_RESET_PASSWORD_PATH = "/reset-password";
+export const CUSTOMER_AUTH_CALLBACK_PATH = "/auth/callback";
 
 /** Where an authenticated customer lands — sign-in, sign-up and gate bounces. */
 export const CUSTOMER_HOME_PATH = "/account";
@@ -23,6 +24,7 @@ export const CUSTOMER_HOME_PATH = "/account";
 /**
  * Keep only same-origin absolute paths — `//evil`, `https:` and
  * `javascript:` fall back instead of becoming open redirects.
+ * Also guard against infinite redirects back to guest-only auth surfaces.
  */
 export function safeReturnTo(value, fallback = CUSTOMER_HOME_PATH) {
   if (
@@ -30,6 +32,14 @@ export function safeReturnTo(value, fallback = CUSTOMER_HOME_PATH) {
     value.startsWith("/") &&
     !value.startsWith("//")
   ) {
+    const cleanPath = value.split("?")[0].replace(/\/+$/, "") || "/";
+    if (
+      cleanPath === CUSTOMER_LOGIN_PATH ||
+      cleanPath === CUSTOMER_REGISTER_PATH ||
+      cleanPath === CUSTOMER_AUTH_CALLBACK_PATH
+    ) {
+      return fallback;
+    }
     return value;
   }
   return fallback;

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import AuthAlert from "../../../components/auth/AuthAlert.jsx";
 import AuthShell from "../../../components/auth/AuthShell.jsx";
@@ -33,6 +33,13 @@ export default function ResetPasswordPage() {
   });
   const [errors, setErrors] = useState({});
   const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    const tokenParam = params.get("token");
+    if (tokenParam) {
+      setForm((prev) => (prev.token !== tokenParam ? { ...prev, token: tokenParam } : prev));
+    }
+  }, [params]);
 
   const update = (field) => (event) => {
     setForm((prev) => ({ ...prev, [field]: event.target.value }));

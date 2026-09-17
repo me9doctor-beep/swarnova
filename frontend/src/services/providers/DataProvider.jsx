@@ -146,6 +146,9 @@ DataProvider.propTypes = {
     logoutCustomer: PropTypes.func,
     requestCustomerPasswordReset: PropTypes.func,
     resetCustomerPassword: PropTypes.func,
+    /* Phase 13.5 — customer Google OAuth contract */
+    initiateCustomerGoogleOAuth: PropTypes.func,
+    completeCustomerGoogleOAuth: PropTypes.func,
     /* Phase 12 — checkout & commerce contract */
     getDeliveryMethods: PropTypes.func,
     getPaymentMethods: PropTypes.func,

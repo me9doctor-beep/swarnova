@@ -20,6 +20,7 @@ import CustomerLoginPage from "../pages/customer/auth/CustomerLoginPage.jsx";
 import CustomerRegisterPage from "../pages/customer/auth/CustomerRegisterPage.jsx";
 import ForgotPasswordPage from "../pages/customer/auth/ForgotPasswordPage.jsx";
 import ResetPasswordPage from "../pages/customer/auth/ResetPasswordPage.jsx";
+import CustomerAuthCallbackPage from "../pages/customer/auth/CustomerAuthCallbackPage.jsx";
 
 import AccountLayout from "../pages/customer/account/AccountLayout.jsx";
 import AccountOverviewPage from "../pages/customer/account/AccountOverviewPage.jsx";
@@ -76,6 +77,8 @@ import EmployeeBranchPage from "../pages/employee/branch/EmployeeBranchPage.jsx"
 import EmployeeReportsPage from "../pages/employee/reports/EmployeeReportsPage.jsx";
 import EmployeeProfilePage from "../pages/employee/profile/EmployeeProfilePage.jsx";
 import EmployeeNotFoundPage from "../pages/employee/EmployeeNotFoundPage.jsx";
+import AdminNotFoundPage from "../pages/admin/AdminNotFoundPage.jsx";
+import SuperAdminNotFoundPage from "../pages/super-admin/SuperAdminNotFoundPage.jsx";
 import NotFoundPage from "../pages/NotFoundPage.jsx";
 
 import RoleBoundary from "../features/authentication/RoleBoundary.jsx";
@@ -190,6 +193,7 @@ export const routeTree = [
       },
       { path: "forgot-password", element: <ForgotPasswordPage /> },
       { path: "reset-password", element: <ResetPasswordPage /> },
+      { path: "auth/callback", element: <CustomerAuthCallbackPage /> },
       {
         path: "account",
         element: (
@@ -337,6 +341,7 @@ export const routeTree = [
         ),
         handle: { crumb: "Reports" },
       },
+      { path: "*", element: <AdminNotFoundPage /> },
     ],
   },
   {
@@ -375,6 +380,7 @@ export const routeTree = [
       { path: "roles", element: <RolesPage />, handle: { crumb: "Roles & Permissions" } },
       { path: "audit-logs", element: <AuditLogsPage />, handle: { crumb: "Audit Logs" } },
       { path: "settings", element: <SettingsPage />, handle: { crumb: "Settings" } },
+      { path: "*", element: <SuperAdminNotFoundPage /> },
     ],
   },
   {
