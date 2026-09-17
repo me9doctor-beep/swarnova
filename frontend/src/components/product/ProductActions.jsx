@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import PropTypes from "prop-types";
 import { Check } from "lucide-react";
 import Button from "../ui/Button.jsx";
@@ -10,30 +11,17 @@ import { cn } from "../../utils/cn.js";
  * product detail screen so the wording, the feedback and the bag behaviour are
  * defined once instead of twice.
  *
- *   Add to Cart — outline, the considered intent
- *   Buy Now     — solid wine, the direct purchase intent
- *
- * Both compose the shared `Button`; neither navigates, so adding a piece never
- * pulls the customer off the screen they are browsing. The confirmation is the
- * storefront's existing in-place language (the newsletter's gold status line),
- * not a modal.
- *
- * Buy Now records the piece as the direct-purchase line in the bag. When the
- * commerce phase registers its checkout route, this component is the single
- * call site that navigates to it.
+ *   Add to Cart — outline, the considered intent (in-place confirmation)
+ *   Buy Now     — solid wine, direct purchase intent (navigates to /cart)
  */
 const layouts = {
-  /* On a card the two actions stack: a 2-up phone card is ~160px wide, which
-     cannot hold both labels side by side. From `md` the card is wide enough
-     for the row, with tighter padding than the detail screen's buttons.
-     `min-h-11` keeps the compact action on the storefront's 44px thumb
-     target — the density table's promise for anything a phone can tap. */
   sm: { row: "flex-col md:flex-row", button: "min-h-11 flex-1 px-4" },
   md: { row: "flex-col sm:flex-row", button: "flex-1" },
 };
 
 export default function ProductActions({ product, size = "md", className }) {
   const { add, quantityOf } = useCart();
+  const navigate = useNavigate();
   const [confirmed, setConfirmed] = useState(null);
 
   const layout = layouts[size] ?? layouts.md;
@@ -42,7 +30,11 @@ export default function ProductActions({ product, size = "md", className }) {
 
   const act = (intent) => {
     add(product);
-    setConfirmed(intent);
+    if (intent === "buy") {
+      navigate("/cart");
+    } else {
+      setConfirmed(intent);
+    }
   };
 
   return (

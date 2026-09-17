@@ -1,5 +1,6 @@
 import PropTypes from "prop-types";
-import { Heart } from "lucide-react";
+import { Heart, Sparkles } from "lucide-react";
+import Button from "../ui/Button.jsx";
 import Card from "../ui/Card.jsx";
 import IconButton from "../ui/IconButton.jsx";
 import Price from "../ui/Price.jsx";
@@ -17,7 +18,7 @@ import { cn } from "../../utils/cn.js";
  * commerce actions are siblings of those links, never nested inside them, so
  * adding a piece from the catalogue never navigates away from it.
  */
-export default function ProductCard({ product }) {
+export default function ProductCard({ product, showTryOn = false }) {
   const { has, toggle } = useWishlist();
   const wished = has(product.id);
   const image = product.images?.[0];
@@ -76,6 +77,17 @@ export default function ProductCard({ product }) {
         {/* `mt-auto` sits the actions on the same line across a row, however
             many lines the piece's name takes. */}
         <ProductActions product={product} size="sm" className="mt-auto pt-5" />
+        {showTryOn && product.tryOnAvailable && (
+          <Button
+            variant="outline"
+            size="sm"
+            href={`/virtual-try-on?product=${product.id}`}
+            className="mt-2.5 w-full"
+          >
+            <Sparkles size={12} strokeWidth={1.5} aria-hidden="true" />
+            Try It On
+          </Button>
+        )}
       </Card.Body>
     </article>
   );
@@ -89,6 +101,8 @@ ProductCard.propTypes = {
     price: PropTypes.number.isRequired,
     href: PropTypes.string,
     images: PropTypes.array,
+    tryOnAvailable: PropTypes.bool,
     rating: PropTypes.shape({ average: PropTypes.number }),
   }).isRequired,
+  showTryOn: PropTypes.bool,
 };

@@ -1,4 +1,5 @@
 import PropTypes from "prop-types";
+import { Link } from "react-router-dom";
 import { cn } from "../../utils/cn.js";
 
 /**
@@ -45,16 +46,26 @@ export default function Button({
   size = "md",
   className,
   href,
+  to,
   type = "button",
   ...rest
 }) {
   const classes = cn(base, sizes[size], variants[variant], className);
 
-  if (href) {
-    const external = /^https?:\/\//.test(href);
+  const target = href || to;
+  if (target) {
+    const isInternal = typeof target === "string" && target.startsWith("/") && !target.startsWith("//");
+    if (isInternal) {
+      return (
+        <Link to={target} className={classes} {...rest}>
+          {children}
+        </Link>
+      );
+    }
+    const external = /^https?:\/\//.test(target);
     return (
       <a
-        href={href}
+        href={target}
         className={classes}
         {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
         {...rest}
@@ -86,5 +97,6 @@ Button.propTypes = {
   size: PropTypes.oneOf(["sm", "md"]),
   className: PropTypes.string,
   href: PropTypes.string,
+  to: PropTypes.string,
   type: PropTypes.string,
 };
