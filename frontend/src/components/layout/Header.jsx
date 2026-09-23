@@ -173,9 +173,11 @@ export default function Header() {
             </ContentLink>
 
             <nav aria-label="Primary" className="hidden xl:block">
-              {/* gap-5 rather than gap-7 at the 1280–1535 breakpoint: the eight
-                  links plus the four header actions overflowed the row by 18px
-                  at exactly 1280px, clipping the shopping-bag icon. */}
+              {/* The four primary links come from `site.navigation` — the one
+                  source of truth the mobile menu reads too. The tighter gap-5
+                  at the 1280–1535 breakpoint is the house spacing (it dates
+                  from when eight links plus the four header actions overflowed
+                  the row by 18px at exactly 1280px) and is left as it was. */}
               <ul className="flex items-center gap-5 2xl:gap-9">
                 {site.navigation.map((item) => (
                   <li key={item.href + item.label}>
