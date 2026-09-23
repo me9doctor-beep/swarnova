@@ -79,7 +79,7 @@ export default function ConsoleShell({
           onOpenNav={() => setNavOpen(true)}
         />
 
-        <main id="console-main">
+        <main id="console-main" data-scroll-container>
           <Container size="wide" className="px-gutter py-8 lg:px-8 lg:py-10">
             {children}
           </Container>

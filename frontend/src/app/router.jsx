@@ -1,5 +1,6 @@
 import { createBrowserRouter } from "react-router-dom";
 
+import ScrollToTop from "../components/layout/ScrollToTop.jsx";
 import CustomerLayout from "../layouts/customer/CustomerLayout.jsx";
 import AdminLayout from "../layouts/admin/AdminLayout.jsx";
 import SuperAdminLayout from "../layouts/super-admin/SuperAdminLayout.jsx";
@@ -483,6 +484,15 @@ export const routeTree = [
   },
 ];
 
-const router = createBrowserRouter(routeTree);
+/**
+ * Scroll restoration sits above every experience layout (customer, admin,
+ * super-admin, employee, staff login) so pages never reset scroll themselves.
+ */
+const router = createBrowserRouter([
+  {
+    element: <ScrollToTop />,
+    children: routeTree,
+  },
+]);
 
 export default router;
