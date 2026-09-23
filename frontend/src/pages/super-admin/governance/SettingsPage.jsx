@@ -110,7 +110,7 @@ export default function SettingsPage() {
                   }
                   hint={
                     form.storefrontStatus === "offline"
-                      ? "Customers will see a maintenance notice until the storefront returns online."
+                      ? "Recorded for the platform. A customer maintenance notice is not enforced in this release — browse and shop remain available."
                       : "Customers can browse and shop normally."
                   }
                 >

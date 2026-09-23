@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import PageHeader from "../../../components/layout/PageHeader.jsx";
 import Badge from "../../../components/ui/Badge.jsx";
 import EmptyState from "../../../components/ui/EmptyState.jsx";
@@ -5,7 +6,9 @@ import AsyncBoundary from "../../../components/ui/AsyncBoundary.jsx";
 import Table from "../../../components/ui/Table.jsx";
 import { useAdminReports } from "../../../hooks/useAdminOperations.js";
 import { useDocumentTitle } from "../../../hooks/useDocumentTitle.js";
-import { ORDER_STATUS_META, STOCK_STATE_META } from "../../../features/admin/operations.js";
+import { STOCK_STATE_META, orderStatusMeta } from "../../../features/admin/operations.js";
+import { OperationsViewNote, useOperationsFrame } from "../../../features/operations/operationsBase.jsx";
+import { ROLES } from "../../../features/authentication/roles.js";
 import { formatter } from "../../../components/ui/Price.jsx";
 
 /**
@@ -14,7 +17,8 @@ import { formatter } from "../../../components/ui/Price.jsx";
  * status, sales by branch, top pieces and the stock that needs attention.
  */
 export default function AdminReportsPage() {
-  useDocumentTitle("Reports — Swarnova Admin");
+  const { consoleName, role } = useOperationsFrame();
+  useDocumentTitle(`Reports — Swarnova ${consoleName}`);
 
   const { status, data: reports, error, retry } = useAdminReports();
 
@@ -50,7 +54,7 @@ export default function AdminReportsPage() {
                 ]}
               >
                 {reports.ordersByStatus.map((row) => {
-                  const meta = ORDER_STATUS_META[row.status] ?? ORDER_STATUS_META.Placed;
+                  const meta = orderStatusMeta(row.status);
                   return (
                     <Table.Row key={row.status}>
                       <Table.Cell>
@@ -71,6 +75,7 @@ export default function AdminReportsPage() {
               <h2 className="font-sans text-label uppercase tracking-[0.24em] text-text-secondary">
                 Sales by Branch
               </h2>
+              <OperationsViewNote />
               <Table
                 caption="Sales by branch"
                 hideCaption

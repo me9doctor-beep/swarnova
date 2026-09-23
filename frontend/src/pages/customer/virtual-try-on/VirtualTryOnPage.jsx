@@ -16,6 +16,8 @@ import { useAddProductToBag } from "../../../hooks/useAddProductToBag.js";
 import { useDocumentTitle } from "../../../hooks/useDocumentTitle.js";
 import { useTryOnRoom } from "../../../hooks/useTryOnRoom.js";
 import { useVirtualTryOn } from "../../../hooks/useVirtualTryOn.js";
+import { useStorefrontAvailability } from "../../../features/storefront/StorefrontFeatures.jsx";
+import { isFeatureOpen } from "../../../features/storefront/availability.js";
 
 /**
  * VIRTUAL TRY-ON — the shared digital fitting room at `/virtual-try-on`.
@@ -31,6 +33,7 @@ import { useVirtualTryOn } from "../../../hooks/useVirtualTryOn.js";
  * → service → provider; the page only composes, exactly like the studio.
  */
 export default function VirtualTryOnPage() {
+  const availability = useStorefrontAvailability();
   const roomState = useTryOnRoom();
   const fitting = useVirtualTryOn();
   const { addCanonical } = useAddProductToBag();
@@ -51,11 +54,14 @@ export default function VirtualTryOnPage() {
     if (changing) document.getElementById("try-on-change")?.scrollIntoView();
   }, [changing]);
 
+  const studioOpen = isFeatureOpen(availability, "aiStudio");
+
+  /* Entry is the route guard. This page only waits for the fitting-room document. */
   if (roomState.status !== "success") {
     return (
       <Container className="pb-20 pt-[160px] sm:pb-28">
         <AsyncBoundary
-          status={roomState.status}
+          status={roomState.status === "error" ? "error" : "loading"}
           error={roomState.error}
           onRetry={roomState.retry}
           className="min-h-[320px] py-0"
@@ -147,7 +153,9 @@ export default function VirtualTryOnPage() {
               title={room.errors.noSource.title}
               action={
                 <>
-                  <Button href="/ai-studio">{room.errors.noSource.studio}</Button>
+                  {studioOpen ? (
+                    <Button href="/ai-studio">{room.errors.noSource.studio}</Button>
+                  ) : null}
                   <Button variant="outline" href="/products">
                     {room.errors.noSource.browse}
                   </Button>
@@ -168,7 +176,9 @@ export default function VirtualTryOnPage() {
               title={room.errors.notFound.title}
               action={
                 <>
-                  <Button href="/ai-studio">{room.errors.notFound.studio}</Button>
+                  {studioOpen ? (
+                    <Button href="/ai-studio">{room.errors.notFound.studio}</Button>
+                  ) : null}
                   <Button variant="outline" href="/products">
                     {room.errors.notFound.browse}
                   </Button>
@@ -276,10 +286,14 @@ export default function VirtualTryOnPage() {
                               {room.actions.addToBag}
                             </Button>
                           </div>
-                        ) : (
+                        ) : studioOpen ? (
                           <Button href="/ai-studio" className="w-full">
                             {room.actions.continueDesigning}
                           </Button>
+                        ) : (
+                          <p className="text-center font-sans text-caption uppercase tracking-[0.16em] text-text-muted">
+                            Paused by the house
+                          </p>
                         )}
                       </div>
                     </div>

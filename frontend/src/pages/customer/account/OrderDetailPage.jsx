@@ -1,5 +1,5 @@
 import { useParams, Link } from "react-router-dom";
-import { ArrowLeft, Check, Package, Clock, Truck, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Check, Package, Clock, Truck, Route, ShieldCheck } from "lucide-react";
 import Button from "../../../components/ui/Button.jsx";
 import Badge from "../../../components/ui/Badge.jsx";
 import Price from "../../../components/ui/Price.jsx";
@@ -8,27 +8,18 @@ import AsyncBoundary from "../../../components/ui/AsyncBoundary.jsx";
 import { useOrder } from "../../../hooks/useOrder.js";
 import { useDocumentTitle } from "../../../hooks/useDocumentTitle.js";
 import { cn } from "../../../utils/cn.js";
+import {
+  CUSTOMER_JOURNEY,
+  orderStatusMeta,
+} from "../../../features/orders/orderLifecycle.js";
 
-const ORDER_STEPS = [
-  { key: "Confirmed", label: "Order Confirmed", Icon: Check },
-  { key: "Processing", label: "In Atelier Preparation", Icon: Clock },
-  { key: "Shipped", label: "Dispatched with Insured Courier", Icon: Truck },
-  { key: "Delivered", label: "Safely Delivered", Icon: ShieldCheck },
-];
-
-const STATUS_RANK = {
-  Confirmed: 0,
-  Processing: 1,
-  Shipped: 2,
-  Delivered: 3,
-};
-
-const STATUS_BADGE_VARIANTS = {
-  Delivered: "success",
-  Shipped: "info",
-  Processing: "brand",
-  Confirmed: "neutral",
-  Cancelled: "error",
+const STEP_ICONS = {
+  Placed: Package,
+  Confirmed: Check,
+  Processing: Clock,
+  Shipped: Truck,
+  "Out for Delivery": Route,
+  Delivered: ShieldCheck,
 };
 
 export default function OrderDetailPage() {
@@ -68,8 +59,9 @@ export default function OrderDetailPage() {
     );
   }
 
-  const currentRank = STATUS_RANK[order.status] ?? 0;
-  const isCancelled = order.status === "Cancelled";
+  const meta = orderStatusMeta(order.status);
+  const currentRank = meta.rank;
+  const showJourney = currentRank != null;
   const dateStr = new Date(order.createdAt).toLocaleDateString("en-IN", {
     day: "numeric",
     month: "long",
@@ -95,8 +87,8 @@ export default function OrderDetailPage() {
             <h2 className="font-serif text-h2 font-medium text-text-primary">
               Order {order.orderNumber}
             </h2>
-            <Badge variant={STATUS_BADGE_VARIANTS[order.status] ?? "neutral"} dot>
-              {order.status}
+            <Badge variant={meta.variant} dot>
+              {meta.label}
             </Badge>
           </div>
           <p className="mt-1 font-serif text-body text-text-secondary">
@@ -112,16 +104,16 @@ export default function OrderDetailPage() {
         </div>
       </div>
 
-      {/* Static Order Journey */}
-      {!isCancelled ? (
+      {/* Fulfillment journey — Placed is the first milestone, never a missing Confirmed. */}
+      {showJourney ? (
         <div className="border border-border-default bg-surface-primary p-6 sm:p-8">
           <h3 className="font-sans text-label uppercase tracking-[0.24em] text-text-secondary">
             Fulfillment Journey
           </h3>
 
-          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-4">
-            {ORDER_STEPS.map((step, idx) => {
-              const StepIcon = step.Icon;
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            {CUSTOMER_JOURNEY.map((step, idx) => {
+              const StepIcon = STEP_ICONS[step.key] ?? Package;
               const isCompleted = idx < currentRank || (idx === currentRank && order.status === "Delivered");
               const isCurrent = idx === currentRank && order.status !== "Delivered";
 
@@ -184,13 +176,18 @@ export default function OrderDetailPage() {
           </div>
         </div>
       ) : (
-        <div className="border border-state-error/30 bg-state-error-soft p-5 text-body text-state-error">
+        <div
+          className={cn(
+            "border p-5 text-body",
+            order.status === "Cancelled"
+              ? "border-state-error/30 bg-state-error-soft text-state-error"
+              : "border-border-default bg-surface-primary text-text-secondary"
+          )}
+        >
           <p className="font-medium uppercase tracking-[0.18em] text-label">
-            Order Cancelled
+            {meta.label}
           </p>
-          <p className="mt-1 text-body-sm">
-            This order has been cancelled. Any pre-authorized payment was returned to your original payment method.
-          </p>
+          <p className="mt-1 text-body-sm">{meta.description}</p>
         </div>
       )}
 

@@ -16,7 +16,7 @@
  *
  * THE INVARIANT (Phase 13): `reserved` on a row equals the quantity the OPEN
  * order book has allocated at that boutique — every piece of every order in
- * Placed or Processing, and nothing else. A shipped or delivered piece has
+ * Placed, Confirmed or Processing, and nothing else. A shipped or delivered piece has
  * left the vitrine, so it is in neither column; a cancelled order returns its
  * pieces to `available`. `placeCheckoutOrder` and the order-lifecycle
  * transitions maintain it, and the seed obeys it, so a branch never counts a

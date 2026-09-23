@@ -10,18 +10,20 @@ import FilterBar from "../../../components/super-admin/FilterBar.jsx";
 import { useAdminOrders } from "../../../hooks/useAdminOperations.js";
 import { useGovernanceBranches } from "../../../hooks/useGovernanceOrganization.js";
 import { useDocumentTitle } from "../../../hooks/useDocumentTitle.js";
-import { ORDER_STATUS_META, ORDER_STATUS_OPTIONS } from "../../../features/admin/operations.js";
+import { ORDER_STATUS_OPTIONS, orderStatusMeta } from "../../../features/admin/operations.js";
+import { OperationsViewNote, useOperationsFrame } from "../../../features/operations/operationsBase.jsx";
 import { formatter } from "../../../components/ui/Price.jsx";
 import { formatDateTime } from "../../../utils/format.js";
 
 /**
  * ORDER OPERATIONS (Phase 9) — the whole order book, operated from head
  * office. Search, filter by status and branch, open an order. The
- * lifecycle itself stays deliberately small: Placed → Processing →
- * Shipped → Delivered, with Cancelled before shipping.
+ * lifecycle is the shared contract: Placed → Confirmed → Processing →
+ * Ready/Shipped → Out for Delivery → Delivered, cancelled before dispatch.
  */
 export default function AdminOrdersPage() {
-  useDocumentTitle("Orders — Swarnova Admin");
+  const { base, consoleName } = useOperationsFrame();
+  useDocumentTitle(`Orders — Swarnova ${consoleName}`);
 
   const [searchParams] = useSearchParams();
   const [search, setSearch] = useState("");
@@ -59,7 +61,7 @@ export default function AdminOrdersPage() {
       <PageHeader
         eyebrow="Business · Orders"
         title="Orders"
-        description="Every order across the business — placed, processing, shipped, delivered and cancelled, with the branch that fulfils each one."
+        description="Every order across the business — placed, confirmed, in preparation, ready or shipped, out for delivery, delivered and cancelled — with the branch that fulfils each one."
       />
 
       <div className="mt-6 space-y-5">
@@ -85,6 +87,7 @@ export default function AdminOrdersPage() {
             },
           ]}
         />
+        <OperationsViewNote narrowed={branchFilter !== "all"} />
 
         <AsyncBoundary
           status={status === "loading" ? "loading" : status === "error" ? "error" : "success"}
@@ -112,12 +115,12 @@ export default function AdminOrdersPage() {
               ]}
             >
               {orders.map((order) => {
-                const meta = ORDER_STATUS_META[order.status] ?? ORDER_STATUS_META.Placed;
+                const meta = orderStatusMeta(order.status);
                 return (
                   <Table.Row key={order.id}>
                     <Table.Cell>
                       <Link
-                        to={`/admin/orders/${order.id}`}
+                        to={`${base}/orders/${order.id}`}
                         className="font-sans text-body-sm font-medium text-text-primary transition-colors duration-200 hover:text-brand-primary"
                       >
                         {order.orderNumber}
@@ -142,7 +145,7 @@ export default function AdminOrdersPage() {
                       {formatDateTime(order.createdAt)}
                     </Table.Cell>
                     <Table.Cell align="right">
-                      <Button variant="ghost" size="sm" to={`/admin/orders/${order.id}`}>
+                      <Button variant="ghost" size="sm" to={`${base}/orders/${order.id}`}>
                         View
                       </Button>
                     </Table.Cell>

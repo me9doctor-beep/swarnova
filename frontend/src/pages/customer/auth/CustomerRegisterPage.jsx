@@ -156,6 +156,15 @@ export default function CustomerRegisterPage() {
               {errors.acceptedTerms}
             </p>
           ) : null}
+          <p className="mt-2 font-sans text-caption text-text-muted">
+            <Link to="/terms" className="underline underline-offset-2 hover:text-text-primary">
+              Terms & Conditions
+            </Link>
+            {" · "}
+            <Link to="/privacy" className="underline underline-offset-2 hover:text-text-primary">
+              Privacy Policy
+            </Link>
+          </p>
         </div>
 
         {activeError ? (

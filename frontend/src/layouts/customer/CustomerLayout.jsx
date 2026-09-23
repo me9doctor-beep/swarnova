@@ -2,6 +2,7 @@ import { Outlet } from "react-router-dom";
 import Header from "../../components/layout/Header.jsx";
 import Footer from "../../components/layout/Footer.jsx";
 import SkipLink from "../../components/ui/SkipLink.jsx";
+import { StorefrontFeaturesProvider } from "../../features/storefront/StorefrontFeatures.jsx";
 
 /**
  * CUSTOMER LAYOUT — the luxury storefront shell.
@@ -14,7 +15,7 @@ import SkipLink from "../../components/ui/SkipLink.jsx";
  */
 export default function CustomerLayout() {
   return (
-    <>
+    <StorefrontFeaturesProvider>
       <SkipLink />
 
       <Header />
@@ -24,6 +25,6 @@ export default function CustomerLayout() {
       </main>
 
       <Footer />
-    </>
+    </StorefrontFeaturesProvider>
   );
 }

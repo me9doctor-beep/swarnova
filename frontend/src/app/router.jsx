@@ -81,10 +81,13 @@ import EmployeeNotFoundPage from "../pages/employee/EmployeeNotFoundPage.jsx";
 import AdminNotFoundPage from "../pages/admin/AdminNotFoundPage.jsx";
 import SuperAdminNotFoundPage from "../pages/super-admin/SuperAdminNotFoundPage.jsx";
 import NotFoundPage from "../pages/NotFoundPage.jsx";
+import CustomerServicePage from "../pages/customer/service/CustomerServicePage.jsx";
+import OperationalRoute from "../features/operations/OperationalRoute.jsx";
 
 import RoleBoundary from "../features/authentication/RoleBoundary.jsx";
 import RequireCapability from "../features/authentication/RequireCapability.jsx";
 import RequireCustomer from "../features/customer-auth/RequireCustomer.jsx";
+import RequireStorefrontFeature from "../features/storefront/RequireStorefrontFeature.jsx";
 import GuestOnly from "../features/customer-auth/GuestOnly.jsx";
 import { ROLES, STAFF_LOGIN_PATH } from "../features/authentication/roles.js";
 import { CAPABILITIES } from "../features/authentication/capabilities.js";
@@ -104,6 +107,8 @@ import { CAPABILITIES } from "../features/authentication/capabilities.js";
  *   Customer      /            /collections  /collections/:slug
  *                 /category/:slug  /products  /product/:id  /ai-studio
  *                 /virtual-try-on  /cart
+ *                 /contact  /faq  /shipping  /returns  /warranty
+ *                 /care-guide  /privacy  /terms
  *                 /login  /register  /forgot-password  /reset-password
  *                   — the customer auth surface (guest-only for /login and
  *                   /register: an authenticated customer lands in /account)
@@ -132,6 +137,10 @@ import { CAPABILITIES } from "../features/authentication/capabilities.js";
  *                 /super-admin/admins        /super-admin/employees
  *                 /super-admin/roles         /super-admin/audit-logs
  *                 /super-admin/settings
+ *                 /super-admin/orders[/:id]  /super-admin/customers[/:id]
+ *                 /super-admin/inventory     /super-admin/reports
+ *                   — the same operational book as Admin, organization-wide,
+ *                   not a second store
  *   Employee      /employee               branch dashboard
  *                 /employee/orders[/:id]  /employee/customers[/:id]
  *                 /employee/products[/:id] /employee/inventory
@@ -157,9 +166,31 @@ export const routeTree = [
       { path: "category/:slug", element: <CatalogueDetailPage scope="category" /> },
       { path: "products", element: <ProductsPage /> },
       { path: "product/:id", element: <ProductDetailPage /> },
-      { path: "ai-studio", element: <AiStudioPage /> },
-      { path: "virtual-try-on", element: <VirtualTryOnPage /> },
+      {
+        path: "ai-studio",
+        element: (
+          <RequireStorefrontFeature feature="aiStudio">
+            <AiStudioPage />
+          </RequireStorefrontFeature>
+        ),
+      },
+      {
+        path: "virtual-try-on",
+        element: (
+          <RequireStorefrontFeature feature="virtualTryOn">
+            <VirtualTryOnPage />
+          </RequireStorefrontFeature>
+        ),
+      },
       { path: "cart", element: <CartPage /> },
+      { path: "contact", element: <CustomerServicePage pageKey="contact" /> },
+      { path: "faq", element: <CustomerServicePage pageKey="faq" /> },
+      { path: "shipping", element: <CustomerServicePage pageKey="shipping" /> },
+      { path: "returns", element: <CustomerServicePage pageKey="returns" /> },
+      { path: "warranty", element: <CustomerServicePage pageKey="warranty" /> },
+      { path: "care-guide", element: <CustomerServicePage pageKey="care" /> },
+      { path: "privacy", element: <CustomerServicePage pageKey="privacy" /> },
+      { path: "terms", element: <CustomerServicePage pageKey="terms" /> },
       {
         path: "checkout",
         element: (
@@ -381,6 +412,36 @@ export const routeTree = [
       { path: "roles", element: <RolesPage />, handle: { crumb: "Roles & Permissions" } },
       { path: "audit-logs", element: <AuditLogsPage />, handle: { crumb: "Audit Logs" } },
       { path: "settings", element: <SettingsPage />, handle: { crumb: "Settings" } },
+      {
+        path: "orders",
+        element: <OperationalRoute page={AdminOrdersPage} />,
+        handle: { crumb: "Orders" },
+      },
+      {
+        path: "orders/:id",
+        element: <OperationalRoute page={AdminOrderDetailPage} />,
+        handle: { crumb: "Order" },
+      },
+      {
+        path: "customers",
+        element: <OperationalRoute page={AdminCustomersPage} />,
+        handle: { crumb: "Customers" },
+      },
+      {
+        path: "customers/:id",
+        element: <OperationalRoute page={AdminCustomerDetailPage} />,
+        handle: { crumb: "Customer" },
+      },
+      {
+        path: "inventory",
+        element: <OperationalRoute page={AdminInventoryPage} />,
+        handle: { crumb: "Inventory" },
+      },
+      {
+        path: "reports",
+        element: <OperationalRoute page={AdminReportsPage} />,
+        handle: { crumb: "Reports" },
+      },
       { path: "*", element: <SuperAdminNotFoundPage /> },
     ],
   },

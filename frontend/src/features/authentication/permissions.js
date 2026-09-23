@@ -44,7 +44,7 @@ export const ROLE_CLAIM_NOTES = {
 /** Brief operational summary of a role, for governance surfaces. */
 export const ROLE_DESCRIPTIONS = {
   [ROLES.SUPER_ADMIN]:
-    "Full platform command — catalogue governance, media, content, gold rates, organisation, roles and audit.",
+    "Organization-wide authority — platform governance, and the same order, customer, inventory and report book head office operates.",
   [ROLES.ADMIN]:
     "Head-office business operations — products, orders, customers, inventory, branches, business content, reports and employees for their scope.",
   [ROLES.EMPLOYEE]:

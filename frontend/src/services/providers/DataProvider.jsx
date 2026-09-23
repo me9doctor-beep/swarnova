@@ -20,7 +20,7 @@ import mockProvider from "./mock/mockProvider.js";
  *   getCollections()             getProducts(query) getProduct(id)
  *   getBranches(query)           getJournalArticles(query)
  *   getActiveCampaign()          getGoldRateBoard() getAiStudio()
- *   getAiAtelier()               generateAiDesign(request)
+ *   getStorefrontFeatures()      getAiAtelier()     generateAiDesign(request)
  *   createAiVariations(id)       refineAiDesign(request)
  *   getTryOnRoom()               getTryOnSource(source)
  *   createTryOn(request)

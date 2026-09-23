@@ -9,7 +9,7 @@ import Table from "../../../components/ui/Table.jsx";
 import FilterBar from "../../../components/super-admin/FilterBar.jsx";
 import { useEmployeeOrders } from "../../../hooks/useEmployeeOperations.js";
 import { useDocumentTitle } from "../../../hooks/useDocumentTitle.js";
-import { ORDER_STATUS_META, ORDER_STATUS_OPTIONS } from "../../../features/admin/operations.js";
+import { ORDER_STATUS_OPTIONS, orderStatusMeta } from "../../../features/admin/operations.js";
 import { formatter } from "../../../components/ui/Price.jsx";
 import { formatDateTime } from "../../../utils/format.js";
 
@@ -93,7 +93,7 @@ export default function EmployeeOrdersPage() {
               ]}
             >
               {orders.map((order) => {
-                const meta = ORDER_STATUS_META[order.status] ?? ORDER_STATUS_META.Placed;
+                const meta = orderStatusMeta(order.status);
                 return (
                   <Table.Row key={order.id}>
                     <Table.Cell>

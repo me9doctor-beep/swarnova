@@ -9,9 +9,11 @@
  *                   a bare "#section" would point at the current page and
  *                   resolve to nothing anywhere but the homepage itself
  *   "mailto:", "tel:", "https://"  handed to the browser untouched
- * A few support and legal destinations are still unwritten copy for pages the
- * platform has not built yet; they navigate to the in-app Not Found screen, and
- * `PHASE_13_AUDIT.md` lists them as content gaps rather than pretending.
+ * Customer-service and legal destinations (`/contact`, `/faq`, `/shipping`,
+ * `/returns`, `/warranty`, `/care-guide`, `/privacy`, `/terms`) are house
+ * pages. Track Order opens the account order book. Custom and private-viewing
+ * links stay contextual — AI Studio and the stores anchor — and are not
+ * intake workflows.
  */
 export const site = {
   brand: {

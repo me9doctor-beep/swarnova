@@ -6,7 +6,7 @@ import Table from "../../../components/ui/Table.jsx";
 import StatCard from "../../../components/super-admin/StatCard.jsx";
 import { useEmployeeReports } from "../../../hooks/useEmployeeOperations.js";
 import { useDocumentTitle } from "../../../hooks/useDocumentTitle.js";
-import { ORDER_STATUS_META, STOCK_STATE_META } from "../../../features/admin/operations.js";
+import { STOCK_STATE_META, orderStatusMeta } from "../../../features/admin/operations.js";
 import { formatter } from "../../../components/ui/Price.jsx";
 import { formatDate } from "../../../utils/format.js";
 
@@ -115,7 +115,7 @@ export default function EmployeeReportsPage() {
                   ]}
                 >
                   {reports.ordersByStatus.map((row) => {
-                    const meta = ORDER_STATUS_META[row.status] ?? ORDER_STATUS_META.Placed;
+                    const meta = orderStatusMeta(row.status);
                     return (
                       <Table.Row key={row.status}>
                         <Table.Cell>

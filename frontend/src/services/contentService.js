@@ -18,6 +18,10 @@ export const contentService = {
   getActiveCampaign(provider) {
     return provider.getActiveCampaign();
   },
+  /** Customer-safe AI Studio / Virtual Try-On switches. Not the governance settings object. */
+  getStorefrontFeatures(provider) {
+    return provider.getStorefrontFeatures();
+  },
 };
 
 export default contentService;

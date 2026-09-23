@@ -49,6 +49,7 @@ import StaffLoginPage from "../pages/staff/StaffLoginPage.jsx";
 import AppProviders from "../app/providers.jsx";
 import CustomerAuthProvider from "../features/customer-auth/CustomerAuthProvider.jsx";
 import RequireCustomer from "../features/customer-auth/RequireCustomer.jsx";
+import RequireStorefrontFeature from "../features/storefront/RequireStorefrontFeature.jsx";
 import GuestOnly from "../features/customer-auth/GuestOnly.jsx";
 
 const MEMBER = {
@@ -78,8 +79,14 @@ function SweepRoutes() {
       h(Route, { path: "category/:slug", element: h(CatalogueDetailPage, { scope: "category" }) }),
       h(Route, { path: "products", element: h(ProductsPage) }),
       h(Route, { path: "product/:id", element: h(ProductDetailPage) }),
-      h(Route, { path: "ai-studio", element: h(AiStudioPage) }),
-      h(Route, { path: "virtual-try-on", element: h(VirtualTryOnPage) }),
+      h(Route, {
+        path: "ai-studio",
+        element: h(RequireStorefrontFeature, { feature: "aiStudio" }, h(AiStudioPage)),
+      }),
+      h(Route, {
+        path: "virtual-try-on",
+        element: h(RequireStorefrontFeature, { feature: "virtualTryOn" }, h(VirtualTryOnPage)),
+      }),
       h(Route, { path: "cart", element: h(CartPage) }),
       h(Route, { path: "login", element: h(GuestOnly, null, h(CustomerLoginPage)) }),
       h(Route, { path: "register", element: h(GuestOnly, null, h(CustomerRegisterPage)) }),

@@ -8,6 +8,8 @@ import Price from "../ui/Price.jsx";
 import Rating from "../ui/Rating.jsx";
 import ProductActions from "../product/ProductActions.jsx";
 import { useWishlist } from "../../state/WishlistContext.jsx";
+import { useStorefrontAvailability } from "../../features/storefront/StorefrontFeatures.jsx";
+import { isFeatureOpen } from "../../features/storefront/availability.js";
 import { cn } from "../../utils/cn.js";
 
 /**
@@ -21,6 +23,8 @@ import { cn } from "../../utils/cn.js";
  */
 export default function ProductCard({ product, showTryOn = false }) {
   const { has, toggle } = useWishlist();
+  const availability = useStorefrontAvailability();
+  const tryOnOpen = isFeatureOpen(availability, "virtualTryOn");
   const wished = has(product.id);
   const image = product.images?.[0];
 
@@ -78,7 +82,7 @@ export default function ProductCard({ product, showTryOn = false }) {
         {/* `mt-auto` sits the actions on the same line across a row, however
             many lines the piece's name takes. */}
         <ProductActions product={product} size="sm" className="mt-auto pt-5" />
-        {showTryOn && product.tryOnAvailable && (
+        {showTryOn && product.tryOnAvailable && tryOnOpen && (
           <Button
             variant="outline"
             size="sm"

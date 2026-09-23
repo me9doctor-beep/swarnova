@@ -8,8 +8,9 @@ import { media } from "../../assets/index.js";
  * shaped to mirror the future order-management API contract:
  *
  *   customerId / branchId   — who ordered, which boutique fulfils
- *   status                  — Placed → Processing → Shipped → Delivered,
- *                             with Cancelled as the one exit before delivery
+ *   status                  — Placed → Confirmed → Processing → Shipped →
+ *                             Out for Delivery → Delivered, with Cancelled
+ *                             before dispatch. Shipped is the Ready/Shipped stage.
  *   paymentStatus           — "paid" | "refunded"
  *   subtotal / shipping /
  *   taxAmount / total       — the commercial snapshot, in the shape

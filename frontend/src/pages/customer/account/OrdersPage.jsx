@@ -7,14 +7,7 @@ import EmptyState from "../../../components/ui/EmptyState.jsx";
 import AsyncBoundary from "../../../components/ui/AsyncBoundary.jsx";
 import { useOrders } from "../../../hooks/useOrders.js";
 import { useDocumentTitle } from "../../../hooks/useDocumentTitle.js";
-
-const STATUS_BADGE_VARIANTS = {
-  Delivered: "success",
-  Shipped: "info",
-  Processing: "brand",
-  Confirmed: "neutral",
-  Cancelled: "error",
-};
+import { orderStatusMeta } from "../../../features/orders/orderLifecycle.js";
 
 export default function OrdersPage() {
   useDocumentTitle("Order History — Swarnova");
@@ -85,8 +78,8 @@ export default function OrdersPage() {
                   </div>
 
                   <div className="flex items-center gap-4">
-                    <Badge variant={STATUS_BADGE_VARIANTS[order.status] ?? "neutral"} dot>
-                      {order.status}
+                    <Badge variant={orderStatusMeta(order.status).variant} dot>
+                      {orderStatusMeta(order.status).label}
                     </Badge>
                     <Price amount={order.total} className="font-serif text-h4 font-medium" />
                   </div>

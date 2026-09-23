@@ -54,6 +54,13 @@ import {
   permissionsFromCapabilities,
   capabilitiesWithinAuthority,
 } from "../../../features/authentication/capabilities.js";
+import {
+  ORDER_FLOW,
+  OPEN_ORDER_STATUSES,
+  RESERVING_ORDER_STATUSES,
+  orderActions,
+  statusesForReport,
+} from "../../../features/orders/orderLifecycle.js";
 
 /* ----------------------------------------------------------------------- */
 /* Helpers                                                                  */
@@ -1386,7 +1393,7 @@ export function updatePlatformSettings(store, patch = {}) {
     next.storefront.status = patch.storefront.status === "offline" ? "offline" : "online";
     next.storefront.statusNote =
       next.storefront.status === "offline"
-        ? "The storefront is temporarily paused. Customers see a maintenance notice."
+        ? "Recorded as offline. A customer maintenance notice is not enforced in this release."
         : "The customer storefront is trading normally.";
   }
   for (const key of ["aiStudio", "virtualTryOn"]) {
@@ -1410,6 +1417,31 @@ export function updatePlatformSettings(store, patch = {}) {
     detail: "Platform settings updated.",
   });
   return emit(store.settings);
+}
+
+const FEATURE_UNAVAILABLE = {
+  aiStudio: "The AI Jewellery Studio is not available at the moment.",
+  virtualTryOn: "The virtual fitting room is not available at the moment.",
+};
+
+/**
+ * Customer availability gate. Governance switches are not informational:
+ * a disabled feature cannot be generated, refined or tried on. Homepage
+ * and navigation hide the doors; this is the refusal if a caller arrives
+ * anyway.
+ */
+export function assertStorefrontFeature(store, key) {
+  if (store.settings?.features?.[key]?.enabled === false) {
+    failWithCode("FEATURE_UNAVAILABLE", FEATURE_UNAVAILABLE[key] ?? "This feature is not available at the moment.");
+  }
+}
+
+/** Customer-safe reading of the two feature switches. Not the settings object. */
+export function storefrontFeatures(store) {
+  return emit({
+    aiStudio: store.settings?.features?.aiStudio?.enabled !== false,
+    virtualTryOn: store.settings?.features?.virtualTryOn?.enabled !== false,
+  });
 }
 
 /** The command-centre summary — computed from canonical state, never stored. */
@@ -1496,24 +1528,13 @@ export function listAuditLogs(store, query = {}) {
 /* ----------------------------------------------------------------------- */
 
 /**
- * The operational order lifecycle — the ONLY states and moves between them.
- * An order walks forward Placed → Processing → Shipped → Delivered, or is
- * Cancelled before it ships. Nothing else exists; the backend refuses it.
+ * The operational order lifecycle is the shared contract in
+ * `features/orders/orderLifecycle.js` — re-exported so existing store callers
+ * keep one import. Placed → Confirmed → Processing → Shipped → Out for Delivery → Delivered,
+ * cancelled before dispatch. Ready, Out for Delivery, Returned, Refunded,
+ * Failed and On Hold are recognized vocabulary, not moves this store offers.
  */
-export const ORDER_FLOW = {
-  Placed: ["Processing", "Cancelled"],
-  Processing: ["Shipped", "Cancelled"],
-  Shipped: ["Delivered"],
-  Delivered: [],
-  Cancelled: [],
-};
-
-/** Order states that still need business attention. */
-export const OPEN_ORDER_STATUSES = ["Placed", "Processing", "Shipped"];
-
-export function orderActions(status) {
-  return ORDER_FLOW[status] ?? [];
-}
+export { ORDER_FLOW, OPEN_ORDER_STATUSES, RESERVING_ORDER_STATUSES, orderActions };
 
 export function toAdminOrder(store, order) {
   const customer = store.customers.find((item) => item.id === order.customerId);
@@ -1686,6 +1707,19 @@ export function toAdminCustomer(store, customer) {
 
 export function listAdminCustomers(store, query = {}) {
   let list = [...store.customers];
+
+  /* A branch here is a view of who has traded with that boutique. It does
+     not grant a new book and it does not narrow the caller's authority —
+     omitting it returns the organization. An unknown branch simply matches
+     no one. */
+  if (query.branchId) {
+    const traded = new Set(
+      store.orders
+        .filter((order) => order.branchId === query.branchId)
+        .map((order) => order.customerId)
+    );
+    list = list.filter((customer) => traded.has(customer.id));
+  }
 
   if (query.search) {
     const term = String(query.search).toLowerCase();
@@ -1868,11 +1902,9 @@ export function listBranchOperations(store) {
 /* Admin operations — reports & overview                                   */
 /* ----------------------------------------------------------------------- */
 
-const ORDER_STATUS_LIST = ["Placed", "Processing", "Shipped", "Delivered", "Cancelled"];
-
 /** Business reports — computed from canonical state, never stored. */
 export function adminReports(store) {
-  const ordersByStatus = ORDER_STATUS_LIST.map((status) => {
+  const ordersByStatus = statusesForReport(store.orders).map((status) => {
     const list = store.orders.filter((order) => order.status === status);
     return {
       status,
@@ -1937,6 +1969,7 @@ export function adminOverview(store) {
     OPEN_ORDER_STATUSES.includes(order.status)
   );
   const placed = store.orders.filter((order) => order.status === "Placed");
+  const confirmed = store.orders.filter((order) => order.status === "Confirmed");
   const processing = store.orders.filter((order) => order.status === "Processing");
   const lowStock = store.inventory.filter((row) => stockState(row) !== "ok");
   const outOfStock = store.inventory.filter((row) => stockState(row) === "out");
@@ -1950,8 +1983,16 @@ export function adminOverview(store) {
     attention.push({
       key: "orders-placed",
       label: `${placed.length} newly placed order${placed.length === 1 ? "" : "s"} to confirm`,
-      action: "Review",
+      action: "Confirm",
       to: "/admin/orders?status=Placed",
+    });
+  }
+  if (confirmed.length > 0) {
+    attention.push({
+      key: "orders-confirmed",
+      label: `${confirmed.length} confirmed order${confirmed.length === 1 ? "" : "s"} ready to prepare`,
+      action: "Prepare",
+      to: "/admin/orders?status=Confirmed",
     });
   }
   if (processing.length > 0) {
@@ -1996,7 +2037,7 @@ export function adminOverview(store) {
     business: {
       openOrders: openOrders.length,
       openOrdersValue: openOrders.reduce((sum, order) => sum + order.total, 0),
-      awaitingFulfilment: placed.length + processing.length,
+      awaitingFulfilment: placed.length + confirmed.length + processing.length,
       lowStockCount: lowStock.length,
       outOfStockCount: outOfStock.length,
       publishedProducts: published.length,
@@ -2262,9 +2303,9 @@ export function getEmployeeOrder(store, actor, id) {
 
 /**
  * Move a branch order along THE SAME lifecycle the business already uses —
- * Placed → Processing → Shipped → Delivered, cancelled before shipping only.
- * The flow table is enforced by `updateAdminOrderStatus`; this contract adds
- * the branch boundary in front of it (orders.manage).
+ * Placed → Confirmed → Processing → Shipped → Out for Delivery → Delivered, cancelled before
+ * dispatch only. The flow table is enforced by `updateAdminOrderStatus`; this
+ * contract adds the branch boundary in front of it (orders.manage).
  */
 export function updateEmployeeOrderStatus(store, actor, id, status) {
   const scope = resolveStaffScope(store, actor);
@@ -2602,6 +2643,7 @@ export function employeeOverview(store, actor, query = {}) {
   const today = orders.filter((order) => onBusinessDay(order.createdAt, day));
   const open = orders.filter((order) => OPEN_ORDER_STATUSES.includes(order.status));
   const placed = orders.filter((order) => order.status === "Placed");
+  const confirmed = orders.filter((order) => order.status === "Confirmed");
   const processing = orders.filter((order) => order.status === "Processing");
   const stock = branchStockRows(store, branchId);
   const needsRestock = stock
@@ -2615,6 +2657,14 @@ export function employeeOverview(store, actor, query = {}) {
       label: `${placed.length} order${placed.length === 1 ? "" : "s"} waiting to be confirmed`,
       action: canManageOrders ? "Confirm" : "Review",
       to: "/employee/orders?status=Placed",
+    });
+  }
+  if (canOrders && confirmed.length > 0) {
+    attention.push({
+      key: "orders-confirmed",
+      label: `${confirmed.length} confirmed order${confirmed.length === 1 ? "" : "s"} ready to prepare`,
+      action: canManageOrders ? "Prepare" : "Review",
+      to: "/employee/orders?status=Confirmed",
     });
   }
   if (canOrders && processing.length > 0) {
@@ -2662,7 +2712,7 @@ export function employeeOverview(store, actor, query = {}) {
           value: open.reduce((sum, order) => sum + order.total, 0),
         }
       : null,
-    awaiting: canOrders ? { count: placed.length + processing.length } : null,
+    awaiting: canOrders ? { count: placed.length + confirmed.length + processing.length } : null,
     inventory: canInventory
       ? {
           rows: stock.length,
@@ -2703,7 +2753,7 @@ export function employeeBranchOperations(store, actor, query = {}) {
   const today = orders.filter((order) => onBusinessDay(order.createdAt, day));
   const open = orders.filter((order) => OPEN_ORDER_STATUSES.includes(order.status));
   const awaiting = orders
-    .filter((order) => order.status === "Placed" || order.status === "Processing")
+    .filter((order) => order.status === "Placed" || order.status === "Confirmed" || order.status === "Processing")
     .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)));
   const stock = branchStockRows(store, branchId);
   const needsRestock = stock.filter((row) => stockState(row) !== "ok");
@@ -2781,7 +2831,7 @@ export function employeeReports(store, actor, query = {}) {
   const stock = branchStockRows(store, branchId);
   const needsRestock = stock.filter((row) => stockState(row) !== "ok");
 
-  const ordersByStatus = ORDER_STATUS_LIST.map((status) => {
+  const ordersByStatus = statusesForReport(orders).map((status) => {
     const list = orders.filter((order) => order.status === status);
     return {
       status,

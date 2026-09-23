@@ -24,7 +24,10 @@ export default function NewsletterSection({ content }) {
           className="mx-auto mt-8"
         />
         <p className="mx-auto mt-4 max-w-md text-caption leading-relaxed text-text-muted">
-          {content.privacyNote}
+          {content.privacyNote}{" "}
+          <Link to="/privacy" className="underline underline-offset-2 hover:text-text-primary">
+            Privacy Policy
+          </Link>
         </p>
       </Container>
     </Section>

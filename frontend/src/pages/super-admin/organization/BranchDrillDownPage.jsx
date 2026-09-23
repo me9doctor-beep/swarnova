@@ -19,7 +19,7 @@ import {
   useEmployeeReports,
 } from "../../../hooks/useEmployeeOperations.js";
 import { useDocumentTitle } from "../../../hooks/useDocumentTitle.js";
-import { ORDER_STATUS_META, STOCK_STATE_META } from "../../../features/admin/operations.js";
+import { STOCK_STATE_META, orderStatusMeta } from "../../../features/admin/operations.js";
 import { ACCOUNT_STATUS_META } from "../../../features/super-admin/governance.js";
 import { formatter } from "../../../components/ui/Price.jsx";
 import { formatDate, formatDateTime } from "../../../utils/format.js";
@@ -35,10 +35,9 @@ import { formatDate, formatDateTime } from "../../../utils/format.js";
  * (`getEmployeeBranchOperations` / `getEmployeeReports`, scoped from the
  * session actor), with the branch named explicitly in the query. The provider
  * validates that name rather than obeying it: a global account may open any
- * boutique, and nothing about this route grants an account a branch it was not
- * given. The picture is read-only by design — the counter's actions belong to
- * the branch and Admin consoles, and stock or catalogue work stays where the
- * governance of each domain lives.
+ * boutique, and nothing about this route grants or removes authority.
+ * Acting on the book uses the shared operational pages, filtered to this
+ * boutique — not a second store.
  */
 export default function BranchDrillDownPage() {
   const { branchId } = useParams();
@@ -63,7 +62,7 @@ export default function BranchDrillDownPage() {
     <PageHeader
       eyebrow="Organisation · Branch Oversight"
       title={branch ? branch.name : "Branch"}
-      description="One boutique's operating picture, read through the platform's own branch contract — orders, stock, team and activity."
+      description="One boutique, as a view. This account stays organization-wide. Open the shared book to act — choosing All branches returns to the full organization."
       actions={
         <div className="flex flex-wrap items-center gap-3">
           {branch ? (
@@ -74,6 +73,15 @@ export default function BranchDrillDownPage() {
           <Button variant="secondary" size="sm" href="/super-admin/branches">
             <ArrowLeft size={13} strokeWidth={1.5} aria-hidden="true" />
             All Branches
+          </Button>
+          <Button size="sm" variant="outline" href={`/super-admin/orders?branch=${branchId}`}>
+            Orders
+          </Button>
+          <Button size="sm" variant="outline" href={`/super-admin/customers?branch=${branchId}`}>
+            Customers
+          </Button>
+          <Button size="sm" variant="outline" href={`/super-admin/inventory?branch=${branchId}`}>
+            Inventory
           </Button>
         </div>
       }
@@ -183,8 +191,8 @@ export default function BranchDrillDownPage() {
               {numbers.ordersByStatus.map((row) => (
                 <Table.Row key={row.status}>
                   <Table.Cell>
-                    <Badge variant={ORDER_STATUS_META[row.status]?.variant ?? "neutral"}>
-                      {row.status}
+                    <Badge variant={orderStatusMeta(row.status).variant}>
+                      {orderStatusMeta(row.status).label}
                     </Badge>
                   </Table.Cell>
                   <Table.Cell align="center">{row.count}</Table.Cell>
@@ -212,11 +220,14 @@ export default function BranchDrillDownPage() {
                   {branchOps.orders.awaiting.map((order) => (
                     <Table.Row key={order.id}>
                       <Table.Cell>
-                        <span className="block font-sans text-body-sm font-medium text-text-primary">
+                        <Link
+                          to={`/super-admin/orders/${order.id}`}
+                          className="block font-sans text-body-sm font-medium text-text-primary transition-colors duration-200 hover:text-brand-primary"
+                        >
                           {order.orderNumber}
-                        </span>
-                        <Badge variant={ORDER_STATUS_META[order.status]?.variant ?? "neutral"}>
-                          {order.status}
+                        </Link>
+                        <Badge variant={orderStatusMeta(order.status).variant}>
+                          {orderStatusMeta(order.status).label}
                         </Badge>
                       </Table.Cell>
                       <Table.Cell className="font-sans text-body-sm text-text-secondary">

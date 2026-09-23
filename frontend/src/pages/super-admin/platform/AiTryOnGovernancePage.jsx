@@ -150,8 +150,8 @@ function FeaturePanel({
           label={`Available to customers`}
           description={
             enabled
-              ? "The feature is live on the storefront right now."
-              : "The feature is hidden from the storefront until re-enabled."
+              ? "Live on the storefront — navigation, homepage and the direct route."
+              : "Hidden from navigation and the homepage. A direct link shows an unavailable notice, and generation is refused."
           }
           checked={enabled}
           disabled={busy}

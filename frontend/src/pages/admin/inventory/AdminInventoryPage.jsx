@@ -16,6 +16,7 @@ import {
 import { useGovernanceBranches } from "../../../hooks/useGovernanceOrganization.js";
 import { useGovernanceMutation } from "../../../hooks/useGovernanceMutation.js";
 import { useDocumentTitle } from "../../../hooks/useDocumentTitle.js";
+import { OperationsViewNote, useOperationsFrame } from "../../../features/operations/operationsBase.jsx";
 import { useAuth } from "../../../features/authentication/useAuth.js";
 import { useCapability } from "../../../features/authentication/useCapability.js";
 import { CAPABILITIES } from "../../../features/authentication/capabilities.js";
@@ -32,7 +33,8 @@ import { STOCK_FILTER_OPTIONS, STOCK_STATE_META } from "../../../features/admin/
  * movement history behind every line. No warehouse system, by design.
  */
 export default function AdminInventoryPage() {
-  useDocumentTitle("Inventory — Swarnova Admin");
+  const { base, consoleName } = useOperationsFrame();
+  useDocumentTitle(`Inventory — Swarnova ${consoleName}`);
 
   const [searchParams] = useSearchParams();
   const [search, setSearch] = useState("");
@@ -118,6 +120,7 @@ export default function AdminInventoryPage() {
             },
           ]}
         />
+        <OperationsViewNote narrowed={branchFilter !== "all"} />
 
         <AsyncBoundary
           status={status === "loading" ? "loading" : status === "error" ? "error" : "success"}
@@ -160,7 +163,7 @@ export default function AdminInventoryPage() {
                         ) : null}
                         <span>
                           <Link
-                            to={`/admin/products/${row.productId}`}
+                            to={`${base}/products/${row.productId}`}
                             className="block font-sans text-body-sm font-medium text-text-primary transition-colors duration-200 hover:text-brand-primary"
                           >
                             {row.productName}

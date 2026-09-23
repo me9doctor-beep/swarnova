@@ -97,6 +97,15 @@ export const CONSOLE_CONFIG = {
         ],
       },
       {
+        label: "Operations",
+        items: [
+          { label: "Orders", to: "/super-admin/orders", icon: ClipboardList },
+          { label: "Customers", to: "/super-admin/customers", icon: ShoppingBag },
+          { label: "Inventory", to: "/super-admin/inventory", icon: Boxes },
+          { label: "Reports", to: "/super-admin/reports", icon: BarChart3 },
+        ],
+      },
+      {
         label: "Organisation",
         items: [
           { label: "Branches", to: "/super-admin/branches", icon: Store },

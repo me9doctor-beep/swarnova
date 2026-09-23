@@ -7,7 +7,8 @@ import AsyncBoundary from "../../../components/ui/AsyncBoundary.jsx";
 import Table from "../../../components/ui/Table.jsx";
 import { useAdminCustomer } from "../../../hooks/useAdminOperations.js";
 import { useDocumentTitle } from "../../../hooks/useDocumentTitle.js";
-import { ORDER_STATUS_META } from "../../../features/admin/operations.js";
+import { orderStatusMeta } from "../../../features/admin/operations.js";
+import { useOperationsFrame } from "../../../features/operations/operationsBase.jsx";
 import { formatter } from "../../../components/ui/Price.jsx";
 import { formatDateTime } from "../../../utils/format.js";
 
@@ -18,15 +19,16 @@ import { formatDateTime } from "../../../utils/format.js";
  */
 export default function AdminCustomerDetailPage() {
   const { id } = useParams();
+  const { base, consoleName } = useOperationsFrame();
   const { status, data: customer, error, retry } = useAdminCustomer(id);
 
-  useDocumentTitle(`${customer?.name ?? "Customer"} — Swarnova Admin`);
+  useDocumentTitle(`${customer?.name ?? "Customer"} — Swarnova ${consoleName}`);
 
   return (
     <>
       <p className="mb-4">
         <Link
-          to="/admin/customers"
+          to={`${base}/customers`}
           className="inline-flex items-center gap-1.5 font-sans text-label uppercase tracking-[0.18em] text-text-secondary transition-colors duration-200 hover:text-brand-primary"
         >
           <ArrowLeft size={12} strokeWidth={1.5} aria-hidden="true" />
@@ -140,12 +142,12 @@ export default function AdminCustomerDetailPage() {
                     ]}
                   >
                     {(customer.orders ?? []).map((order) => {
-                      const meta = ORDER_STATUS_META[order.status] ?? ORDER_STATUS_META.Placed;
+                      const meta = orderStatusMeta(order.status);
                       return (
                         <Table.Row key={order.id}>
                           <Table.Cell>
                             <Link
-                              to={`/admin/orders/${order.id}`}
+                              to={`${base}/orders/${order.id}`}
                               className="font-sans text-body-sm font-medium text-text-primary transition-colors duration-200 hover:text-brand-primary"
                             >
                               {order.orderNumber}

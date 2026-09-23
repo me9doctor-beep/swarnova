@@ -10,6 +10,8 @@ import { useBodyScrollLock } from "../../hooks/useBodyScrollLock.js";
 import { useSite } from "../../hooks/useSite.js";
 import { useWishlist } from "../../state/WishlistContext.jsx";
 import { useCart } from "../../state/CartContext.jsx";
+import { useStorefrontAvailability } from "../../features/storefront/StorefrontFeatures.jsx";
+import { isFeatureRouteOpen } from "../../features/storefront/availability.js";
 import { cn } from "../../utils/cn.js";
 
 const HEADER_ACTIONS = [
@@ -81,14 +83,16 @@ function MobileMenu({ open, onClose, navigation, badges = {} }) {
           <Button href="/#collections" className="w-full" onClick={onClose}>
             Explore Collections
           </Button>
-          <Button
-            href="/ai-studio"
-            variant="outline"
-            className="w-full"
-            onClick={onClose}
-          >
-            Create with AI
-          </Button>
+          {navigation.some((item) => item.href === "/ai-studio") ? (
+            <Button
+              href="/ai-studio"
+              variant="outline"
+              className="w-full"
+              onClick={onClose}
+            >
+              Create with AI
+            </Button>
+          ) : null}
         </div>
 
         <div className="mt-8 flex items-center gap-2 border-t border-border-default pt-6 text-text-primary/70">
@@ -113,6 +117,7 @@ function MobileMenu({ open, onClose, navigation, badges = {} }) {
 export default function Header() {
   const { pathname } = useLocation();
   const { data: site } = useSite();
+  const availability = useStorefrontAvailability();
   const { count: wishlistCount } = useWishlist();
   const { count: bagCount } = useCart();
   const [scrolled, setScrolled] = useState(false);
@@ -130,6 +135,9 @@ export default function Header() {
   /* The two client-side customer states surface their counts on the icons
      that already own them — the IconButton badge slot, no new chrome. */
   const badges = { Wishlist: wishlistCount, "Shopping bag": bagCount };
+  /* One source — `site.navigation` — with a platform-availability filter.
+     A disabled AI Studio is omitted; nothing else is added. */
+  const navigation = site.navigation.filter((item) => isFeatureRouteOpen(item.href, availability));
 
   /* The transparent, light-tinted chrome is designed to sit over the hero
      photograph — the only customer route with a dark backdrop. Every other
@@ -179,7 +187,7 @@ export default function Header() {
                   from when eight links plus the four header actions overflowed
                   the row by 18px at exactly 1280px) and is left as it was. */}
               <ul className="flex items-center gap-5 2xl:gap-9">
-                {site.navigation.map((item) => (
+                {navigation.map((item) => (
                   <li key={item.href + item.label}>
                     <ContentLink
                       href={item.href}
@@ -239,7 +247,7 @@ export default function Header() {
       <MobileMenu
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
-        navigation={site.navigation}
+        navigation={navigation}
         badges={badges}
       />
     </>
