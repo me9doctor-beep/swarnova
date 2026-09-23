@@ -32,14 +32,16 @@ export const site = {
     shortMessage:
       "BIS HALLMARKED 22K GOLD  ·  FREE INSURED DELIVERY  ·  LIFETIME CARE",
   },
+  /* Four destinations only. "Jewellery" duplicated what `/collections` already
+     owns, so catalogue discovery reads through Collections alone. Virtual
+     Try-On is entered contextually (product detail, AI Studio, Saved Try-Ons),
+     and Our Story and Journal are editorial destinations reached from the
+     footer columns and the homepage's own sections — none of them needs a
+     primary slot. Their routes and pages are untouched. */
   navigation: [
     { label: "Home", href: "/#top" },
     { label: "Collections", href: "/#collections" },
-    { label: "Jewellery", href: "/collections" },
     { label: "AI Studio", href: "/ai-studio" },
-    { label: "Virtual Try-On", href: "/virtual-try-on" },
-    { label: "Our Story", href: "/#our-story" },
-    { label: "Journal", href: "/#journal" },
     { label: "Stores", href: "/#stores" },
   ],
   quickLinks: [
