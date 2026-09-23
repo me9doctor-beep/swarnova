@@ -74,13 +74,18 @@ test("navbar · desktop and mobile render one source — no second configuration
 
   assert.match(
     header,
-    /site\.navigation\.map\(/,
-    "the desktop nav maps `site.navigation` — the canonical list"
+    /site\.navigation\.filter\(/,
+    "the navbar filters `site.navigation` — still the one canonical list"
   );
   assert.match(
     header,
-    /navigation=\{site\.navigation\}/,
-    "the mobile menu is handed the same list, not a copy of it"
+    /navigation\.map\(/,
+    "desktop renders the filtered list, not a second configuration"
+  );
+  assert.match(
+    header,
+    /navigation=\{navigation\}/,
+    "the mobile menu is handed the same filtered list, not a copy of the raw array"
   );
   for (const label of DEMOTED) {
     assert.ok(

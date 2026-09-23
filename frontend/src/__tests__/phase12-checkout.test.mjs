@@ -584,7 +584,7 @@ test("20 · the Admin console sees the canonical order in the order book", () =>
   assert.equal(adminOrder.length, 1);
   assert.equal(adminOrder[0].customerName, "Aadya Sharma", "the book joins the customer directory");
   assert.equal(adminOrder[0].branchName, "Swarnova Bhubaneswar", "…and the branch record");
-  assert.deepEqual(adminOrder[0].actions, ["Processing", "Cancelled"], "the existing lifecycle actions apply");
+  assert.deepEqual(adminOrder[0].actions, ["Confirmed", "Cancelled"], "a placed order confirms before preparation");
 
   /* Reports read the same book — no checkout-only sales record exists. */
   const placed = adminReports(store).ordersByStatus.find((row) => row.status === "Placed");

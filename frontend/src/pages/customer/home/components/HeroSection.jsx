@@ -79,10 +79,12 @@ export default function HeroSection({ content }) {
             </p>
 
             <div className="mt-10 flex flex-wrap items-center gap-x-4 gap-y-4">
-              <Button href={primaryCta.href}>{primaryCta.label}</Button>
-              <Button href={secondaryCta.href} variant="outlineInverse">
-                {secondaryCta.label}
-              </Button>
+              {primaryCta ? <Button href={primaryCta.href}>{primaryCta.label}</Button> : null}
+              {secondaryCta ? (
+                <Button href={secondaryCta.href} variant="outlineInverse">
+                  {secondaryCta.label}
+                </Button>
+              ) : null}
             </div>
 
             {/* Bottom badge / trust micro-copy */}

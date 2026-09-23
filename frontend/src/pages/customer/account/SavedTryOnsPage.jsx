@@ -9,6 +9,8 @@ import Badge from "../../../components/ui/Badge.jsx";
 import { useSavedTryOns } from "../../../state/SavedTryOnsContext.jsx";
 import { useAddProductToBag } from "../../../hooks/useAddProductToBag.js";
 import { useDocumentTitle } from "../../../hooks/useDocumentTitle.js";
+import { useStorefrontAvailability } from "../../../features/storefront/StorefrontFeatures.jsx";
+import { isFeatureOpen } from "../../../features/storefront/availability.js";
 import { cn } from "../../../utils/cn.js";
 
 /* The two quiet confirmations the bag action can leave behind. */
@@ -28,6 +30,9 @@ const BAG_UNAVAILABLE_NOTE = "This piece is no longer in the catalogue.";
  */
 export default function SavedTryOnsPage() {
   useDocumentTitle("Saved Try-Ons — Swarnova");
+  const availability = useStorefrontAvailability();
+  const tryOnOpen = isFeatureOpen(availability, "virtualTryOn");
+  const studioOpen = isFeatureOpen(availability, "aiStudio");
 
   const { savedResults, removeResult, count } = useSavedTryOns();
   const { addCanonical } = useAddProductToBag();
@@ -107,7 +112,7 @@ export default function SavedTryOnsPage() {
       {savedResults.length === 0 ? (
         <EmptyState
           title="No Saved Fitting Previews"
-          action={<Button href="/virtual-try-on">Try Jewellery On</Button>}
+          action={tryOnOpen ? <Button href="/virtual-try-on">Try Jewellery On</Button> : null}
           className="py-16 text-center"
         >
           Step into our virtual fitting room to see Swarnova pieces or your custom AI concepts
@@ -205,14 +210,16 @@ export default function SavedTryOnsPage() {
                         <Eye size={12} strokeWidth={1.5} aria-hidden="true" />
                         View
                       </Button>
-                      <Button
-                        size="sm"
-                        className="flex-1"
-                        href={`/virtual-try-on?${tryOnParam}`}
-                      >
-                        <Camera size={12} strokeWidth={1.5} aria-hidden="true" />
-                        Fitting Room
-                      </Button>
+                      {tryOnOpen ? (
+                        <Button
+                          size="sm"
+                          className="flex-1"
+                          href={`/virtual-try-on?${tryOnParam}`}
+                        >
+                          <Camera size={12} strokeWidth={1.5} aria-hidden="true" />
+                          Fitting Room
+                        </Button>
+                      ) : null}
                     </div>
 
                       <div className="flex gap-2">
@@ -226,7 +233,7 @@ export default function SavedTryOnsPage() {
                           <ShoppingBag size={12} strokeWidth={1.5} aria-hidden="true" />
                           Add to Bag
                         </Button>
-                      ) : (
+                      ) : studioOpen ? (
                         <Button
                           variant="outline"
                           size="sm"
@@ -235,7 +242,7 @@ export default function SavedTryOnsPage() {
                         >
                           Atelier Concept
                         </Button>
-                      )}
+                      ) : null}
 
                       <Button
                         variant="outline"
@@ -285,16 +292,22 @@ export default function SavedTryOnsPage() {
             </h3>
 
             <div className="flex flex-wrap gap-3 border-t border-border-default pt-6">
-              <Button
-                href={`/virtual-try-on?${
-                  activeModalResult.result.sourceType === "product"
-                    ? `product=${activeModalResult.result.sourceId}`
-                    : `design=${activeModalResult.result.sourceId}`
-                }`}
-              >
-                <Camera size={13} strokeWidth={1.5} aria-hidden="true" />
-                Reopen in Fitting Room
-              </Button>
+              {tryOnOpen ? (
+                <Button
+                  href={`/virtual-try-on?${
+                    activeModalResult.result.sourceType === "product"
+                      ? `product=${activeModalResult.result.sourceId}`
+                      : `design=${activeModalResult.result.sourceId}`
+                  }`}
+                >
+                  <Camera size={13} strokeWidth={1.5} aria-hidden="true" />
+                  Reopen in Fitting Room
+                </Button>
+              ) : (
+                <p className="font-sans text-caption uppercase tracking-[0.16em] text-text-muted">
+                  Paused by the house
+                </p>
+              )}
               {activeModalResult.result.sourceType === "product" && (
                 <Button
                   variant="outline"

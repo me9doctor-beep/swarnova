@@ -17,7 +17,7 @@ import { useDocumentTitle } from "../../../hooks/useDocumentTitle.js";
 import { useCapability } from "../../../features/authentication/useCapability.js";
 import { CAPABILITIES } from "../../../features/authentication/capabilities.js";
 import { employeeOperationsService } from "../../../services/employeeOperationsService.js";
-import { ORDER_ACTIONS, ORDER_STATUS_META } from "../../../features/admin/operations.js";
+import { ORDER_ACTIONS, orderStatusMeta } from "../../../features/admin/operations.js";
 import { formatter } from "../../../components/ui/Price.jsx";
 import { formatDateTime } from "../../../utils/format.js";
 
@@ -84,7 +84,7 @@ export default function EmployeeOrderDetailPage() {
         ) : (
           <>
             {(() => {
-              const meta = ORDER_STATUS_META[order.status] ?? ORDER_STATUS_META.Placed;
+              const meta = orderStatusMeta(order.status);
               return (
                 <PageHeader
                   eyebrow={`${order.orderNumber} · Orders`}

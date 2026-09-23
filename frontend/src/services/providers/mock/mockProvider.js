@@ -109,6 +109,13 @@
  */
 import * as db from "../../../mock/data/index.js";
 import * as gov from "./governanceStore.js";
+import {
+  HOMEPAGE_FEATURE_SECTIONS,
+  isFeatureEnabled,
+  readingFromSettings,
+  filterFeatureLinks,
+  omitClosedFeatureLinks,
+} from "../../../features/storefront/availability.js";
 
 /** Reuse the governance store's detached-copy helper. */
 const emit = gov.emit;
@@ -298,13 +305,28 @@ export const mockProvider = {
   },
 
   getSite() {
-    return Promise.resolve(emit(db.site));
+    const site = emit(db.site);
+    const reading = readingFromSettings(this.getStore().settings);
+    site.navigation = filterFeatureLinks(site.navigation, reading);
+    site.quickLinks = filterFeatureLinks(site.quickLinks, reading);
+    site.experience = filterFeatureLinks(site.experience, reading);
+    return Promise.resolve(site);
   },
 
   getHomepage() {
-    const homepage = emit(this.getStore().homepage);
+    const store = this.getStore();
+    const reading = readingFromSettings(store.settings);
+    const homepage = emit(store.homepage);
     homepage.sections = homepage.sections
       .filter((section) => section.enabled !== false)
+      .filter((section) => {
+        const feature = HOMEPAGE_FEATURE_SECTIONS[section.type];
+        return !feature || isFeatureEnabled(store.settings, feature);
+      })
+      .map((section) => ({
+        ...section,
+        content: omitClosedFeatureLinks(section.content, reading),
+      }))
       .sort(byOrder);
     return Promise.resolve(homepage);
   },
@@ -380,11 +402,16 @@ export const mockProvider = {
     return Promise.resolve(emit(db.aiStudio));
   },
 
+  getStorefrontFeatures() {
+    return Promise.resolve(gov.storefrontFeatures(this.getStore()));
+  },
+
   getAiAtelier() {
     return Promise.resolve(emit(db.aiAtelier));
   },
 
   async generateAiDesign(request = {}) {
+    gov.assertStorefrontFeature(this.getStore(), "aiStudio");
     const prompt = String(request.prompt ?? "").trim();
     if (!prompt) {
       return Promise.reject(
@@ -403,6 +430,7 @@ export const mockProvider = {
   },
 
   async createAiVariations(conceptId) {
+    gov.assertStorefrontFeature(this.getStore(), "aiStudio");
     await wait(AI_RENDER_DELAY);
     const design = db.aiDesigns.find((item) => item.id === conceptId);
     if (!design) {
@@ -415,6 +443,7 @@ export const mockProvider = {
   },
 
   async refineAiDesign(request = {}) {
+    gov.assertStorefrontFeature(this.getStore(), "aiStudio");
     const feedback = String(request.feedback ?? "").trim();
     if (!feedback) {
       return Promise.reject(new Error("Describe how you would like the design refined."));
@@ -446,6 +475,7 @@ export const mockProvider = {
   },
 
   async createTryOn(request = {}) {
+    gov.assertStorefrontFeature(this.getStore(), "virtualTryOn");
     const { sourceType, sourceId } = request;
     const photo = request.photo;
 

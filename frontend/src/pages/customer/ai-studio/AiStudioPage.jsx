@@ -15,6 +15,8 @@ import { useAiAtelier } from "../../../hooks/useAiAtelier.js";
 import { useAiDesignSession } from "../../../hooks/useAiDesignSession.js";
 import { useDocumentTitle } from "../../../hooks/useDocumentTitle.js";
 import { useSavedDesigns } from "../../../state/SavedDesignsContext.jsx";
+import { useStorefrontAvailability } from "../../../features/storefront/StorefrontFeatures.jsx";
+import { isFeatureOpen } from "../../../features/storefront/availability.js";
 
 /**
  * AI JEWELLERY STUDIO — the dedicated customer atelier at `/ai-studio`.
@@ -28,6 +30,7 @@ import { useSavedDesigns } from "../../../state/SavedDesignsContext.jsx";
  * lives in the session hook → service → provider; the page only composes.
  */
 export default function AiStudioPage() {
+  const availability = useStorefrontAvailability();
   const { status, data: atelier, error, retry } = useAiAtelier();
   const studio = useAiDesignSession();
   const { designs, save, remove, has } = useSavedDesigns();
@@ -107,11 +110,12 @@ export default function AiStudioPage() {
     document.getElementById("atelier")?.scrollIntoView();
   };
 
+  /* Entry is the route guard. This page only waits for the atelier document. */
   if (status !== "success") {
     return (
       <Container className="pb-20 pt-[160px] sm:pb-28">
         <AsyncBoundary
-          status={status}
+          status={status === "error" ? "error" : "loading"}
           error={error}
           onRetry={retry}
           className="min-h-[320px] py-0"
@@ -130,7 +134,10 @@ export default function AiStudioPage() {
   const catalogueHref = concept?.category
     ? `/products?category=${concept.category}`
     : nextSteps.cta.href;
-  const tryOnHref = concept ? `/virtual-try-on?design=${concept.id}` : undefined;
+  const tryOnHref =
+    concept && isFeatureOpen(availability, "virtualTryOn")
+      ? `/virtual-try-on?design=${concept.id}`
+      : undefined;
 
   return (
     <>

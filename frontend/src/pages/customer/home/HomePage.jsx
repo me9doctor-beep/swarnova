@@ -3,6 +3,12 @@ import { useLocation } from "react-router-dom";
 import AsyncBoundary from "../../../components/ui/AsyncBoundary.jsx";
 import ErrorBoundary from "../../../components/ui/ErrorBoundary.jsx";
 import { useHomepage } from "../../../hooks/useHomepage.js";
+import { useStorefrontAvailability } from "../../../features/storefront/StorefrontFeatures.jsx";
+import {
+  HOMEPAGE_FEATURE_SECTIONS,
+  isFeatureOpen,
+  omitClosedFeatureLinks,
+} from "../../../features/storefront/availability.js";
 
 import HeroSection from "./components/HeroSection.jsx";
 import TrustStripSection from "./components/TrustStripSection.jsx";
@@ -52,6 +58,7 @@ const sectionRegistry = {
  */
 export default function HomePage() {
   const { status, data: homepage, error, retry } = useHomepage();
+  const availability = useStorefrontAvailability();
   const { hash } = useLocation();
 
   useEffect(() => {
@@ -75,19 +82,24 @@ export default function HomePage() {
         emptyMessage="The homepage is being prepared. Please check back shortly."
         className="flex min-h-[60vh] items-center justify-center"
       >
-        {(homepage?.sections ?? []).map((section) => {
-          const SectionComponent = sectionRegistry[section.type];
-          if (!SectionComponent) return null;
-          return (
-            <ErrorBoundary
-              key={section.id ?? section.type}
-              variant="section"
-              label={section.type}
-            >
-              <SectionComponent content={section.content} />
-            </ErrorBoundary>
-          );
-        })}
+        {(homepage?.sections ?? [])
+          .filter((section) => {
+            const feature = HOMEPAGE_FEATURE_SECTIONS[section.type];
+            return !feature || isFeatureOpen(availability, feature);
+          })
+          .map((section) => {
+            const SectionComponent = sectionRegistry[section.type];
+            if (!SectionComponent) return null;
+            return (
+              <ErrorBoundary
+                key={section.id ?? section.type}
+                variant="section"
+                label={section.type}
+              >
+                <SectionComponent content={omitClosedFeatureLinks(section.content, availability)} />
+              </ErrorBoundary>
+            );
+          })}
       </AsyncBoundary>
     </>
   );

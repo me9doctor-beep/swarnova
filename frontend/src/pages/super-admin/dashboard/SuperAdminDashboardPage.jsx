@@ -43,7 +43,7 @@ export default function SuperAdminDashboardPage() {
       <PageHeader
         eyebrow={ROLE_LABELS[ROLES.SUPER_ADMIN]}
         title="Platform Command Centre"
-        description="One command centre for one jewellery platform — catalogue, media, content, organisation and settings, all governed from here."
+        description="One command centre for one jewellery platform — governance, and organization-wide orders, customers, inventory and reports from the same book head office operates."
         actions={
           <Button size="sm" href="/super-admin/products?status=submitted">
             Review Queue
@@ -87,6 +87,23 @@ export default function SuperAdminDashboardPage() {
                   </span>
                 </li>
               </ul>
+            </section>
+
+            <section aria-label="Operational oversight" className="space-y-4">
+              <h2 className="font-sans text-label uppercase tracking-[0.24em] text-text-secondary">
+                Operational Oversight
+              </h2>
+              <p className="max-w-2xl font-sans text-body-sm text-text-secondary">
+                Organization-wide orders, customers, inventory and reports — the same
+                canonical book head office operates, not a second store. Branch drill-down
+                remains the boutique lens.
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" href="/super-admin/orders">Orders</Button>
+                <Button size="sm" variant="outline" href="/super-admin/customers">Customers</Button>
+                <Button size="sm" variant="outline" href="/super-admin/inventory">Inventory</Button>
+                <Button size="sm" variant="outline" href="/super-admin/reports">Reports</Button>
+              </div>
             </section>
 
             {/* ----- Platform summaries ---------------------------------- */}

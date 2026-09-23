@@ -20,7 +20,7 @@ import { useDocumentTitle } from "../../../hooks/useDocumentTitle.js";
 import { useCapability } from "../../../features/authentication/useCapability.js";
 import { CAPABILITIES } from "../../../features/authentication/capabilities.js";
 import { ROLE_LABELS, ROLES } from "../../../features/authentication/roles.js";
-import { ORDER_STATUS_META } from "../../../features/admin/operations.js";
+import { orderStatusMeta } from "../../../features/admin/operations.js";
 import { auditActionLabel, auditActionVariant } from "../../../features/super-admin/governance.js";
 import { formatter } from "../../../components/ui/Price.jsx";
 import { formatDateTime, formatDate } from "../../../utils/format.js";
@@ -157,7 +157,7 @@ export default function AdminDashboardPage() {
                 </div>
                 <ul className="divide-y divide-border-subtle border border-border-default bg-surface-primary">
                   {overview.recentOrders.map((order) => {
-                    const meta = ORDER_STATUS_META[order.status] ?? ORDER_STATUS_META.Placed;
+                    const meta = orderStatusMeta(order.status);
                     return (
                       <li key={order.id} className="px-5 py-3.5">
                         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
@@ -292,13 +292,13 @@ export default function AdminDashboardPage() {
                 </h2>
                 {overview.ordersNeedingAttention.length === 0 ? (
                   <EmptyState title="No open orders waiting">
-                    Every placed order has been confirmed and every confirmed
-                    order is on its way.
+                    Every placed order has been confirmed, and every confirmed
+                    order has entered preparation.
                   </EmptyState>
                 ) : (
                   <ul className="divide-y divide-border-subtle border border-border-default bg-surface-primary">
                     {overview.ordersNeedingAttention.map((order) => {
-                      const meta = ORDER_STATUS_META[order.status] ?? ORDER_STATUS_META.Placed;
+                      const meta = orderStatusMeta(order.status);
                       return (
                         <li key={order.id} className="px-5 py-3.5">
                           <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">

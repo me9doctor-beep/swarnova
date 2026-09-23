@@ -16,7 +16,8 @@ import { useCapability } from "../../../features/authentication/useCapability.js
 import { CAPABILITIES } from "../../../features/authentication/capabilities.js";
 import { actorLabel } from "../../../features/authentication/roles.js";
 import { adminOperationsService } from "../../../services/adminOperationsService.js";
-import { ORDER_ACTIONS, ORDER_STATUS_META } from "../../../features/admin/operations.js";
+import { ORDER_ACTIONS, orderStatusMeta } from "../../../features/admin/operations.js";
+import { useOperationsFrame } from "../../../features/operations/operationsBase.jsx";
 import { formatter } from "../../../components/ui/Price.jsx";
 import { formatDateTime } from "../../../utils/format.js";
 
@@ -28,13 +29,14 @@ import { formatDateTime } from "../../../utils/format.js";
  */
 export default function AdminOrderDetailPage() {
   const { id } = useParams();
+  const { base, consoleName } = useOperationsFrame();
   const { user, role } = useAuth();
   const { can: canDo } = useCapability();
   const { status, data: order, error, retry } = useAdminOrder(id);
   const mutation = useGovernanceMutation();
   const [pending, setPending] = useState(null); // the target status awaiting confirmation
 
-  useDocumentTitle(`${order?.orderNumber ?? "Order"} — Swarnova Admin`);
+  useDocumentTitle(`${order?.orderNumber ?? "Order"} — Swarnova ${consoleName}`);
 
   const canManage = canDo(CAPABILITIES.ORDERS_MANAGE);
 
@@ -59,7 +61,7 @@ export default function AdminOrderDetailPage() {
     <>
       <p className="mb-4">
         <Link
-          to="/admin/orders"
+          to={`${base}/orders`}
           className="inline-flex items-center gap-1.5 font-sans text-label uppercase tracking-[0.18em] text-text-secondary transition-colors duration-200 hover:text-brand-primary"
         >
           <ArrowLeft size={12} strokeWidth={1.5} aria-hidden="true" />
@@ -80,7 +82,7 @@ export default function AdminOrderDetailPage() {
         ) : (
           <>
             {(() => {
-              const meta = ORDER_STATUS_META[order.status] ?? ORDER_STATUS_META.Placed;
+              const meta = orderStatusMeta(order.status);
               return (
                 <PageHeader
                   eyebrow={`${order.orderNumber} · Orders`}
@@ -241,7 +243,7 @@ export default function AdminOrderDetailPage() {
                       {order.shippingAddress?.phone ?? "—"}
                     </p>
                     <Link
-                      to={`/admin/customers/${order.customerId}`}
+                      to={`${base}/customers/${order.customerId}`}
                       className="inline-flex items-center gap-1.5 font-sans text-label uppercase tracking-[0.18em] text-brand-primary transition-colors duration-200 hover:text-brand-accent-strong"
                     >
                       View Customer

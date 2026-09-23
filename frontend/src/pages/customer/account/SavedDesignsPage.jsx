@@ -8,6 +8,8 @@ import EmptyState from "../../../components/ui/EmptyState.jsx";
 import IconButton from "../../../components/ui/IconButton.jsx";
 import { useSavedDesigns } from "../../../state/SavedDesignsContext.jsx";
 import { useDocumentTitle } from "../../../hooks/useDocumentTitle.js";
+import { useStorefrontAvailability } from "../../../features/storefront/StorefrontFeatures.jsx";
+import { isFeatureOpen } from "../../../features/storefront/availability.js";
 
 /**
  * SAVED AI DESIGNS — the member's own studio shelf.
@@ -22,6 +24,9 @@ import { useDocumentTitle } from "../../../hooks/useDocumentTitle.js";
  */
 export default function SavedDesignsPage() {
   useDocumentTitle("Saved AI Designs — Swarnova");
+  const availability = useStorefrontAvailability();
+  const studioOpen = isFeatureOpen(availability, "aiStudio");
+  const tryOnOpen = isFeatureOpen(availability, "virtualTryOn");
 
   const { designs, remove, count } = useSavedDesigns();
   const [activeModalDesign, setActiveModalDesign] = useState(null);
@@ -78,7 +83,7 @@ export default function SavedDesignsPage() {
       {designs.length === 0 ? (
         <EmptyState
           title="No AI Designs Saved Yet"
-          action={<Button href="/ai-studio">Enter AI Studio</Button>}
+          action={studioOpen ? <Button href="/ai-studio">Enter AI Studio</Button> : null}
           className="py-16 text-center"
         >
           Envision jewellery using natural words and artistic directions in our AI Atelier.
@@ -156,26 +161,30 @@ export default function SavedDesignsPage() {
                         <Eye size={12} strokeWidth={1.5} aria-hidden="true" />
                         View
                       </Button>
-                      <Button
-                        size="sm"
-                        className="flex-1"
-                        href={`/ai-studio?concept=${concept.id}`}
-                      >
-                        <Sparkles size={12} strokeWidth={1.5} aria-hidden="true" />
-                        Refine
-                      </Button>
+                      {studioOpen ? (
+                        <Button
+                          size="sm"
+                          className="flex-1"
+                          href={`/ai-studio?concept=${concept.id}`}
+                        >
+                          <Sparkles size={12} strokeWidth={1.5} aria-hidden="true" />
+                          Refine
+                        </Button>
+                      ) : null}
                     </div>
 
                     <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="flex-1"
-                        href={`/virtual-try-on?design=${concept.id}`}
-                      >
-                        <Camera size={12} strokeWidth={1.5} aria-hidden="true" />
-                        Try On
-                      </Button>
+                      {tryOnOpen ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          href={`/virtual-try-on?design=${concept.id}`}
+                        >
+                          <Camera size={12} strokeWidth={1.5} aria-hidden="true" />
+                          Try On
+                        </Button>
+                      ) : null}
                       <Button
                         variant="outline"
                         size="sm"
@@ -241,17 +250,21 @@ export default function SavedDesignsPage() {
             </div>
 
             <div className="flex flex-wrap gap-3 border-t border-border-default pt-6">
-              <Button href={`/ai-studio?concept=${activeModalDesign.id}`}>
-                <Sparkles size={13} strokeWidth={1.5} aria-hidden="true" />
-                Continue Designing in Studio
-              </Button>
-              <Button
-                variant="outline"
-                href={`/virtual-try-on?design=${activeModalDesign.id}`}
-              >
-                <Camera size={13} strokeWidth={1.5} aria-hidden="true" />
-                Try It On
-              </Button>
+              {studioOpen ? (
+                <Button href={`/ai-studio?concept=${activeModalDesign.id}`}>
+                  <Sparkles size={13} strokeWidth={1.5} aria-hidden="true" />
+                  Continue Designing in Studio
+                </Button>
+              ) : null}
+              {tryOnOpen ? (
+                <Button
+                  variant="outline"
+                  href={`/virtual-try-on?design=${activeModalDesign.id}`}
+                >
+                  <Camera size={13} strokeWidth={1.5} aria-hidden="true" />
+                  Try It On
+                </Button>
+              ) : null}
             </div>
           </div>
         ) : null}

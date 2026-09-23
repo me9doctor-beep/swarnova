@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import PageHeader from "../../../components/layout/PageHeader.jsx";
 import Button from "../../../components/ui/Button.jsx";
 import Badge from "../../../components/ui/Badge.jsx";
@@ -8,7 +8,9 @@ import AsyncBoundary from "../../../components/ui/AsyncBoundary.jsx";
 import Table from "../../../components/ui/Table.jsx";
 import FilterBar from "../../../components/super-admin/FilterBar.jsx";
 import { useAdminCustomers } from "../../../hooks/useAdminOperations.js";
+import { useGovernanceBranches } from "../../../hooks/useGovernanceOrganization.js";
 import { useDocumentTitle } from "../../../hooks/useDocumentTitle.js";
+import { OperationsViewNote, useOperationsFrame } from "../../../features/operations/operationsBase.jsx";
 import { formatter } from "../../../components/ui/Price.jsx";
 import { formatDate } from "../../../utils/format.js";
 
@@ -20,11 +22,33 @@ import { formatDate } from "../../../utils/format.js";
  * sensitive a business view does not need.
  */
 export default function AdminCustomersPage() {
-  useDocumentTitle("Customers — Swarnova Admin");
+  const { base, consoleName } = useOperationsFrame();
+  useDocumentTitle(`Customers — Swarnova ${consoleName}`);
 
+  const [searchParams] = useSearchParams();
   const [search, setSearch] = useState("");
-  const query = useMemo(() => ({ search: search.trim() || undefined }), [search]);
+  const [branchFilter, setBranchFilter] = useState(searchParams.get("branch") ?? "all");
+
+  useEffect(() => {
+    setBranchFilter(searchParams.get("branch") ?? "all");
+  }, [searchParams]);
+
+  const query = useMemo(
+    () => ({
+      search: search.trim() || undefined,
+      branchId: branchFilter === "all" ? undefined : branchFilter,
+    }),
+    [search, branchFilter]
+  );
   const { status, data: customers, error, retry } = useAdminCustomers(query);
+  const branches = useGovernanceBranches();
+  const branchOptions = [
+    { value: "all", label: "All branches" },
+    ...(branches.data ?? []).map((branch) => ({
+      value: branch.id,
+      label: branch.name,
+    })),
+  ];
 
   return (
     <>
@@ -71,7 +95,7 @@ export default function AdminCustomersPage() {
                 <Table.Row key={customer.id}>
                   <Table.Cell>
                     <Link
-                      to={`/admin/customers/${customer.id}`}
+                      to={`${base}/customers/${customer.id}`}
                       className="block font-sans text-body-sm font-medium text-text-primary transition-colors duration-200 hover:text-brand-primary"
                     >
                       {customer.name}
@@ -104,7 +128,7 @@ export default function AdminCustomersPage() {
                     {customer.lastOrderAt ? formatDate(customer.lastOrderAt) : "—"}
                   </Table.Cell>
                   <Table.Cell align="right">
-                    <Button variant="ghost" size="sm" to={`/admin/customers/${customer.id}`}>
+                    <Button variant="ghost" size="sm" to={`${base}/customers/${customer.id}`}>
                       View
                     </Button>
                   </Table.Cell>

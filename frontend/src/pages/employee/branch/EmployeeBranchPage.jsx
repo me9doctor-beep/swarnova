@@ -8,7 +8,7 @@ import StatCard from "../../../components/super-admin/StatCard.jsx";
 import Table from "../../../components/ui/Table.jsx";
 import { useEmployeeBranchOperations } from "../../../hooks/useEmployeeOperations.js";
 import { useDocumentTitle } from "../../../hooks/useDocumentTitle.js";
-import { ORDER_STATUS_META, STOCK_STATE_META } from "../../../features/admin/operations.js";
+import { STOCK_STATE_META, orderStatusMeta } from "../../../features/admin/operations.js";
 import { formatter } from "../../../components/ui/Price.jsx";
 import { formatDate, formatDateTime } from "../../../utils/format.js";
 
@@ -199,7 +199,7 @@ export default function EmployeeBranchPage() {
                 ) : (
                   <ul className="divide-y divide-border-subtle border border-border-default bg-surface-primary">
                     {branchOps.orders.awaiting.map((order) => {
-                      const meta = ORDER_STATUS_META[order.status] ?? ORDER_STATUS_META.Placed;
+                      const meta = orderStatusMeta(order.status);
                       return (
                         <li key={order.id} className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-5 py-4">
                           <span>

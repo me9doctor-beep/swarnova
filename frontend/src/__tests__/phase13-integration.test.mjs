@@ -42,6 +42,7 @@ import {
   listInventoryMovements,
   placeCheckoutOrder,
   registerCustomer,
+  RESERVING_ORDER_STATUSES,
   updateAdminOrderStatus,
 } from "../services/providers/mock/governanceStore.js";
 import { GST_RATE } from "../services/pricingService.js";
@@ -299,7 +300,7 @@ test("order book · every line mirrors the canonical product and every total rec
 test("inventory · the seeded book reserves exactly what the open orders hold", () => {
   const store = createGovernanceStore();
   const demand = new Map();
-  for (const order of store.orders.filter((item) => ["Placed", "Processing"].includes(item.status))) {
+  for (const order of store.orders.filter((item) => RESERVING_ORDER_STATUSES.includes(item.status))) {
     for (const item of order.items) {
       const key = `${item.id}|${order.branchId}`;
       demand.set(key, (demand.get(key) ?? 0) + item.quantity);
@@ -337,6 +338,12 @@ test("inventory · dispatch retires the allocation, cancellation returns it", ()
   const ledgerAtAllocation = ledgerLines();
   assert.match(store.inventoryMovements[0].note, new RegExp(`Allocated to order ${shippedOrder.orderNumber}`));
 
+  updateAdminOrderStatus(store, shippedOrder.id, "Confirmed", desk);
+  assert.deepEqual(
+    { available: row(shippedOrder.branchId).available, reserved: row(shippedOrder.branchId).reserved },
+    allocated,
+    "confirmation holds the reservation — it does not move stock"
+  );
   updateAdminOrderStatus(store, shippedOrder.id, "Processing", desk);
   assert.deepEqual(
     { available: row(shippedOrder.branchId).available, reserved: row(shippedOrder.branchId).reserved },
@@ -353,6 +360,17 @@ test("inventory · dispatch retires the allocation, cancellation returns it", ()
     store.auditLog.find((entry) => entry.entityId === shippedOrder.id).detail,
     /handed over for delivery\./,
     "the trail carries the consequence, not just the status"
+  );
+
+  const onTheRoad = updateAdminOrderStatus(store, shippedOrder.id, "Out for Delivery", desk);
+  assert.equal(onTheRoad.status, "Out for Delivery");
+  assert.deepEqual(onTheRoad.actions, ["Delivered"], "delivery follows the road, not a skip");
+  assert.equal(row(shippedOrder.branchId).reserved, afterDispatch.reserved, "out for delivery does not move stock again");
+  assert.equal(row(shippedOrder.branchId).available, afterDispatch.available);
+  assert.throws(
+    () => updateAdminOrderStatus(store, shippedOrder.id, "Cancelled", desk),
+    /cannot move/,
+    "a consignment already dispatched cannot be cancelled"
   );
 
   const cancelled = place("P13-CANCEL", 1);
@@ -375,7 +393,7 @@ test("inventory · dispatch retires the allocation, cancellation returns it", ()
   /* And the invariant survives: whatever the book now holds is what its open
      orders hold, including the order that was just cancelled. */
   const demand = new Map();
-  for (const order of store.orders.filter((item) => ["Placed", "Processing"].includes(item.status))) {
+  for (const order of store.orders.filter((item) => RESERVING_ORDER_STATUSES.includes(item.status))) {
     for (const item of order.items) {
       const key = `${item.id}|${order.branchId}`;
       demand.set(key, (demand.get(key) ?? 0) + item.quantity);
@@ -635,18 +653,9 @@ test("links · every content href resolves to a real route or a documented gap",
   }));
   const routed = (pathname) => matchers.some((entry) => entry.test.test(pathname));
 
-  /* Written content that still waits for a page of its own. The audit records
-     these as content gaps; a new unrouted link must not join quietly. */
-  const PENDING_PAGES = new Set([
-    "/contact",
-    "/faq",
-    "/shipping",
-    "/returns",
-    "/warranty",
-    "/care-guide",
-    "/privacy",
-    "/terms",
-  ]);
+  /* Phase 14.1 approved these as house pages. A new unrouted link must not
+     join quietly — there is no remaining content-gap exception. */
+  const PENDING_PAGES = new Set();
 
   const problems = [];
   for (const file of sourceFiles(join(SRC_DIR, "mock/data"))) {

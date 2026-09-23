@@ -8,6 +8,8 @@ import Rating from "../ui/Rating.jsx";
 import ProductActions from "./ProductActions.jsx";
 import ProductSpecifications from "./ProductSpecifications.jsx";
 import { useWishlist } from "../../state/WishlistContext.jsx";
+import { useStorefrontAvailability } from "../../features/storefront/StorefrontFeatures.jsx";
+import { isFeatureOpen } from "../../features/storefront/availability.js";
 import { cn } from "../../utils/cn.js";
 
 /** Copy for the availability values the product contract actually carries. */
@@ -28,9 +30,11 @@ const AVAILABILITY = {
  */
 export default function ProductSummary({ product, category, collection }) {
   const { has, toggle } = useWishlist();
+  const features = useStorefrontAvailability();
+  const tryOnOpen = isFeatureOpen(features, "virtualTryOn");
   const wished = has(product.id);
   const lineage = collection?.name ?? category?.name;
-  const availability = product.availability && AVAILABILITY[product.availability];
+  const stockLabel = product.availability && AVAILABILITY[product.availability];
 
   return (
     <div>
@@ -53,9 +57,9 @@ export default function ProductSummary({ product, category, collection }) {
       {/* The price gets its own register, hairlined above and below. */}
       <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3 border-y border-border-default py-5">
         <Price amount={product.price} currency={product.currency} className="text-h3" />
-        {availability && (
+        {stockLabel && (
           <Badge variant="success" dot>
-            {availability}
+            {stockLabel}
           </Badge>
         )}
       </div>
@@ -66,7 +70,7 @@ export default function ProductSummary({ product, category, collection }) {
 
       {/* The piece carries into the shared fitting room — only where the
           catalogue contract says it is eligible, never a misleading CTA. */}
-      {product.tryOnAvailable && (
+      {product.tryOnAvailable && tryOnOpen && (
         <Button
           variant="outline"
           href={`/virtual-try-on?product=${product.id}`}

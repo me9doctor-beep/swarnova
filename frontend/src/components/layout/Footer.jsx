@@ -6,6 +6,8 @@ import Eyebrow from "../ui/Eyebrow.jsx";
 import SocialIcon from "../ui/SocialIcon.jsx";
 import NewsletterForm from "../forms/NewsletterForm.jsx";
 import { useSite } from "../../hooks/useSite.js";
+import { useStorefrontAvailability } from "../../features/storefront/StorefrontFeatures.jsx";
+import { filterFeatureLinks } from "../../features/storefront/availability.js";
 
 function FooterColumn({ title, links }) {
   return (
@@ -31,7 +33,11 @@ function FooterColumn({ title, links }) {
 
 export default function Footer() {
   const { data: site } = useSite();
+  const availability = useStorefrontAvailability();
   if (!site) return null;
+
+  const quickLinks = filterFeatureLinks(site.quickLinks, availability);
+  const experience = filterFeatureLinks(site.experience, availability);
 
   return (
     <footer className="bg-surface-inverse text-text-inverse/75">
@@ -77,13 +83,13 @@ export default function Footer() {
           </div>
 
           <div className="lg:col-span-2">
-            <FooterColumn title="Quick Links" links={site.quickLinks} />
+            <FooterColumn title="Quick Links" links={quickLinks} />
           </div>
           <div className="lg:col-span-2">
             <FooterColumn title="Customer Service" links={site.customerService} />
           </div>
           <div className="lg:col-span-2">
-            <FooterColumn title="Experience" links={site.experience} />
+            <FooterColumn title="Experience" links={experience} />
           </div>
 
           {/* Newsletter */}

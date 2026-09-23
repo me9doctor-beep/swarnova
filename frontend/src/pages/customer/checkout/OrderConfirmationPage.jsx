@@ -9,15 +9,11 @@ import EmptyState from "../../../components/ui/EmptyState.jsx";
 import AsyncBoundary from "../../../components/ui/AsyncBoundary.jsx";
 import { useOrder } from "../../../hooks/useOrder.js";
 import { useDocumentTitle } from "../../../hooks/useDocumentTitle.js";
-
-const STATUS_BADGE_VARIANTS = {
-  Delivered: "success",
-  Shipped: "info",
-  Processing: "brand",
-  Placed: "brand",
-  Confirmed: "neutral",
-  Cancelled: "error",
-};
+import {
+  customerNextStep,
+  customerReceiptTitle,
+  orderStatusMeta,
+} from "../../../features/orders/orderLifecycle.js";
 
 /**
  * ORDER CONFIRMATION (Phase 12)
@@ -32,8 +28,10 @@ export default function OrderConfirmationPage() {
   const { id } = useParams();
   const { order, status, error, retry } = useOrder(id);
 
+  const meta = order ? orderStatusMeta(order.status) : null;
+
   useDocumentTitle(
-    order ? `Order ${order.orderNumber} Confirmed — Swarnova` : "Order Confirmation — Swarnova"
+    order ? `Order ${order.orderNumber} ${meta.label} — Swarnova` : "Order Confirmation — Swarnova"
   );
 
   if (status !== "success" && !order) {
@@ -90,12 +88,12 @@ export default function OrderConfirmationPage() {
           <div className="mt-4 flex flex-col items-center gap-3 sm:flex-row sm:items-center sm:gap-4">
             <CheckCircle2 size={30} strokeWidth={1.4} className="text-state-success" aria-hidden="true" />
             <h1 className="font-serif text-h2 font-medium text-text-primary sm:text-h1">
-              Thank you — your order is confirmed
+              {customerReceiptTitle(order.status)}
             </h1>
           </div>
           <p className="mt-3 font-serif text-body text-text-secondary">
-            Order <span className="font-medium text-text-primary">{order.orderNumber}</span> placed
-            on {dateStr}. We are preparing your pieces with insured, secure packaging.
+            Order <span className="font-medium text-text-primary">{order.orderNumber}</span> was
+            placed on {dateStr}. {customerNextStep(order.status)}
           </p>
         </div>
 
@@ -171,8 +169,8 @@ export default function OrderConfirmationPage() {
                 <div className="flex items-center justify-between gap-3">
                   <dt className="text-text-secondary">Order status</dt>
                   <dd>
-                    <Badge variant={STATUS_BADGE_VARIANTS[order.status] ?? "neutral"} dot>
-                      {order.status}
+                    <Badge variant={meta.variant} dot>
+                      {meta.label}
                     </Badge>
                   </dd>
                 </div>
@@ -221,8 +219,7 @@ export default function OrderConfirmationPage() {
                 What Happens Next
               </h2>
               <p className="mt-4 font-sans text-body-sm leading-relaxed text-text-secondary">
-                Your order enters the atelier queue shortly. You can follow its journey —
-                preparation, insured dispatch and delivery — at any moment from your account.
+                {customerNextStep(order.status)}
               </p>
               <div className="mt-6 flex flex-wrap items-center gap-3">
                 <Button to={`/account/orders/${order.id}`}>View Order</Button>

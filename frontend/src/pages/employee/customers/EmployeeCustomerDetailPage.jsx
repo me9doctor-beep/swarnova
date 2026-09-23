@@ -7,7 +7,7 @@ import AsyncBoundary from "../../../components/ui/AsyncBoundary.jsx";
 import Table from "../../../components/ui/Table.jsx";
 import { useEmployeeCustomer } from "../../../hooks/useEmployeeOperations.js";
 import { useDocumentTitle } from "../../../hooks/useDocumentTitle.js";
-import { ORDER_STATUS_META } from "../../../features/admin/operations.js";
+import { orderStatusMeta } from "../../../features/admin/operations.js";
 import { formatter } from "../../../components/ui/Price.jsx";
 import { formatDateTime } from "../../../utils/format.js";
 
@@ -158,7 +158,7 @@ export default function EmployeeCustomerDetailPage() {
                     ]}
                   >
                     {(customer.orders ?? []).map((order) => {
-                      const meta = ORDER_STATUS_META[order.status] ?? ORDER_STATUS_META.Placed;
+                      const meta = orderStatusMeta(order.status);
                       return (
                         <Table.Row key={order.id}>
                           <Table.Cell>

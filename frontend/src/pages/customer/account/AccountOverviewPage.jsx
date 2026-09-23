@@ -21,17 +21,15 @@ import { useSavedTryOns } from "../../../state/SavedTryOnsContext.jsx";
 import { useOrders } from "../../../hooks/useOrders.js";
 import { useProducts } from "../../../hooks/useProducts.js";
 import { useDocumentTitle } from "../../../hooks/useDocumentTitle.js";
-
-const STATUS_BADGE_VARIANTS = {
-  Delivered: "success",
-  Shipped: "info",
-  Processing: "brand",
-  Confirmed: "neutral",
-  Cancelled: "error",
-};
+import { orderStatusMeta } from "../../../features/orders/orderLifecycle.js";
+import { useStorefrontAvailability } from "../../../features/storefront/StorefrontFeatures.jsx";
+import { isFeatureOpen } from "../../../features/storefront/availability.js";
 
 export default function AccountOverviewPage() {
   useDocumentTitle("My Swarnova — Account Overview");
+  const availability = useStorefrontAvailability();
+  const studioOpen = isFeatureOpen(availability, "aiStudio");
+  const tryOnOpen = isFeatureOpen(availability, "virtualTryOn");
 
   const { profile } = useCustomerProfile();
   const { ids, count: wishlistCount } = useWishlist();
@@ -172,8 +170,8 @@ export default function AccountOverviewPage() {
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Badge variant={STATUS_BADGE_VARIANTS[recentOrder.status] ?? "neutral"} dot>
-                    {recentOrder.status}
+                  <Badge variant={orderStatusMeta(recentOrder.status).variant} dot>
+                    {orderStatusMeta(recentOrder.status).label}
                   </Badge>
                   <Price amount={recentOrder.total} className="font-serif text-h4 font-medium" />
                 </div>
@@ -270,9 +268,15 @@ export default function AccountOverviewPage() {
             Co-create bespoke jewellery concepts using natural language and artistic directions in our AI Atelier.
           </p>
           <div className="mt-5 flex items-center gap-4">
-            <Button href="/ai-studio" size="sm">
-              Enter Studio
-            </Button>
+            {studioOpen ? (
+              <Button href="/ai-studio" size="sm">
+                Enter Studio
+              </Button>
+            ) : (
+              <p className="font-sans text-caption uppercase tracking-[0.16em] text-text-muted">
+                Paused by the house
+              </p>
+            )}
             <Link
               to="/account/saved-designs"
               className="font-sans text-caption uppercase tracking-[0.2em] text-text-muted hover:text-brand-primary"
@@ -289,9 +293,15 @@ export default function AccountOverviewPage() {
             Preview catalogue pieces and AI concepts draped naturally on your own photograph or curated portraits.
           </p>
           <div className="mt-5 flex items-center gap-4">
-            <Button href="/virtual-try-on" variant="outline" size="sm">
-              Try It On
-            </Button>
+            {tryOnOpen ? (
+              <Button href="/virtual-try-on" variant="outline" size="sm">
+                Try It On
+              </Button>
+            ) : (
+              <p className="font-sans text-caption uppercase tracking-[0.16em] text-text-muted">
+                Paused by the house
+              </p>
+            )}
             <Link
               to="/account/saved-try-ons"
               className="font-sans text-caption uppercase tracking-[0.2em] text-text-muted hover:text-brand-primary"

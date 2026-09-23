@@ -30,7 +30,7 @@ export const homepage = {
           ],
         },
         body: "Jewellery crafted with timeless artistry and imagined through a new generation of technology — from our master karigars to your fingertips.",
-        primaryCta: { label: "Explore Collections", href: "#collections" },
+        primaryCta: { label: "Explore Collections", href: "/#collections" },
         secondaryCta: { label: "Create with AI", href: "/ai-studio" },
         image: {
           src: media.heroEditorial,
@@ -151,7 +151,7 @@ export const homepage = {
           "Save and compare your favourites",
         ],
         cta: { label: "Try Jewellery On", href: "/virtual-try-on" },
-        secondaryCta: { label: "Book a Fitting", href: "#stores" },
+        secondaryCta: { label: "Book a Fitting", href: "/#stores" },
         image: {
           src: media.tryOnAtelier,
           alt: "Indian woman in an ivory silk saree wearing a delicate gold diamond pendant, hand at her neckline",
@@ -277,7 +277,7 @@ export const homepage = {
         successMessage:
           "Welcome to Swarnova. Your invitation will arrive by email shortly.",
         privacyNote:
-          "By subscribing you agree to our Privacy Policy. Unsubscribe anytime.",
+          "By subscribing you agree to the house privacy notice. Unsubscribe anytime.",
       },
     },
   ],

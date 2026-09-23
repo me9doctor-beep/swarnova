@@ -266,6 +266,8 @@ test("10 · orders.manage moves a branch order through the shared lifecycle, and
   const bikash = actorFor(store, "EMP-008"); // Cuttack · Branch Sales (orders: manage)
 
   const placed = store.orders.find((order) => order.branchId === CTC && order.status === "Placed");
+  const confirmed = updateEmployeeOrderStatus(store, bikash, placed.id, "Confirmed");
+  assert.equal(confirmed.status, "Confirmed");
   const moved = updateEmployeeOrderStatus(store, bikash, placed.id, "Processing");
   assert.equal(moved.status, "Processing");
 
@@ -283,7 +285,7 @@ test("11 · orders.view alone can look an order up but cannot manage it", () => 
 
   const order = getEmployeeOrder(store, rakesh, "ORD-2026-9390");
   assert.equal(order.branchId, BBSR);
-  assert.deepEqual(order.actions, ["Processing", "Cancelled"], "the lifecycle is reported, not a grant");
+  assert.deepEqual(order.actions, ["Confirmed", "Cancelled"], "the lifecycle is reported, not a grant");
   assert.throws(
     () => updateEmployeeOrderStatus(store, rakesh, "ORD-2026-9390", "Processing"),
     /order management capability/

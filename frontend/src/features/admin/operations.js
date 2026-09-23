@@ -1,45 +1,30 @@
 /**
- * ADMIN OPERATIONS PRESENTATION CONTRACT (Phase 9)
+ * ADMIN OPERATIONS PRESENTATION CONTRACT (Phase 9, vocabulary unified in 14.1)
  * -----------------------------------------------------------------------------
- * The single place where the Admin console's operational vocabulary is
- * defined: order states, stock states, movement types and the labels /
- * badge variants they render with. Raw values match the mock-backend
- * contract in `services/providers/mock/governanceStore.js` — the future API
- * returns the same strings.
+ * Stock states, movement types and the console's order-action copy. The
+ * order status vocabulary itself lives in `features/orders/orderLifecycle.js`
+ * — the one contract customer, Admin, Employee and Super Admin share. It is
+ * re-exported here so existing console imports keep one path.
  *
  * Business rules (which order moves are valid, whether stock is low) are
- * NOT here — the provider computes them (`order.actions`, `stock.state`).
- * This module only maps meaning to presentation.
+ * NOT decided in the UI — the provider computes them (`order.actions`,
+ * `stock.state`) from that same lifecycle.
  */
 
 /* ----------------------------------------------------------------------- */
-/* Order lifecycle                                                          */
+/* Order lifecycle — re-exported from the shared contract                   */
 /* ----------------------------------------------------------------------- */
 
-export const ORDER_STATUS = {
-  PLACED: "Placed",
-  PROCESSING: "Processing",
-  SHIPPED: "Shipped",
-  DELIVERED: "Delivered",
-  CANCELLED: "Cancelled",
-};
-
-export const ORDER_STATUS_META = {
-  Placed: { label: "Placed", variant: "info", description: "Received and paid — waiting to be confirmed." },
-  Processing: { label: "Processing", variant: "warning", description: "Confirmed — being prepared for handover." },
-  Shipped: { label: "Shipped", variant: "brand", description: "On its way to the customer." },
-  Delivered: { label: "Delivered", variant: "success", description: "Handed over to the customer." },
-  Cancelled: { label: "Cancelled", variant: "error", description: "Cancelled before delivery." },
-};
-
-export const ORDER_STATUS_OPTIONS = [
-  { value: "all", label: "All statuses" },
-  { value: "Placed", label: "Placed" },
-  { value: "Processing", label: "Processing" },
-  { value: "Shipped", label: "Shipped" },
-  { value: "Delivered", label: "Delivered" },
-  { value: "Cancelled", label: "Cancelled" },
-];
+export {
+  ORDER_STATUS,
+  ORDER_STATUS_META,
+  ORDER_STATUS_OPTIONS,
+  ORDER_FLOW,
+  OPEN_ORDER_STATUSES,
+  OPERATIONAL_STATUSES,
+  orderStatusMeta,
+  orderActions,
+} from "../orders/orderLifecycle.js";
 
 /**
  * Labels and confirmation copy for the order actions the provider offers.
@@ -47,21 +32,37 @@ export const ORDER_STATUS_OPTIONS = [
  * UI never decides the lifecycle itself.
  */
 export const ORDER_ACTIONS = {
+  Confirmed: {
+    label: "Confirm Order",
+    confirmTitle: "Confirm this order?",
+    confirmBody:
+      "The house accepts the order. Preparation has not started — the pieces stay reserved at the fulfilling boutique.",
+    confirmLabel: "Confirm Order",
+    variant: "primary",
+  },
   Processing: {
     label: "Start Processing",
     confirmTitle: "Start processing this order?",
     confirmBody:
-      "The order moves into preparation at its branch. It stays open until it ships.",
+      "The confirmed order moves into preparation at its branch. It stays open until it ships.",
     confirmLabel: "Start Processing",
     variant: "primary",
   },
   Shipped: {
-    label: "Mark Shipped",
-    confirmTitle: "Mark this order as shipped?",
+    label: "Mark Ready / Shipped",
+    confirmTitle: "Mark this order ready / shipped?",
     confirmBody:
-      "The allocated pieces leave the branch for the customer and their " +
-      "reservation is retired. Delivery completes the flow.",
-    confirmLabel: "Mark Shipped",
+      "The allocated pieces leave the boutique and their reservation is retired. " +
+      "The next stage is out for delivery. This does not open a carrier feed.",
+    confirmLabel: "Mark Ready / Shipped",
+    variant: "primary",
+  },
+  "Out for Delivery": {
+    label: "Mark Out for Delivery",
+    confirmTitle: "Mark this order out for delivery?",
+    confirmBody:
+      "The consignment is on the way to handover. Stock does not move again, and no live carrier event is connected.",
+    confirmLabel: "Mark Out for Delivery",
     variant: "primary",
   },
   Delivered: {
