@@ -151,7 +151,7 @@ export const homepage = {
           "Save and compare your favourites",
         ],
         cta: { label: "Try Jewellery On", href: "/virtual-try-on" },
-        secondaryCta: { label: "Book a Fitting", href: "/#stores" },
+        secondaryCta: { label: "Book a Fitting", href: "/appointments?type=FITTING" },
         image: {
           src: media.tryOnAtelier,
           alt: "Indian woman in an ivory silk saree wearing a delicate gold diamond pendant, hand at her neckline",

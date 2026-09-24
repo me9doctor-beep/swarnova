@@ -67,8 +67,8 @@ export const site = {
   experience: [
     { label: "AI Jewellery Studio", href: "/ai-studio" },
     { label: "Virtual Try-On", href: "/virtual-try-on" },
-    { label: "Custom & Bespoke Jewellery", href: "/ai-studio" },
-    { label: "Book a Private Viewing", href: "/#stores" },
+    { label: "Custom & Bespoke Jewellery", href: "/custom-jewellery" },
+    { label: "Book a Private Viewing", href: "/appointments?type=PRIVATE_VIEWING" },
     { label: "Gold Rate Board", href: "/#gold-rate" },
   ],
   legal: [

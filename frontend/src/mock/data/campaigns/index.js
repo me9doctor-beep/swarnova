@@ -16,7 +16,7 @@ export const campaigns = [
       alt: "22K gold halo diamond ring on pale cream marble with jasmine buds",
     },
     cta: { label: "Explore Now", href: "/collections" },
-    secondaryCta: { label: "Book a Private Viewing", href: "/#stores" },
+    secondaryCta: { label: "Book a Private Viewing", href: "/appointments?type=PRIVATE_VIEWING" },
     activeWindow: { start: "2025-01-01", end: "2027-12-31" },
   },
 ];

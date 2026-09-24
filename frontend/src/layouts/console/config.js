@@ -1,3 +1,4 @@
+import { intakePaths } from "../../utils/links.js";
 import {
   BadgeIndianRupee,
   BarChart3,
@@ -58,6 +59,7 @@ export const CONSOLE_CONFIG = {
         label: "Business",
         items: [
           { label: "Products", to: "/admin/products", icon: Package, capability: CAPABILITIES.CATALOGUE_VIEW },
+          ...Object.values(intakePaths).map((path) => ({ label: path.title, to: `/admin/${path.segment}`, icon: ClipboardList, capability: CAPABILITIES.ORDERS_VIEW })),
           { label: "Orders", to: "/admin/orders", icon: ClipboardList, capability: CAPABILITIES.ORDERS_VIEW },
           { label: "Customers", to: "/admin/customers", icon: ShoppingBag, capability: CAPABILITIES.ORDERS_VIEW },
           { label: "Inventory", to: "/admin/inventory", icon: Boxes, capability: CAPABILITIES.INVENTORY_VIEW },
@@ -99,6 +101,7 @@ export const CONSOLE_CONFIG = {
       {
         label: "Operations",
         items: [
+          ...Object.values(intakePaths).map((path) => ({ label: path.title, to: `/super-admin/${path.segment}`, icon: ClipboardList, capability: CAPABILITIES.ORDERS_VIEW })),
           { label: "Orders", to: "/super-admin/orders", icon: ClipboardList },
           { label: "Customers", to: "/super-admin/customers", icon: ShoppingBag },
           { label: "Inventory", to: "/super-admin/inventory", icon: Boxes },
@@ -161,6 +164,7 @@ export const CONSOLE_CONFIG = {
         label: "My Work",
         items: [
           { label: "Dashboard", to: "/employee", end: true, icon: LayoutDashboard },
+          ...Object.values(intakePaths).map((path) => ({ label: path.title, to: `/employee/${path.segment}`, icon: ClipboardList, capability: CAPABILITIES.ORDERS_VIEW })),
           { label: "Orders", to: "/employee/orders", icon: ClipboardList, capability: CAPABILITIES.ORDERS_VIEW },
           { label: "Customers", to: "/employee/customers", icon: ShoppingBag, capability: CAPABILITIES.ORDERS_VIEW },
           { label: "Products", to: "/employee/products", icon: Package, capability: CAPABILITIES.CATALOGUE_VIEW },

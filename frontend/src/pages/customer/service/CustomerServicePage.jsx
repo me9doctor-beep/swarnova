@@ -1,3 +1,4 @@
+import { intakeLink } from "../../../utils/links.js";
 import PropTypes from "prop-types";
 import CatalogueHeader from "../../../components/catalogue/CatalogueHeader.jsx";
 import Container from "../../../components/ui/Container.jsx";
@@ -57,6 +58,7 @@ export default function CustomerServicePage({ pageKey }) {
         <Container>
           <div className="mx-auto max-w-3xl">
             {page.showCareDesk ? <CareDesk contact={site?.contact} /> : null}
+            {["returns", "care"].includes(pageKey) && <p className="mb-8"><ContentLink className="underline" href={intakeLink("service")}>Submit a return or care enquiry for an order</ContentLink></p>}
             <div className="space-y-12">
               {page.sections.map((section) => (
                 <section key={section.heading} className="space-y-4">

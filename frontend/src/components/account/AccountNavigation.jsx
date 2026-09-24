@@ -1,3 +1,4 @@
+import { intakePaths } from "../../utils/links.js";
 import PropTypes from "prop-types";
 import { NavLink } from "react-router-dom";
 import {
@@ -48,6 +49,7 @@ export default function AccountNavigation({ className }) {
       Icon: ShoppingBag,
       count: orders.length,
     },
+    ...Object.values(intakePaths).map((path) => ({ to: path.account, label: path.title, Icon: ShoppingBag })),
     {
       to: "/account/addresses",
       label: "Addresses",

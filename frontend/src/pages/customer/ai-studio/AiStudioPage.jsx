@@ -1,3 +1,5 @@
+import ContentLink from "../../../components/ui/ContentLink.jsx";
+import { intakeLink } from "../../../utils/links.js";
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import AsyncBoundary from "../../../components/ui/AsyncBoundary.jsx";
@@ -163,6 +165,7 @@ export default function AiStudioPage() {
                 {resultCopy.heading}
               </h2>
 
+              {concept && <p className="mt-5"><ContentLink className="underline underline-offset-4" href={intakeLink("custom", { aiDesignId: concept.id })}>Discuss this concept as a custom piece</ContentLink></p>}
               <div className="mt-6">
                 {concept ? (
                   <AiDesignResult

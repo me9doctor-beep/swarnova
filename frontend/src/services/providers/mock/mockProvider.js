@@ -293,6 +293,22 @@ const PRODUCT_SORTS = {
 export const mockProvider = {
   name: "mock",
 
+  async getIntakeOptions(kind) {
+    return gov.getIntakeOptions(this.getStore(), this.customerSessionId(), kind);
+  },
+  async createIntakeRequest(kind, payload) {
+    return gov.createIntakeRequest(this.getStore(), this.customerSessionId(), kind, payload);
+  },
+  async getIntakeRequests(kind) {
+    return gov.listIntakeRequests(this.getStore(), this.customerSessionId(), kind);
+  },
+  async getIntakeRequest(kind, id) {
+    return gov.getIntakeRequest(this.getStore(), this.customerSessionId(), kind, id);
+  },
+  async getOperationalIntakeRequests(actor, kind, query = {}) {
+    return gov.listOperationalIntakeRequests(this.getStore(), actor, kind, query);
+  },
+
   /* ----------------------------------------------------------------------
    * The one canonical store. Lazily created once per page load; every
    * governed domain (customer reads AND Super Admin writes) flows through

@@ -138,7 +138,7 @@ export const CUSTOMER_SERVICE_PAGES = {
   returns: {
     eyebrow: "Customer Care",
     title: "Returns & exchanges",
-    lead: "Cancellation before dispatch is a house action. A return or exchange after dispatch is not a workflow this storefront operates.",
+    lead: "Cancellation before dispatch is a house action. You can submit a return or care enquiry for an order; approval and processing remain with the house.",
     sections: [
       {
         heading: "Before dispatch",
@@ -150,7 +150,7 @@ export const CUSTOMER_SERVICE_PAGES = {
       {
         heading: "After dispatch",
         paragraphs: [
-          "Once an order is shipped or delivered, this website cannot open a return, an exchange, or a refund. Speak to the care desk or the fulfilling boutique. A return workflow, a restocking rule and a refund settlement are not invented here.",
+          "You can submit a return enquiry from your order or Service Requests. This records your request only: it does not approve a return, arrange pickup, exchange a piece or settle a refund. The care desk or fulfilling boutique must review it.",
         ],
       },
     ],

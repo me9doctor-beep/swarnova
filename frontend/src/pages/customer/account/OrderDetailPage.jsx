@@ -1,3 +1,4 @@
+import { intakeLink } from "../../../utils/links.js";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft, Check, Package, Clock, Truck, Route, ShieldCheck } from "lucide-react";
 import Button from "../../../components/ui/Button.jsx";
@@ -80,6 +81,7 @@ export default function OrderDetailPage() {
         </Link>
       </div>
 
+      <Button variant="outline" href={intakeLink("service", { orderId: order.id })}>Request return or care</Button>
       {/* Header row */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-border-default pb-6">
         <div>

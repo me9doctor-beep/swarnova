@@ -48,6 +48,12 @@ export function DataProvider({ provider = mockProvider, children }) {
 
 DataProvider.propTypes = {
   provider: PropTypes.shape({
+    /* Phase 14.2 — typed intake contract; identity is resolved by provider. */
+    getIntakeOptions: PropTypes.func,
+    createIntakeRequest: PropTypes.func,
+    getIntakeRequests: PropTypes.func,
+    getIntakeRequest: PropTypes.func,
+    getOperationalIntakeRequests: PropTypes.func,
     getSite: PropTypes.func.isRequired,
     getHomepage: PropTypes.func.isRequired,
     getCategories: PropTypes.func.isRequired,

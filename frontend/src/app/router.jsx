@@ -1,3 +1,7 @@
+import IntakePage from "../pages/customer/requests/IntakePage.jsx";
+import IntakeAccountPage from "../pages/customer/requests/IntakeAccountPage.jsx";
+import IntakeOperationsPage from "../pages/operations/IntakeOperationsPage.jsx";
+import { intakePaths } from "../utils/links.js";
 import { createBrowserRouter } from "react-router-dom";
 
 import ScrollToTop from "../components/layout/ScrollToTop.jsx";
@@ -182,6 +186,8 @@ export const routeTree = [
           </RequireStorefrontFeature>
         ),
       },
+      { path: "custom-jewellery", element: <RequireCustomer><IntakePage kind="custom" /></RequireCustomer> },
+      { path: "appointments", element: <RequireCustomer><IntakePage kind="appointment" /></RequireCustomer> },
       { path: "cart", element: <CartPage /> },
       { path: "contact", element: <CustomerServicePage pageKey="contact" /> },
       { path: "faq", element: <CustomerServicePage pageKey="faq" /> },
@@ -240,6 +246,11 @@ export const routeTree = [
           { path: "saved-designs", element: <SavedDesignsPage /> },
           { path: "saved-try-ons", element: <SavedTryOnsPage /> },
           { path: "addresses", element: <AddressesPage /> },
+          ...Object.entries(intakePaths).flatMap(([kind, paths]) => [
+            { path: paths.segment, element: <IntakeAccountPage kind={kind} /> },
+            { path: `${paths.segment}/:id`, element: <IntakeAccountPage kind={kind} /> },
+          ]),
+          { path: "service-requests/new", element: <IntakePage kind="service" /> },
           { path: "orders", element: <OrdersPage /> },
           { path: "orders/:id", element: <OrderDetailPage /> },
         ],
@@ -373,6 +384,11 @@ export const routeTree = [
         ),
         handle: { crumb: "Reports" },
       },
+      ...Object.entries(intakePaths).map(([kind, paths]) => ({
+        path: paths.segment,
+        element: <RequireCapability capability={CAPABILITIES.ORDERS_VIEW}><IntakeOperationsPage kind={kind} /></RequireCapability>,
+        handle: { crumb: paths.title },
+      })),
       { path: "*", element: <AdminNotFoundPage /> },
     ],
   },
@@ -442,6 +458,11 @@ export const routeTree = [
         element: <OperationalRoute page={AdminReportsPage} />,
         handle: { crumb: "Reports" },
       },
+      ...Object.entries(intakePaths).map(([kind, paths]) => ({
+        path: paths.segment,
+        element: <RequireCapability capability={CAPABILITIES.ORDERS_VIEW}><IntakeOperationsPage kind={kind} /></RequireCapability>,
+        handle: { crumb: paths.title },
+      })),
       { path: "*", element: <SuperAdminNotFoundPage /> },
     ],
   },
@@ -540,6 +561,11 @@ export const routeTree = [
         element: <EmployeeProfilePage />,
         handle: { crumb: "My Profile" },
       },
+      ...Object.entries(intakePaths).map(([kind, paths]) => ({
+        path: paths.segment,
+        element: <RequireCapability capability={CAPABILITIES.ORDERS_VIEW}><IntakeOperationsPage kind={kind} /></RequireCapability>,
+        handle: { crumb: paths.title },
+      })),
       { path: "*", element: <EmployeeNotFoundPage /> },
     ],
   },
