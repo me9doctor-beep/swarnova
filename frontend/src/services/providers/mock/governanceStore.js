@@ -133,6 +133,7 @@ export function createGovernanceStore() {
     capabilityProfiles: emit(db.capabilityProfiles),
     customers: seedCustomerRegistry(),
     orders: emit(db.customerOrders),
+    intakeRequests: [],
     inventory: emit(db.inventoryStock),
     inventoryMovements: emit(db.inventoryMovements),
     auditLog: emit(db.governanceAuditLog),
@@ -3950,4 +3951,220 @@ export function resetCustomerPassword(store, payload = {}) {
   record.password = String(payload.password);
   entry.usedAt = now();
   return { reset: true };
+}
+
+
+/* Phase 14.2 — one canonical intake book, no operational transitions. */
+const INTAKE_KINDS = ["custom", "appointment", "service"];
+function intakeKind(kind) {
+  if (!INTAKE_KINDS.includes(kind))
+    failWithCode("VALIDATION_ERROR", "Unknown request type.");
+}
+function intakeText(value, label, required = false, max = 2000) {
+  if (value != null && typeof value !== "string")
+    failWithCode("VALIDATION_ERROR", `${label} must be text.`);
+  const text = (value ?? "").trim();
+  if ((required && !text) || text.length > max)
+    failWithCode(
+      "VALIDATION_ERROR",
+      `Please provide ${label.toLowerCase()} (${required ? "1" : "0"}–${max} characters).`,
+    );
+  return text || null;
+}
+function intakeBranch(store, id, required = false) {
+  if (!id && !required) return null;
+  const branch = store.branches.find(
+    (item) => item.id === id && item.status !== "disabled",
+  );
+  if (!branch)
+    failWithCode("UNAVAILABLE", "Please select an available boutique.");
+  return branch.id;
+}
+export function getIntakeOptions(store, customerId, kind) {
+  const customer = resolveCustomerScope(store, customerId);
+  intakeKind(kind);
+  return emit({
+    contact: {
+      name: customer.name,
+      email: customer.email,
+      phone: customer.phone,
+    },
+    branches: store.branches
+      .filter((b) => b.status !== "disabled")
+      .map(({ id, name }) => ({ id, name })),
+    products:
+      kind === "custom"
+        ? store.products
+            .filter((p) => p.status === "published")
+            .map(({ id, name }) => ({ id, name }))
+        : [],
+    designs:
+      kind === "custom"
+        ? db.aiDesigns.map(({ id, name, title }) => ({
+            id,
+            name: name ?? title ?? id,
+          }))
+        : [],
+    orders: kind === "service" ? listCustomerOrders(store, customerId) : [],
+  });
+}
+export function createIntakeRequest(store, customerId, kind, payload = {}) {
+  const customer = resolveCustomerScope(store, customerId);
+  intakeKind(kind);
+  if (!payload || typeof payload !== "object" || Array.isArray(payload))
+    failWithCode("VALIDATION_ERROR", "Please provide request details.");
+  if (payload.referenceImages?.length || payload.attachments?.length)
+    failWithCode(
+      "UNAVAILABLE",
+      "Image uploads require secure backend storage and are not available yet.",
+    );
+  const timestamp = now();
+  const record = {
+    id: `REQ-${String(store.intakeRequests.length + 1).padStart(6, "0")}`,
+    kind,
+    customerId,
+    status: kind === "appointment" ? "REQUESTED" : "SUBMITTED",
+    contact: {
+      name: customer.name,
+      email: customer.email,
+      phone: customer.phone,
+    },
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+  if (kind === "custom") {
+    const product = payload.productId
+      ? store.products.find(
+          (p) => p.id === payload.productId && p.status === "published",
+        )
+      : null;
+    const design = payload.aiDesignId
+      ? db.aiDesigns.find((d) => d.id === payload.aiDesignId)
+      : null;
+    if ((payload.productId && !product) || (payload.aiDesignId && !design))
+      failWithCode(
+        "VALIDATION_ERROR",
+        "The selected product or design is no longer available.",
+      );
+    Object.assign(record, {
+      productId: product?.id ?? null,
+      aiDesignId: design?.id ?? null,
+      productName: product?.name ?? null,
+      designName: design?.name ?? design?.title ?? design?.id ?? null,
+      source:
+        product && design
+          ? "PRODUCT_AND_AI"
+          : product
+            ? "PRODUCT"
+            : design
+              ? "AI_DESIGN"
+              : "DIRECT",
+      branchId: intakeBranch(store, payload.preferredBranchId),
+      preferredBranchId: payload.preferredBranchId || null,
+      referenceImages: [],
+    });
+    for (const field of [
+      "category",
+      "style",
+      "occasion",
+      "metalPreference",
+      "purity",
+      "stonePreference",
+      "budgetRange",
+      "description",
+    ]) {
+      record[field] = intakeText(
+        payload[field],
+        field,
+        ["category", "description"].includes(field),
+        field === "description" ? 2000 : 160,
+      );
+    }
+    const quantity = Number(payload.quantity ?? 1);
+    if (!Number.isInteger(quantity) || quantity < 1 || quantity > 100)
+      failWithCode("VALIDATION_ERROR", "Quantity must be between 1 and 100.");
+    record.quantity = quantity;
+  } else if (kind === "appointment") {
+    if (!["PRIVATE_VIEWING", "FITTING"].includes(payload.type))
+      failWithCode("VALIDATION_ERROR", "Select a viewing or fitting request.");
+    const date = intakeText(payload.requestedDate, "Preferred date", true, 10);
+    const time = intakeText(payload.requestedTime, "Preferred time", true, 5);
+    if (
+      !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+      !Number.isFinite(Date.parse(`${date}T00:00:00Z`)) ||
+      new Date(`${date}T00:00:00Z`).toISOString().slice(0, 10) !== date ||
+      date < timestamp.slice(0, 10)
+    )
+      failWithCode("VALIDATION_ERROR", "Choose a valid date today or later.");
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(time))
+      failWithCode("VALIDATION_ERROR", "Choose a valid preferred time.");
+    Object.assign(record, {
+      type: payload.type,
+      branchId: intakeBranch(store, payload.branchId, true),
+      requestedDate: date,
+      requestedTime: time,
+      note: intakeText(payload.note, "Note"),
+      productIds: [],
+    });
+  } else {
+    if (!["RETURN_REQUEST", "CARE_REQUEST"].includes(payload.type))
+      failWithCode("VALIDATION_ERROR", "Select return or care.");
+    const order = getCustomerOrder(store, customerId, payload.orderId);
+    const item = order?.items.find((i) => i.id === payload.orderItemId);
+    if (
+      !order ||
+      !item ||
+      (payload.productId && payload.productId !== (item.productId ?? item.id))
+    )
+      failWithCode(
+        "NOT_FOUND",
+        "That order item is not available in your account.",
+      );
+    Object.assign(record, {
+      type: payload.type,
+      orderId: order.id,
+      orderItemId: item.id,
+      productId: item.productId ?? item.id,
+      productName: item.name,
+      branchId: order.branchId,
+      reason: intakeText(payload.reason, "Reason", true, 160),
+      description: intakeText(payload.description, "Description", true),
+      attachments: [],
+    });
+  }
+  record.branchName =
+    store.branches.find((b) => b.id === record.branchId)?.name ?? null;
+  store.intakeRequests.unshift(record);
+  return emit(record);
+}
+export function listIntakeRequests(store, customerId, kind) {
+  resolveCustomerScope(store, customerId);
+  intakeKind(kind);
+  return emit(
+    store.intakeRequests.filter(
+      (r) => r.kind === kind && r.customerId === customerId,
+    ),
+  );
+}
+export function getIntakeRequest(store, customerId, kind, id) {
+  const record = listIntakeRequests(store, customerId, kind).find(
+    (r) => r.id === id,
+  );
+  if (!record)
+    failWithCode(
+      "NOT_FOUND",
+      "This request could not be found in your account.",
+    );
+  return record;
+}
+export function listOperationalIntakeRequests(store, actor, kind, query = {}) {
+  intakeKind(kind);
+  const scope = resolveStaffScope(store, actor);
+  requireScopeCapability(scope, CAPABILITIES.ORDERS_VIEW, "Orders & Customers");
+  const branchId = resolveScopeBranch(store, scope, query.branchId);
+  return emit(
+    store.intakeRequests.filter(
+      (r) => r.kind === kind && (!branchId || r.branchId === branchId),
+    ),
+  );
 }

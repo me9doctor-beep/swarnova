@@ -27,3 +27,17 @@ export function isExternalUrl(href) {
 
 /** Attributes a departing link needs so the new tab cannot reach back here. */
 export const externalLinkProps = { target: "_blank", rel: "noopener noreferrer" };
+
+/** Canonical Phase 14.2 destinations, shared by contextual and account doors. */
+export const intakePaths = {
+  custom: { create: "/custom-jewellery", account: "/account/custom-requests", segment: "custom-requests", title: "Custom Requests" },
+  appointment: { create: "/appointments", account: "/account/appointments", segment: "appointments", title: "Appointments" },
+  service: { create: "/account/service-requests/new", account: "/account/service-requests", segment: "service-requests", title: "Service Requests" },
+};
+export function intakeLink(kind, context = {}) {
+  const query = new URLSearchParams(Object.entries(context).filter(([, value]) => value));
+  return `${intakePaths[kind].create}${query.size ? `?${query}` : ""}`;
+}
+export function intakeDetailLink(kind, id) {
+  return `${intakePaths[kind].account}/${encodeURIComponent(id)}`;
+}

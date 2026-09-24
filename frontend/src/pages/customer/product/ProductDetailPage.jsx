@@ -1,3 +1,4 @@
+import { intakeLink } from "../../../utils/links.js";
 import { useParams } from "react-router-dom";
 import PropTypes from "prop-types";
 import AsyncBoundary from "../../../components/ui/AsyncBoundary.jsx";
@@ -95,7 +96,8 @@ export default function ProductDetailPage() {
 
         <div className="mt-8 grid gap-x-16 gap-y-12 lg:mt-10 lg:grid-cols-2">
           <ProductGallery images={product.images ?? []} name={product.name} />
-          <ProductSummary product={product} category={category} collection={collection} />
+          <div className="space-y-6"><ProductSummary product={product} category={category} collection={collection} />
+          <ContentLink className="inline-block underline underline-offset-4" href={intakeLink("custom", { productId: product.id })}>Enquire about a bespoke interpretation</ContentLink></div>
         </div>
       </Container>
 

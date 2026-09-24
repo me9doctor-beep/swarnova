@@ -1,3 +1,4 @@
+import { intakeLink } from "../../utils/links.js";
 import PropTypes from "prop-types";
 import { MapPin, Clock, Phone } from "lucide-react";
 import Card from "../ui/Card.jsx";
@@ -58,6 +59,7 @@ export default function BranchCard({ branch }) {
         <TextLink href={branch.href} className="mt-6">
           View Store
         </TextLink>
+        <p className="mt-4"><TextLink href={intakeLink("appointment", { branchId: branch.id })}>Request a viewing or fitting</TextLink></p>
       </Card.Body>
     </Card>
   );
