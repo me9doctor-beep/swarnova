@@ -216,7 +216,10 @@ test("3 · registration creates a directory customer that can immediately sign i
     { identifier: "test.patnaik@example.com", password: "new-customer-pass" }
   );
   assert.equal(session.customer.id, customer.id);
-  assert.equal(listAdminCustomers(store, { search: "test.patnaik" }).length, 1);
+  assert.equal(
+    listAdminCustomers(store, { role: ROLES.SUPER_ADMIN }, { search: "test.patnaik" }).length,
+    1
+  );
 
   /* A fresh profile resolves with derived defaults, never null. */
   const profile = getCustomerProfile(store, customer.id);
@@ -643,14 +646,25 @@ test("18 · Super Admin keeps the platform overview and the audit trail", () => 
   assert.ok(Array.isArray(listAuditLogs(store, {})));
 });
 
-test("19 · Admin keeps the overview, the order book and the reports", () => {
+test("19 · the operational book answers to its audience: Super Admin global, Admin branch-scoped", () => {
   const store = freshStore();
-  const overview = adminOverview(store);
+  const superAdmin = { role: ROLES.SUPER_ADMIN };
+  const overview = adminOverview(store, superAdmin);
   assert.ok(overview.business.openOrders > 0);
   assert.ok(overview.business.activeBranches > 0);
-  assert.ok(listAdminOrders(store, {}).length > 0);
-  const reports = adminReports(store);
+  assert.ok(listAdminOrders(store, superAdmin, {}).length > 0);
+  const reports = adminReports(store, superAdmin);
   assert.equal(reports.salesByBranch.length, store.branches.length);
+
+  /* A branch-scoped Admin reads only their own boutique (Phase 14.3). */
+  const branchAdmin = { id: "ADM-002", role: ROLES.ADMIN };
+  const scoped = listAdminOrders(store, branchAdmin, {});
+  assert.ok(scoped.length > 0);
+  assert.ok(scoped.every((order) => order.branchId === "BR-001"));
+  assert.throws(
+    () => listAdminOrders(store, branchAdmin, { branchId: "BR-002" }),
+    /only branch this account can work in/
+  );
 });
 
 test("20 · Employee keeps their branch-scoped overview", () => {

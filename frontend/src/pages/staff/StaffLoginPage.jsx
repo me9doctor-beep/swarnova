@@ -26,7 +26,7 @@ import { useDocumentTitle } from "../../hooks/useDocumentTitle.js";
 /** Demo accounts surfaced until a real identity provider lands. */
 const DEMO_ACCOUNTS = [
   { label: "Super Admin", email: "superadmin@swarnova.in" },
-  { label: "Admin (Head Office)", email: "arpita.mohanty@swarnova.in" },
+  { label: "Admin (Bhubaneswar)", email: "arpita.mohanty@swarnova.in" },
   { label: "Employee (Branch Manager)", email: "meera.das@swarnova.in" },
   { label: "Employee (Sales)", email: "ananya.tripathy@swarnova.in" },
 ];

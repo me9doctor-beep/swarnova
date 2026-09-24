@@ -78,14 +78,19 @@
  * contract, fulfilled by the SAME shared governance store. One staff login
  * serves every staff role; orders, customers, inventory, branches,
  * employees, reports and the business overview all read the canonical
- * entities:
- *   authenticateStaff(credentials)   getAdminOverview()
- *   getAdminOrders(query)            getAdminOrder(id)
- *   updateAdminOrderStatus(id, s, actor)   getAdminCustomers(query)
- *   getAdminCustomer(id)             getAdminInventory(query)
- *   adjustInventoryStock(id, adj, actor)   getInventoryMovements(query)
- *   getBranchOperations()            getAdminReports()
- *   getCapabilityProfiles()          createGovernanceEmployee(d, actor)
+ * entities. Since Phase 14.3 every staff method resolves the authenticated
+ * actor from the provider's OWN staff session — browser-supplied actor
+ * objects and branch claims are never authority:
+ *   authenticateStaff(credentials)   staffSignOut()
+ *   getAdminOverview()               getAdminOrders(query)
+ *   getAdminOrder(id)                updateAdminOrderStatus(id, s)
+ *   getAdminCustomers(query)         getAdminCustomer(id)
+ *   getAdminInventory(query)         adjustInventoryStock(id, adj)
+ *   getInventoryMovements(query)     getBranchOperations()
+ *   getAdminReports()                getCapabilityProfiles()
+ *   getGovernanceAdmins()            createGovernanceAdmin(d)
+ *   updateGovernanceAdmin(id, d)     getGovernanceEmployees()
+ *   createGovernanceEmployee(d)      updateGovernanceEmployee(id, d)
  *
  * CUSTOMER IDENTITY (Phase 11) — the customer authentication contract,
  * fulfilled by the SAME shared governance store. The mock holds the session
@@ -306,7 +311,9 @@ export const mockProvider = {
     return gov.getIntakeRequest(this.getStore(), this.customerSessionId(), kind, id);
   },
   async getOperationalIntakeRequests(actor, kind, query = {}) {
-    return gov.listOperationalIntakeRequests(this.getStore(), actor, kind, query);
+    /* The actor is resolved from the provider's own staff session — a
+       browser-supplied actor object is never authority (Phase 14.3). */
+    return gov.listOperationalIntakeRequests(this.getStore(), this.requireStaffActor(), kind, query);
   },
 
   /* ----------------------------------------------------------------------
@@ -864,31 +871,47 @@ export const mockProvider = {
   },
 
   setBranchStatus(id, status) {
-    return Promise.resolve(gov.setBranchStatus(this.getStore(), id, status));
+    return Promise.resolve(
+      gov.setBranchStatus(this.getStore(), id, status, this.requireStaffActor())
+    );
   },
 
   getGovernanceAdmins() {
-    return Promise.resolve(gov.listGovernanceAdmins(this.getStore()));
+    /* Administrator directory — Super Admin only (Phase 14.3). */
+    return Promise.resolve(gov.listGovernanceAdmins(this.getStore(), this.requireStaffActor()));
   },
 
-  createGovernanceAdmin(data = {}, actor) {
-    return Promise.resolve(gov.createGovernanceAdmin(this.getStore(), data, actor));
+  createGovernanceAdmin(data = {}) {
+    /* Only the Super Admin creates administrators; the actor comes from the
+       provider's own staff session, never from the browser (Phase 14.3). */
+    return Promise.resolve(
+      gov.createGovernanceAdmin(this.getStore(), data, this.requireStaffActor())
+    );
   },
 
   updateGovernanceAdmin(id, data = {}) {
-    return Promise.resolve(gov.updateGovernanceAdmin(this.getStore(), id, data));
+    return Promise.resolve(
+      gov.updateGovernanceAdmin(this.getStore(), id, data, this.requireStaffActor())
+    );
   },
 
   getGovernanceEmployees() {
-    return Promise.resolve(gov.listGovernanceEmployees(this.getStore()));
+    /* Super Admin sees the whole directory; an Admin sees only their own
+       branch's employees (Phase 14.3). */
+    return Promise.resolve(gov.listGovernanceEmployees(this.getStore(), this.requireStaffActor()));
   },
 
-  updateGovernanceEmployee(id, data = {}, actor) {
-    return Promise.resolve(gov.updateGovernanceEmployee(this.getStore(), id, data, actor));
+  updateGovernanceEmployee(id, data = {}) {
+    return Promise.resolve(
+      gov.updateGovernanceEmployee(this.getStore(), id, data, this.requireStaffActor())
+    );
   },
 
-  createGovernanceEmployee(data = {}, actor) {
-    return Promise.resolve(gov.createEmployee(this.getStore(), data, actor));
+  createGovernanceEmployee(data = {}) {
+    /* Employee creation authority is resolved from the provider's staff
+       session: an Admin's employee is derived into the Admin's branch; the
+       Super Admin names the branch (Phase 14.3). */
+    return Promise.resolve(gov.createEmployee(this.getStore(), data, this.requireStaffActor()));
   },
 
   updateGoldRates(rates = []) {
@@ -908,60 +931,101 @@ export const mockProvider = {
   },
 
   /* --------------------------------------------------------------------------
-   * Admin / head office operations (Phase 9)
+   * Admin / head office operations (Phase 9, hardened in Phase 14.3)
    * --------------------------------------------------------------------------
    * One staff login for every staff role, then the business-operations
    * surface: the order book, the customer directory, branch inventory,
    * branch coordination, employees, reports and the business overview.
    * Every read/write crosses into the same shared governance store.
+   *
+   * PHASE 14.3 — THE PROVIDER RESOLVES THE AUTHENTICATED ACTOR. The staff
+   * session lives HERE (the same place a backend session cookie would), set
+   * only by `authenticateStaff` and cleared by `staffSignOut`. Every
+   * staff-facing method derives the actor from that session; an actor object
+   * arriving from the browser is never authority. Branch scope, capabilities
+   * and role hierarchy are re-resolved store-side on every call.
    * ------------------------------------------------------------------------ */
 
+  /* The authenticated staff identity: { id, role } and nothing else. In
+     memory for the page visit, exactly like the canonical store — a real
+     backend re-resolves a session cookie here instead. */
+  _staffSession: null,
+
+  requireStaffActor() {
+    if (!this._staffSession) return null;
+    return { ...this._staffSession };
+  },
+
   authenticateStaff(credentials = {}) {
-    return Promise.resolve(gov.authenticateStaff(this.getStore(), credentials));
+    const session = gov.authenticateStaff(this.getStore(), credentials);
+    /* The session claim the provider itself keeps — the browser's copy is
+       a UX convenience and carries no authority. */
+    this._staffSession = { id: session.user.id, role: session.role };
+    return Promise.resolve(session);
+  },
+
+  /** End the provider-side staff session (the staff sign-out path). */
+  staffSignOut() {
+    this._staffSession = null;
+    return Promise.resolve(true);
   },
 
   getAdminOverview() {
-    return Promise.resolve(gov.adminOverview(this.getStore()));
+    return Promise.resolve(gov.adminOverview(this.getStore(), this.requireStaffActor()));
   },
 
   getAdminOrders(query = {}) {
-    return Promise.resolve(gov.listAdminOrders(this.getStore(), query));
+    return Promise.resolve(
+      gov.listAdminOrders(this.getStore(), this.requireStaffActor(), query)
+    );
   },
 
   getAdminOrder(id) {
-    return Promise.resolve(gov.getAdminOrder(this.getStore(), id));
+    return Promise.resolve(gov.getAdminOrder(this.getStore(), this.requireStaffActor(), id));
   },
 
-  updateAdminOrderStatus(id, status, actor) {
-    return Promise.resolve(gov.updateAdminOrderStatus(this.getStore(), id, status, actor));
+  updateAdminOrderStatus(id, status) {
+    return Promise.resolve(
+      gov.updateAdminOrderStatus(this.getStore(), this.requireStaffActor(), id, status)
+    );
   },
 
   getAdminCustomers(query = {}) {
-    return Promise.resolve(gov.listAdminCustomers(this.getStore(), query));
+    return Promise.resolve(
+      gov.listAdminCustomers(this.getStore(), this.requireStaffActor(), query)
+    );
   },
 
   getAdminCustomer(id) {
-    return Promise.resolve(gov.getAdminCustomer(this.getStore(), id));
+    return Promise.resolve(
+      gov.getAdminCustomer(this.getStore(), this.requireStaffActor(), id)
+    );
   },
 
   getAdminInventory(query = {}) {
-    return Promise.resolve(gov.listAdminInventory(this.getStore(), query));
+    return Promise.resolve(
+      gov.listAdminInventory(this.getStore(), this.requireStaffActor(), query)
+    );
   },
 
-  adjustInventoryStock(stockId, adjustment = {}, actor) {
-    return Promise.resolve(gov.adjustAdminInventory(this.getStore(), stockId, adjustment, actor));
+  adjustInventoryStock(stockId, adjustment = {}) {
+    return Promise.resolve(
+      gov.adjustAdminInventory(this.getStore(), this.requireStaffActor(), stockId, adjustment)
+    );
   },
 
   getInventoryMovements(query = {}) {
-    return Promise.resolve(gov.listInventoryMovements(this.getStore(), query));
+    return Promise.resolve(
+      gov.listInventoryMovements(this.getStore(), this.requireStaffActor(), query)
+    );
   },
 
   getBranchOperations() {
-    return Promise.resolve(gov.listBranchOperations(this.getStore()));
+    return Promise.resolve(gov.listBranchOperations(this.getStore(), this.requireStaffActor()));
   },
 
   getAdminReports() {
-    return Promise.resolve(gov.adminReports(this.getStore()));
+    return Promise.resolve(gov.adminReports(this.getStore(), this.requireStaffActor()));
   },
 
   getCapabilityProfiles() {
@@ -969,14 +1033,15 @@ export const mockProvider = {
   },
 
   /* --------------------------------------------------------------------------
-   * Employee / branch operations (Phase 10)
+   * Employee / branch operations (Phase 10, hardened in Phase 14.3)
    * --------------------------------------------------------------------------
-   * The counter-side contract. Every method receives the session actor
-   * (`{ id, role, label }`) and re-resolves the employee's branch and
-   * capabilities store-side — a `branchId` that arrives in a query is treated
-   * as a request to validate, never as authority. A Super Admin stays global
-   * and may name any branch; an Admin works head-office-wide, or its own
-   * boutique when the administrator account is branch-scoped.
+   * The counter-side contract. The provider resolves the authenticated actor
+   * from ITS OWN staff session and re-resolves the account's branch and
+   * capabilities store-side on every call — a `branchId` that arrives in a
+   * query is treated as a request to validate, never as authority, and an
+   * actor object arriving from the browser is never authority either. A
+   * Super Admin stays global and may name any branch; an Admin works their
+   * own assigned boutique; an Employee theirs.
    *
    *   employeeOverview(actor)
    *   employeeOrders(actor, query)            employeeOrder(actor, id)
@@ -991,71 +1056,71 @@ export const mockProvider = {
    * ------------------------------------------------------------------------ */
 
   getEmployeeOverview(actor, query = {}) {
-    return Promise.resolve(gov.employeeOverview(this.getStore(), actor, query));
+    return Promise.resolve(gov.employeeOverview(this.getStore(), this.requireStaffActor(), query));
   },
 
   getEmployeeOrders(actor, query = {}) {
-    return Promise.resolve(gov.listEmployeeOrders(this.getStore(), actor, query));
+    return Promise.resolve(gov.listEmployeeOrders(this.getStore(), this.requireStaffActor(), query));
   },
 
   getEmployeeOrder(actor, id) {
-    return Promise.resolve(gov.getEmployeeOrder(this.getStore(), actor, id));
+    return Promise.resolve(gov.getEmployeeOrder(this.getStore(), this.requireStaffActor(), id));
   },
 
   updateEmployeeOrderStatus(actor, id, status) {
-    return Promise.resolve(gov.updateEmployeeOrderStatus(this.getStore(), actor, id, status));
+    return Promise.resolve(gov.updateEmployeeOrderStatus(this.getStore(), this.requireStaffActor(), id, status));
   },
 
   getEmployeeCustomers(actor, query = {}) {
-    return Promise.resolve(gov.listEmployeeCustomers(this.getStore(), actor, query));
+    return Promise.resolve(gov.listEmployeeCustomers(this.getStore(), this.requireStaffActor(), query));
   },
 
   getEmployeeCustomer(actor, id) {
-    return Promise.resolve(gov.getEmployeeCustomer(this.getStore(), actor, id));
+    return Promise.resolve(gov.getEmployeeCustomer(this.getStore(), this.requireStaffActor(), id));
   },
 
   getEmployeeCatalogue(actor, query = {}) {
-    return Promise.resolve(gov.listEmployeeCatalogue(this.getStore(), actor, query));
+    return Promise.resolve(gov.listEmployeeCatalogue(this.getStore(), this.requireStaffActor(), query));
   },
 
   getEmployeeProduct(actor, id) {
-    return Promise.resolve(gov.getEmployeeProduct(this.getStore(), actor, id));
+    return Promise.resolve(gov.getEmployeeProduct(this.getStore(), this.requireStaffActor(), id));
   },
 
   getEmployeeCategories(actor) {
-    return Promise.resolve(gov.listEmployeeCategories(this.getStore(), actor));
+    return Promise.resolve(gov.listEmployeeCategories(this.getStore(), this.requireStaffActor()));
   },
 
   getEmployeeInventory(actor, query = {}) {
-    return Promise.resolve(gov.listEmployeeInventory(this.getStore(), actor, query));
+    return Promise.resolve(gov.listEmployeeInventory(this.getStore(), this.requireStaffActor(), query));
   },
 
   adjustEmployeeInventory(actor, stockId, adjustment = {}) {
     return Promise.resolve(
-      gov.adjustEmployeeInventory(this.getStore(), actor, stockId, adjustment)
+      gov.adjustEmployeeInventory(this.getStore(), this.requireStaffActor(), stockId, adjustment)
     );
   },
 
   getEmployeeInventoryMovements(actor, query = {}) {
     return Promise.resolve(
-      gov.listEmployeeInventoryMovements(this.getStore(), actor, query)
+      gov.listEmployeeInventoryMovements(this.getStore(), this.requireStaffActor(), query)
     );
   },
 
   getEmployeeBranchOperations(actor, query = {}) {
-    return Promise.resolve(gov.employeeBranchOperations(this.getStore(), actor, query));
+    return Promise.resolve(gov.employeeBranchOperations(this.getStore(), this.requireStaffActor(), query));
   },
 
   getEmployeeReports(actor, query = {}) {
-    return Promise.resolve(gov.employeeReports(this.getStore(), actor, query));
+    return Promise.resolve(gov.employeeReports(this.getStore(), this.requireStaffActor(), query));
   },
 
   getEmployeeProfile(actor) {
-    return Promise.resolve(gov.employeeProfile(this.getStore(), actor));
+    return Promise.resolve(gov.employeeProfile(this.getStore(), this.requireStaffActor()));
   },
 
   updateEmployeeProfile(actor, patch = {}) {
-    return Promise.resolve(gov.updateEmployeeProfile(this.getStore(), actor, patch));
+    return Promise.resolve(gov.updateEmployeeProfile(this.getStore(), this.requireStaffActor(), patch));
   },
 };
 

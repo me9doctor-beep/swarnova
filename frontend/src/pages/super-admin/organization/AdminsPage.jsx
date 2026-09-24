@@ -18,9 +18,11 @@ import { ACCOUNT_STATUS_META } from "../../../features/super-admin/governance.js
 /**
  * ADMIN MANAGEMENT — the platform's administrator directory.
  *
- * An administrator is a person with a console and a scope: head office, or
- * one boutique. Super Admin creates accounts, reassigns scope and enables /
- * disables access. Authentication itself belongs to the backend, later.
+ * Since Phase 14.3 every administrator runs exactly ONE boutique: a branch
+ * assignment is a required identity attribute, and the Super Admin is the
+ * only global authority. The Super Admin creates branch administrators,
+ * reassigns their branch and enables / disables access. Authentication
+ * itself belongs to the backend, later.
  */
 export default function AdminsPage() {
   useDocumentTitle("Admins — Swarnova Super Admin");
@@ -68,7 +70,7 @@ export default function AdminsPage() {
               hideCaption
               headers={[
                 { label: "Admin" },
-                { label: "Scope" },
+                { label: "Branch" },
                 { label: "Role" },
                 { label: "Status" },
                 { label: "Actions", align: "right" },
@@ -84,12 +86,12 @@ export default function AdminsPage() {
                     </Table.Cell>
                     <Table.Cell>
                       <span className="block font-sans text-body-sm text-text-primary">
-                        {admin.scope === "head-office" ? "Head Office" : (admin.branchName ?? "Branch")}
+                        {admin.branchName ?? "Branch"}
                       </span>
                       <span className="block font-sans text-caption text-text-muted">{admin.title}</span>
                     </Table.Cell>
                     <Table.Cell>
-                      <Badge variant="brand">Admin</Badge>
+                      <Badge variant="brand">{admin.branchName ? "Branch Admin" : "Admin"}</Badge>
                     </Table.Cell>
                     <Table.Cell>
                       <Badge variant={meta.variant} dot>
@@ -150,8 +152,8 @@ export default function AdminsPage() {
         }
         body={
           confirm?.target === "disabled"
-            ? "They can no longer sign in to their console. Their record, scope and history stay intact."
-            : "Their console access is restored with the same scope as before."
+            ? "They can no longer sign in to their console. Their record, branch and history stay intact."
+            : "Their console access is restored with the same branch as before."
         }
         confirmLabel={confirm?.target === "disabled" ? "Disable Admin" : "Enable Admin"}
         confirmVariant={confirm?.target === "disabled" ? "danger" : "primary"}
@@ -171,10 +173,15 @@ function AdminDialog({ admin, onClose, onSaved }) {
   const branches = useGovernanceBranches();
   const mutation = useGovernanceMutation();
 
+  /* Assignment is offered for ACTIVE branches only — a disabled boutique
+     cannot receive staff (the provider enforces the same rule). */
+  const assignableBranches = (branches.data ?? []).filter(
+    (branch) => branch.status !== "disabled"
+  );
+
   const [form, setForm] = useState({
     name: admin?.name ?? "",
     email: admin?.email ?? "",
-    scope: admin?.scope ?? "branch",
     branchId: admin?.branchId ?? "",
   });
   const [localError, setLocalError] = useState(null);
@@ -191,18 +198,23 @@ function AdminDialog({ admin, onClose, onSaved }) {
       setLocalError("Enter a valid email address.");
       return;
     }
-    if (form.scope === "branch" && !form.branchId) {
+    /* Phase 14.3 — the branch is REQUIRED. There is no head-office
+       administrator: organization-wide authority is the Super Admin's. */
+    if (!form.branchId) {
       setLocalError("Choose the branch this administrator manages.");
       return;
     }
 
     try {
       if (isNew) {
-        await mutation.run(organizationGovernanceService.createAdmin, form);
+        await mutation.run(organizationGovernanceService.createAdmin, {
+          name: form.name,
+          email: form.email,
+          branchId: form.branchId,
+        });
       } else {
         await mutation.run(organizationGovernanceService.updateAdmin, admin.id, {
-          scope: form.scope,
-          branchId: form.scope === "branch" ? form.branchId : null,
+          branchId: form.branchId,
         });
       }
       onSaved();
@@ -218,8 +230,8 @@ function AdminDialog({ admin, onClose, onSaved }) {
       title={isNew ? "New Admin" : `Edit — ${admin.name}`}
       description={
         isNew
-          ? "An administrator runs catalogue, inventory and orders within their scope."
-          : `${admin.email} · reassignment and status are the levers here.`
+          ? "An administrator runs catalogue, inventory and orders for ONE boutique — the branch is required and defines their entire authority."
+          : `${admin.email} · branch reassignment and status are the levers here.`
       }
     >
       <form onSubmit={save} className="space-y-4">
@@ -239,38 +251,26 @@ function AdminDialog({ admin, onClose, onSaved }) {
               size="sm"
               value={form.email}
               onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
+              hint="Used to sign in at the shared staff login."
             />
           </>
         ) : null}
 
         <Select
-          label="Scope"
+          label="Branch"
           required
           size="sm"
-          value={form.scope}
-          onChange={(event) => setForm((prev) => ({ ...prev, scope: event.target.value }))}
-          hint="Head Office sees the whole platform; a Branch administrator manages one boutique."
+          value={form.branchId}
+          onChange={(event) => setForm((prev) => ({ ...prev, branchId: event.target.value }))}
+          hint="The one boutique this administrator runs. Their operational scope is exactly this branch."
         >
-          <option value="head-office">Head Office — whole platform</option>
-          <option value="branch">One boutique branch</option>
+          <option value="">Choose a branch…</option>
+          {assignableBranches.map((branch) => (
+            <option key={branch.id} value={branch.id}>
+              {branch.name}
+            </option>
+          ))}
         </Select>
-
-        {form.scope === "branch" ? (
-          <Select
-            label="Branch"
-            required
-            size="sm"
-            value={form.branchId}
-            onChange={(event) => setForm((prev) => ({ ...prev, branchId: event.target.value }))}
-          >
-            <option value="">Choose a branch…</option>
-            {(branches.data ?? []).map((branch) => (
-              <option key={branch.id} value={branch.id}>
-                {branch.name}
-              </option>
-            ))}
-          </Select>
-        ) : null}
 
         {(localError || mutation.error) && (
           <p role="alert" className="border border-state-error/30 bg-state-error-soft px-4 py-3 font-sans text-caption text-state-error">

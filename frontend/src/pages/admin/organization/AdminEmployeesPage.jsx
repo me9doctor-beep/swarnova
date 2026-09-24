@@ -18,31 +18,32 @@ import { useGovernanceBranches } from "../../../hooks/useGovernanceOrganization.
 import { useGovernanceMutation } from "../../../hooks/useGovernanceMutation.js";
 import { useDocumentTitle } from "../../../hooks/useDocumentTitle.js";
 import { useAuth } from "../../../features/authentication/useAuth.js";
-import { actorLabel } from "../../../features/authentication/roles.js";
 import { organizationGovernanceService } from "../../../services/organizationGovernanceService.js";
 import { EMPLOYEE_STATUS_META } from "../../../features/admin/operations.js";
 import { describeCapabilities } from "../../../features/authentication/capabilities.js";
 
 /**
- * STAFF MANAGEMENT (Phase 9) — the Admin's employee directory.
+ * STAFF MANAGEMENT (Phase 9, branch-scoped in Phase 14.3) — the Admin's
+ * employee directory.
  *
- * One list, one form. Admins create EMPLOYEE accounts — never Admins, never
- * Super Admins (the provider refuses; the UI never offers them) — and shape
- * each account with a reusable capability profile. Capability grants are
- * bounded by the Admin's own authority, enforced again by the provider.
+ * One list, one form, ONE branch. The provider scopes the list to the
+ * authenticated Admin's own branch (a query cannot widen it), and employee
+ * creation derives the new account's branch from the Admin's own assignment:
+ * the form shows the branch as a fixed fact instead of a selector. Admins
+ * create EMPLOYEE accounts — never Admins, never Super Admins — and shape
+ * each one with a reusable capability profile bounded by their own grant.
  */
 export default function AdminEmployeesPage() {
   useDocumentTitle("Employees — Swarnova Admin");
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const { user, role, permissions } = useAuth();
+  const { user, permissions } = useAuth();
   const { status, data: employees, error, retry } = useAdminEmployees();
   const profilesAsync = useCapabilityProfiles();
   const branchesAsync = useGovernanceBranches();
   const mutation = useGovernanceMutation();
 
   const [search, setSearch] = useState("");
-  const [branchFilter, setBranchFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
   const [editing, setEditing] = useState(null); // employee | "new" | null
   const [confirm, setConfirm] = useState(null); // { employee, target }
@@ -61,7 +62,6 @@ export default function AdminEmployeesPage() {
 
   const visible = useMemo(() => {
     let list = employees ?? [];
-    if (branchFilter !== "all") list = list.filter((item) => item.branchId === branchFilter);
     if (statusFilter !== "all") list = list.filter((item) => item.status === statusFilter);
     if (search.trim()) {
       const term = search.trim().toLowerCase();
@@ -73,15 +73,16 @@ export default function AdminEmployeesPage() {
       );
     }
     return list;
-  }, [employees, branchFilter, statusFilter, search]);
+  }, [employees, statusFilter, search]);
 
+  /* The provider resolves the authenticated actor from its own staff
+     session — no authority travels from this page (Phase 14.3). */
   const submitEmployee = async (data) => {
     try {
       if (editing === "new") {
         const result = await mutation.run(
           organizationGovernanceService.createEmployee,
-          data,
-          { role, permissions, label: actorLabel(user, role) }
+          data
         );
         setEditing(null);
         setCreated(result);
@@ -90,8 +91,7 @@ export default function AdminEmployeesPage() {
         await mutation.run(
           organizationGovernanceService.updateEmployee,
           editing.id,
-          data,
-          { role, permissions, label: actorLabel(user, role) }
+          data
         );
         setEditing(null);
         retry();
@@ -106,8 +106,7 @@ export default function AdminEmployeesPage() {
       await mutation.run(
         organizationGovernanceService.updateEmployee,
         employee.id,
-        { status: target },
-        actorLabel(user, role)
+        { status: target }
       );
       setConfirm(null);
       retry();
@@ -121,7 +120,7 @@ export default function AdminEmployeesPage() {
       <PageHeader
         eyebrow="Organisation"
         title="Employees"
-        description="Boutique staff accounts — created with a capability profile, assigned to a branch, signed in through the shared staff login. Admins create employees only; administrator accounts stay with the Super Admin."
+        description={`Your boutique's staff accounts — new employees join ${user?.branchName ?? "your branch"} automatically, with a capability profile and the shared staff login. Admins create employees only; administrator accounts stay with the Super Admin.`}
         actions={
           <Button size="sm" onClick={() => setEditing("new")}>
             New Employee
@@ -130,22 +129,14 @@ export default function AdminEmployeesPage() {
       />
 
       <div className="mt-6 space-y-5">
+        {/* The list is provider-scoped to this Admin's branch, so there is
+            deliberately no branch filter to reach for. */}
         <FilterBar
           searchLabel="Search employees"
           searchPlaceholder="Name, email or role…"
           searchValue={search}
           onSearchChange={setSearch}
           filters={[
-            {
-              id: "branch",
-              label: "Branch",
-              value: branchFilter,
-              onChange: setBranchFilter,
-              options: [
-                { value: "all", label: "All branches" },
-                ...branches.map((branch) => ({ value: branch.id, label: branch.name })),
-              ],
-            },
             {
               id: "status",
               label: "Status",
@@ -260,6 +251,11 @@ export default function AdminEmployeesPage() {
           profiles={profiles}
           actorPermissions={permissions}
           branches={branches}
+          fixedBranch={
+            user?.branchId
+              ? { id: user.branchId, name: user.branchName ?? user.branchId }
+              : null
+          }
           busy={mutation.busy}
           error={mutation.error}
           onClose={() => setEditing(null)}

@@ -120,13 +120,14 @@ test("order · a new checkout begins as Placed and every audience reads that sta
   assert.equal(customerDetail.status, "Placed");
   assert.equal(orderStatusMeta(customerList[0].status).label, orderStatusMeta(customerDetail.status).label);
 
-  const adminList = listAdminOrders(store, { search: order.orderNumber });
-  const adminDetail = getAdminOrder(store, order.id);
+  const globalActor = { role: ROLES.SUPER_ADMIN };
+  const adminList = listAdminOrders(store, globalActor, { search: order.orderNumber });
+  const adminDetail = getAdminOrder(store, globalActor, order.id);
   assert.equal(adminList[0].status, "Placed");
   assert.equal(adminDetail.status, "Placed");
   assert.equal(orderStatusMeta(adminDetail.status).label, "Placed");
 
-  const superAdmin = listAdminOrders(store, { search: order.orderNumber });
+  const superAdmin = listAdminOrders(store, globalActor, { search: order.orderNumber });
   assert.equal(superAdmin[0].status, adminDetail.status, "Super Admin reads the same book, not a copy");
   assert.equal(orderStatusMeta(superAdmin[0].status).label, "Placed");
 
@@ -185,21 +186,22 @@ test("order · cancellation before dispatch still stands; return and refund are 
   const store = freshStore();
   const { order } = placeOne(store);
 
-  const cancelled = updateAdminOrderStatus(store, order.id, "Cancelled", "Phase 14.1");
+  const desk = { role: ROLES.SUPER_ADMIN, label: "Phase 14.1" };
+  const cancelled = updateAdminOrderStatus(store, desk, order.id, "Cancelled");
   assert.equal(cancelled.status, "Cancelled");
   assert.equal(cancelled.paymentStatus, "refunded");
   assert.equal(orderStatusMeta(cancelled.status).label, "Cancelled");
   assert.notEqual(cancelled.status, "Refunded");
-  assert.throws(() => updateAdminOrderStatus(store, order.id, "Refunded", "Phase 14.1"));
+  assert.throws(() => updateAdminOrderStatus(store, desk, order.id, "Refunded"));
 
   const shipped = store.orders.find((item) => item.status === "Shipped");
   assert.ok(shipped, "the book still has a dispatched order");
-  assert.throws(() => updateAdminOrderStatus(store, shipped.id, "Cancelled", "Phase 14.1"));
+  assert.throws(() => updateAdminOrderStatus(store, desk, shipped.id, "Cancelled"));
 
   const remembered = store.orders.find((item) => item.customerId && item.id !== order.id);
   remembered.status = "Returned";
   assert.equal(getCustomerOrder(store, remembered.customerId, remembered.id).status, "Returned");
-  assert.equal(getAdminOrder(store, remembered.id).status, "Returned");
+  assert.equal(getAdminOrder(store, desk, remembered.id).status, "Returned");
   assert.equal(orderStatusMeta("Returned").label, "Returned");
   assert.equal(orderStatusMeta("Refunded").label, "Refunded");
   assert.notEqual(orderStatusMeta("Returned").label, "Placed");
@@ -212,17 +214,18 @@ test("order · cancellation before dispatch still stands; return and refund are 
 
 test("super admin · global orders, customers and inventory, then a branch, then back", () => {
   const store = freshStore();
-  const globalOrders = listAdminOrders(store);
-  const globalCustomers = listAdminCustomers(store);
-  const globalInventory = listAdminInventory(store);
+  const globalActor = { role: ROLES.SUPER_ADMIN };
+  const globalOrders = listAdminOrders(store, globalActor);
+  const globalCustomers = listAdminCustomers(store, globalActor);
+  const globalInventory = listAdminInventory(store, globalActor);
   assert.ok(globalOrders.length > 1);
   assert.ok(new Set(globalOrders.map((order) => order.branchId)).size > 1, "global orders span branches");
   assert.ok(globalCustomers.length > 1);
   assert.ok(new Set(globalInventory.map((row) => row.branchId)).size > 1, "global inventory spans branches");
 
-  const branchOrders = listAdminOrders(store, { branchId: "BR-001" });
-  const branchCustomers = listAdminCustomers(store, { branchId: "BR-001" });
-  const branchInventory = listAdminInventory(store, { branchId: "BR-001" });
+  const branchOrders = listAdminOrders(store, globalActor, { branchId: "BR-001" });
+  const branchCustomers = listAdminCustomers(store, globalActor, { branchId: "BR-001" });
+  const branchInventory = listAdminInventory(store, globalActor, { branchId: "BR-001" });
   assert.ok(branchOrders.length > 0);
   assert.ok(branchOrders.length < globalOrders.length);
   assert.ok(branchOrders.every((order) => order.branchId === "BR-001"));
@@ -231,9 +234,9 @@ test("super admin · global orders, customers and inventory, then a branch, then
   assert.ok(branchInventory.every((row) => row.branchId === "BR-001"));
   assert.ok(branchInventory.length < globalInventory.length);
 
-  assert.equal(listAdminOrders(store).length, globalOrders.length, "omitting the branch returns the organization");
-  assert.equal(listAdminCustomers(store).length, globalCustomers.length);
-  assert.equal(listAdminInventory(store).length, globalInventory.length);
+  assert.equal(listAdminOrders(store, globalActor).length, globalOrders.length, "omitting the branch returns the organization");
+  assert.equal(listAdminCustomers(store, globalActor).length, globalCustomers.length);
+  assert.equal(listAdminInventory(store, globalActor).length, globalInventory.length);
 
   const router = read("app/router.jsx");
   assert.match(router, /path: "orders"/);
@@ -263,8 +266,10 @@ test("super admin · employee and admin restrictions are unchanged", () => {
     password: PASSWORD,
   });
   assert.equal(adminSession.role, ROLES.ADMIN);
-  const adminOrders = listAdminOrders(store);
-  assert.ok(adminOrders.length > 0, "head-office Admin still reads the shared book");
+  const branchAdmin = { id: adminSession.user.id, role: adminSession.role };
+  const adminOrders = listAdminOrders(store, branchAdmin);
+  assert.ok(adminOrders.length > 0, "the branch Admin reads their own branch's book");
+  assert.ok(adminOrders.every((order) => order.branchId === adminSession.user.branchId));
 
   const superSession = authenticateStaff(store, {
     email: superAdminAccount.email,
@@ -272,7 +277,12 @@ test("super admin · employee and admin restrictions are unchanged", () => {
   });
   assert.equal(superSession.role, ROLES.SUPER_ADMIN);
   assert.deepEqual(superSession.permissions, ["*"]);
-  assert.equal(listAdminOrders(store).length, adminOrders.length, "Super Admin does not open a second order book");
+  const globalActor = { role: ROLES.SUPER_ADMIN };
+  const globalOrders = listAdminOrders(store, globalActor);
+  assert.ok(
+    globalOrders.length >= adminOrders.length,
+    "the Super Admin keeps the organization-wide book"
+  );
 });
 
 /* -------------------------------------------------------------------------- */

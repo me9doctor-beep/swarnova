@@ -25,27 +25,39 @@ import {
   listAuditLogs,
   platformOverview,
 } from "../services/providers/mock/governanceStore.js";
+import { OPEN_ORDER_STATUSES } from "../features/orders/orderLifecycle.js";
 import { ROLES } from "../features/authentication/roles.js";
 import { CAPABILITIES } from "../features/authentication/capabilities.js";
 import { can } from "../features/authentication/permissions.js";
 
 const PASSWORD = "Swarnova@123";
 
-test("regression · Admin sign-in and the Admin console payloads are unchanged", () => {
+test("regression · Admin sign-in resolves a branch-scoped console (Phase 14.3 authority model)", () => {
   const store = createGovernanceStore();
   const session = authenticateStaff(store, { email: "arpita.mohanty@swarnova.in", password: PASSWORD });
 
   assert.equal(session.role, ROLES.ADMIN);
   assert.ok(can(session.permissions, CAPABILITIES.ORDERS_MANAGE));
   assert.ok(can(session.permissions, CAPABILITIES.STAFF_MANAGE));
+  assert.equal(session.user.branchId, "BR-001");
 
-  const overview = adminOverview(store);
-  assert.ok(overview.business.openOrders > 0);
-  assert.ok(overview.business.activeBranches > 0);
+  const admin = { id: session.user.id, role: session.role };
+
+  /* The Admin book is the branch book: Bhubaneswar only, whatever the caller. */
+  const overview = adminOverview(store, admin);
+  assert.equal(overview.branchId, "BR-001");
+  const bbsrOpen = store.orders.filter(
+    (order) => order.branchId === "BR-001" && OPEN_ORDER_STATUSES.includes(order.status)
+  ).length;
+  assert.equal(overview.business.openOrders, bbsrOpen);
+  assert.equal(overview.business.activeBranches, 1);
+  assert.ok(overview.branches.every((branch) => branch.id === "BR-001"));
   assert.ok(Array.isArray(overview.attention));
 
-  const reports = adminReports(store);
-  assert.equal(reports.salesByBranch.length, store.branches.length);
+  const reports = adminReports(store, admin);
+  assert.equal(reports.branchId, "BR-001");
+  assert.equal(reports.salesByBranch.length, 1);
+  assert.equal(reports.salesByBranch[0].branchId, "BR-001");
 });
 
 test("regression · Super Admin sign-in, platform overview and audit still work — and employee actions land in the trail", () => {
@@ -87,18 +99,20 @@ test("regression · the customer storefront still serves published pieces only",
   assert.ok(detail.images.length > 0);
 });
 
-test("regression · Admin staff management can still create an employee within its own authority", () => {
+test("regression · Admin staff management still creates an employee — derived into the Admin's own branch", () => {
   const store = createGovernanceStore();
-  const admin = { role: ROLES.ADMIN, permissions: ["*"], label: "Arpita Mohanty — Admin" };
+  const session = authenticateStaff(store, { email: "arpita.mohanty@swarnova.in", password: PASSWORD });
+  const admin = { id: session.user.id, role: session.role, label: "Arpita Mohanty — Admin" };
   const before = store.employees.length;
 
+  /* No branchId in the payload: an Admin's employee derives from the Admin's
+     own branch assignment (Phase 14.3). */
   const created = createEmployee(
     store,
     {
       name: "Regression Hire",
       email: "regression.hire@swarnova.in",
       phone: "+91 94371 30001",
-      branchId: "BR-001",
       role: "Sales Consultant",
       profileId: "PROF-BRANCH-SALES",
     },
@@ -110,4 +124,5 @@ test("regression · Admin staff management can still create an employee within i
   assert.equal(created.profileId, "PROF-BRANCH-SALES");
   assert.ok(created.temporaryPassword);
   assert.equal(store.auditLog[0].action, "employee.create");
+  assert.equal(store.auditLog[0].branchId, "BR-001");
 });

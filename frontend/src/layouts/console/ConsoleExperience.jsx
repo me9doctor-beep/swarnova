@@ -1,9 +1,10 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { Outlet } from "react-router-dom";
 import PropTypes from "prop-types";
 import ConsoleShell from "../../components/layout/ConsoleShell.jsx";
 import { ROLES, roleLabel } from "../../features/authentication/roles.js";
 import { useAuth } from "../../features/authentication/useAuth.js";
+import { useDataProvider } from "../../services/providers/DataProvider.jsx";
 import { CONSOLE_CONFIG } from "./config.js";
 import { filterNavigation } from "./navigation.js";
 
@@ -29,12 +30,24 @@ const EXPERIENCE_ROLES = [ROLES.ADMIN, ROLES.SUPER_ADMIN, ROLES.EMPLOYEE];
 
 export default function ConsoleExperience({ role, contextLabel = null }) {
   const { user, permissions, signOut } = useAuth();
+  const provider = useDataProvider();
   const { label, homePath, navigation } = CONSOLE_CONFIG[role];
 
   const visibleNavigation = useMemo(
     () => filterNavigation(navigation, permissions),
     [navigation, permissions]
   );
+
+  /* Signing out ends BOTH copies of the session: the UI's and the provider's
+     own staff session — the one the provider resolves authority from
+     (Phase 14.3). */
+  const handleSignOut = useCallback(async () => {
+    try {
+      await provider.staffSignOut();
+    } finally {
+      signOut();
+    }
+  }, [provider, signOut]);
 
   return (
     <ConsoleShell
@@ -43,7 +56,7 @@ export default function ConsoleExperience({ role, contextLabel = null }) {
       navigation={visibleNavigation}
       role={roleLabel(role)}
       user={user}
-      onSignOut={signOut}
+      onSignOut={handleSignOut}
     >
       <Outlet />
     </ConsoleShell>

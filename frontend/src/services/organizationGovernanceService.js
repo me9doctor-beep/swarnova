@@ -6,6 +6,12 @@
  * Operational employee management (rosters, counters) deliberately stays in
  * the Admin/Employee domains — governance only sees and controls status.
  *
+ * Phase 14.3 — the provider resolves the authenticated actor from its own
+ * staff session for every call, so no method here carries actor identity or
+ * authority from the browser. An Admin's employee creation derives the
+ * branch from the Admin's own assignment provider-side; the Super Admin
+ * names the branch.
+ *
  * Flow: UI → useGovernanceBranches / useGovernanceAdmins / useGovernanceEmployees
  *       → organizationGovernanceService → DataProvider → Mock Provider → store.
  */
@@ -28,16 +34,16 @@ export const organizationGovernanceService = {
   getEmployees(provider) {
     return provider.getGovernanceEmployees();
   },
-  updateEmployee(provider, id, data, actor) {
-    return provider.updateGovernanceEmployee(id, data, actor);
+  updateEmployee(provider, id, data) {
+    return provider.updateGovernanceEmployee(id, data);
   },
   /**
-   * Admin employee creation (Phase 9) — the only staff-creation path open
-   * to Admins. `actor` carries { role, permissions } so the provider can
-   * enforce the hierarchy: no capabilities granted beyond the creator's own.
+   * Admin employee creation — the only staff-creation path open to Admins.
+   * The provider enforces the hierarchy and derives the branch from the
+   * authenticated Admin's own assignment; the Super Admin must name one.
    */
-  createEmployee(provider, data, actor) {
-    return provider.createGovernanceEmployee(data, actor);
+  createEmployee(provider, data) {
+    return provider.createGovernanceEmployee(data);
   },
   getCapabilityProfiles(provider) {
     return provider.getCapabilityProfiles();

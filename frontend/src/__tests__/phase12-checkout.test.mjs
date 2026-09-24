@@ -576,18 +576,19 @@ test("19 · the customer sees the new order through the existing order contract"
   assert.equal(byNumber.id, response.order.id, "useOrder resolves by order number");
 });
 
-test("20 · the Admin console sees the canonical order in the order book", () => {
+test("20 · the operational book sees the canonical checkout order", () => {
   const store = freshStore();
   const response = placeValid(store);
 
-  const adminOrder = listAdminOrders(store, { search: response.order.orderNumber });
+  const superAdmin = { role: ROLES.SUPER_ADMIN };
+  const adminOrder = listAdminOrders(store, superAdmin, { search: response.order.orderNumber });
   assert.equal(adminOrder.length, 1);
   assert.equal(adminOrder[0].customerName, "Aadya Sharma", "the book joins the customer directory");
   assert.equal(adminOrder[0].branchName, "Swarnova Bhubaneswar", "…and the branch record");
   assert.deepEqual(adminOrder[0].actions, ["Confirmed", "Cancelled"], "a placed order confirms before preparation");
 
   /* Reports read the same book — no checkout-only sales record exists. */
-  const placed = adminReports(store).ordersByStatus.find((row) => row.status === "Placed");
+  const placed = adminReports(store, superAdmin).ordersByStatus.find((row) => row.status === "Placed");
   assert.ok(placed.count >= 1);
 });
 
@@ -626,7 +627,7 @@ test("22 · Super Admin retains global visibility of the new order", () => {
   assert.ok(globalOrders.some((order) => order.id === response.order.id));
   assert.ok(globalOrders.some((order) => order.branchId === CTC), "no branch restriction was applied");
 
-  const overview = adminOverview(store);
+  const overview = adminOverview(store, { role: ROLES.SUPER_ADMIN });
   assert.ok(overview.business.openOrders >= 1);
 
   const platform = platformOverview(store);
@@ -661,7 +662,11 @@ test("23 · order and inventory stay consistent — allocation, not invention", 
   assert.match(movement.by, /Aadya Sharma — Storefront/);
 
   /* The movement log reads through the existing contract. */
-  const listed = listInventoryMovements(store, { stockId: "STK-001-BR-001", limit: 5 });
+  const listed = listInventoryMovements(
+    store,
+    { role: ROLES.SUPER_ADMIN },
+    { stockId: "STK-001-BR-001", limit: 5 }
+  );
   assert.ok(listed.some((item) => item.id === movement.id));
 });
 
@@ -753,18 +758,25 @@ test("27 · the Phase 11 customer identity surface is untouched", () => {
   );
 });
 
-test("28 · the Phase 9 Admin operations surface is untouched", () => {
+test("28 · the Phase 9 Admin operations surface answers to the 14.3 scope model", () => {
   const store = freshStore();
   const session = authenticateStaff(store, {
     email: "arpita.mohanty@swarnova.in",
     password: PASSWORD,
   });
   assert.equal(session.role, ROLES.ADMIN);
+  assert.equal(session.user.branchId, "BR-001");
 
-  const overview = adminOverview(store);
+  /* The branch Admin's overview is their branch's; the organization-wide
+     counts stay with the Super Admin. */
+  const admin = { id: session.user.id, role: session.role };
+  const overview = adminOverview(store, admin);
   assert.ok(Array.isArray(overview.attention));
-  const reports = adminReports(store);
-  assert.equal(reports.salesByBranch.length, store.branches.length);
+  assert.equal(overview.branchId, "BR-001");
+
+  const superAdmin = { role: ROLES.SUPER_ADMIN };
+  const globalReports = adminReports(store, superAdmin);
+  assert.equal(globalReports.salesByBranch.length, store.branches.length);
 });
 
 test("29 · the Phase 10 Employee surface is untouched", () => {
