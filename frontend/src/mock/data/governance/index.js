@@ -4,8 +4,13 @@
  * The directory and control-plane fixtures the Super Admin command centre
  * governs. Four contracts live here:
  *
- *   platformAdmins      — the platform's administrator accounts with their
- *                         organisational scope ("head-office" or a branch id).
+ *   platformAdmins      — the platform's administrator accounts. Since Phase
+ *                         14.3 every administrator is a BRANCH administrator:
+ *                         `branchId` is a required identity attribute naming
+ *                         the one boutique they operate, and their authority
+ *                         never exceeds that branch. Organization-wide
+ *                         authority belongs to the Super Admin alone
+ *                         (`superAdminAccount` in `mock/data/staff`).
  *                         Identifiers and role strings match
  *                         `features/authentication/roles.js`.
  *
@@ -34,6 +39,13 @@
  * Phase 9 added `password` to staff accounts (the shared staff login checks
  * it — a future backend hashes and enforces it server-side) and capability
  * profile fields to employees.
+ *
+ * Phase 14.3 migrated the former head-office administrator (ADM-001,
+ * arpita.mohanty@swarnova.in) onto a branch: no fixture tied her to a
+ * specific boutique, so the assignment resolves deterministically to the
+ * first canonical branch in the branch directory (BR-001 — Bhubaneswar).
+ * No new branch was invented and no other credential changed. Every admin
+ * and employee record now carries exactly one valid branchId.
  */
 
 export const platformAdmins = [
@@ -43,9 +55,9 @@ export const platformAdmins = [
     email: "arpita.mohanty@swarnova.in",
     password: "Swarnova@123",
     role: "admin",
-    scope: "head-office",
-    branchId: null,
-    title: "Head Office Administrator",
+    scope: "branch",
+    branchId: "BR-001",
+    title: "Branch Administrator — Bhubaneswar",
     status: "active",
   },
   {

@@ -9,6 +9,7 @@ import Table from "../../../components/ui/Table.jsx";
 import FilterBar from "../../../components/super-admin/FilterBar.jsx";
 import { useAdminOrders } from "../../../hooks/useAdminOperations.js";
 import { useGovernanceBranches } from "../../../hooks/useGovernanceOrganization.js";
+import { useAuth } from "../../../features/authentication/useAuth.js";
 import { useDocumentTitle } from "../../../hooks/useDocumentTitle.js";
 import { ORDER_STATUS_OPTIONS, orderStatusMeta } from "../../../features/admin/operations.js";
 import { OperationsViewNote, useOperationsFrame } from "../../../features/operations/operationsBase.jsx";
@@ -25,6 +26,12 @@ export default function AdminOrdersPage() {
   const { base, consoleName } = useOperationsFrame();
   useDocumentTitle(`Orders — Swarnova ${consoleName}`);
 
+  /* A branch-scoped administrator works their own boutique: the provider
+     pins the book to their branch, so no branch selector is offered. The
+     Super Admin (global session) keeps the branch filter. */
+  const { user } = useAuth();
+  const branchScoped = Boolean(user?.branchId);
+
   const [searchParams] = useSearchParams();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState(searchParams.get("status") ?? "all");
@@ -40,9 +47,9 @@ export default function AdminOrdersPage() {
     () => ({
       search: search.trim() || undefined,
       status: statusFilter === "all" ? undefined : statusFilter,
-      branchId: branchFilter === "all" ? undefined : branchFilter,
+      branchId: branchScoped ? undefined : branchFilter === "all" ? undefined : branchFilter,
     }),
-    [search, statusFilter, branchFilter]
+    [search, statusFilter, branchFilter, branchScoped]
   );
 
   const { status, data: orders, error, retry } = useAdminOrders(query);
@@ -78,16 +85,22 @@ export default function AdminOrdersPage() {
               onChange: setStatusFilter,
               options: ORDER_STATUS_OPTIONS,
             },
-            {
-              id: "branch",
-              label: "Branch",
-              value: branchFilter,
-              onChange: setBranchFilter,
-              options: branchOptions,
-            },
+            /* Branch selection is a Super Admin view filter only — a
+               branch-scoped account's book is already provider-pinned. */
+            ...(branchScoped
+              ? []
+              : [
+                  {
+                    id: "branch",
+                    label: "Branch",
+                    value: branchFilter,
+                    onChange: setBranchFilter,
+                    options: branchOptions,
+                  },
+                ]),
           ]}
         />
-        <OperationsViewNote narrowed={branchFilter !== "all"} />
+        <OperationsViewNote narrowed={!branchScoped && branchFilter !== "all"} />
 
         <AsyncBoundary
           status={status === "loading" ? "loading" : status === "error" ? "error" : "success"}

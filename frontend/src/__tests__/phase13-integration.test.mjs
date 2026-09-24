@@ -61,6 +61,7 @@ import {
   superAdminAccount,
 } from "../mock/data/index.js";
 import { CUSTOMER_DEMO_PASSWORD } from "../mock/data/customer/index.js";
+import { ROLES } from "../features/authentication/roles.js";
 
 const AADYA = "CUST-84920";
 const AADYA_ADDR = "ADDR-001";
@@ -318,7 +319,7 @@ test("inventory · the seeded book reserves exactly what the open orders hold", 
 
 test("inventory · dispatch retires the allocation, cancellation returns it", () => {
   const store = createGovernanceStore();
-  const desk = "Rajat Dehury — Admin";
+  const desk = { role: ROLES.SUPER_ADMIN, label: "Rajat Dehury — Admin" };
   const place = (key, quantity) =>
     placeCheckoutOrder(store, AADYA, {
       items: [{ id: "JWL-006", quantity }],
@@ -338,20 +339,20 @@ test("inventory · dispatch retires the allocation, cancellation returns it", ()
   const ledgerAtAllocation = ledgerLines();
   assert.match(store.inventoryMovements[0].note, new RegExp(`Allocated to order ${shippedOrder.orderNumber}`));
 
-  updateAdminOrderStatus(store, shippedOrder.id, "Confirmed", desk);
+  updateAdminOrderStatus(store, desk, shippedOrder.id, "Confirmed");
   assert.deepEqual(
     { available: row(shippedOrder.branchId).available, reserved: row(shippedOrder.branchId).reserved },
     allocated,
     "confirmation holds the reservation — it does not move stock"
   );
-  updateAdminOrderStatus(store, shippedOrder.id, "Processing", desk);
+  updateAdminOrderStatus(store, desk, shippedOrder.id, "Processing");
   assert.deepEqual(
     { available: row(shippedOrder.branchId).available, reserved: row(shippedOrder.branchId).reserved },
     allocated,
     "processing changes no stock"
   );
 
-  updateAdminOrderStatus(store, shippedOrder.id, "Shipped", desk);
+  updateAdminOrderStatus(store, desk, shippedOrder.id, "Shipped");
   const afterDispatch = row(shippedOrder.branchId);
   assert.equal(afterDispatch.reserved, allocated.reserved - 2, "the pieces leave the vitrine");
   assert.equal(afterDispatch.available, allocated.available, "no new stock is taken at dispatch");
@@ -362,29 +363,33 @@ test("inventory · dispatch retires the allocation, cancellation returns it", ()
     "the trail carries the consequence, not just the status"
   );
 
-  const onTheRoad = updateAdminOrderStatus(store, shippedOrder.id, "Out for Delivery", desk);
+  const onTheRoad = updateAdminOrderStatus(store, desk, shippedOrder.id, "Out for Delivery");
   assert.equal(onTheRoad.status, "Out for Delivery");
   assert.deepEqual(onTheRoad.actions, ["Delivered"], "delivery follows the road, not a skip");
   assert.equal(row(shippedOrder.branchId).reserved, afterDispatch.reserved, "out for delivery does not move stock again");
   assert.equal(row(shippedOrder.branchId).available, afterDispatch.available);
   assert.throws(
-    () => updateAdminOrderStatus(store, shippedOrder.id, "Cancelled", desk),
+    () => updateAdminOrderStatus(store, desk, shippedOrder.id, "Cancelled"),
     /cannot move/,
     "a consignment already dispatched cannot be cancelled"
   );
 
   const cancelled = place("P13-CANCEL", 1);
   const before = { available: row(cancelled.branchId).available, reserved: row(cancelled.branchId).reserved };
-  updateAdminOrderStatus(store, cancelled.id, "Cancelled", desk);
+  updateAdminOrderStatus(store, desk, cancelled.id, "Cancelled");
   const after = row(cancelled.branchId);
   assert.equal(after.reserved, before.reserved - 1, "the reservation is released");
   assert.equal(after.available, before.available + 1, "and the piece is buyable again");
 
-  const [movement] = listInventoryMovements(store, { stockId: after.id, limit: 1 });
+  const [movement] = listInventoryMovements(
+    store,
+    { role: ROLES.SUPER_ADMIN },
+    { stockId: after.id, limit: 1 }
+  );
   assert.equal(movement.type, "receipt");
   assert.equal(movement.delta, 1);
   assert.match(movement.note, /Returned to free stock — order .+ cancelled\./);
-  assert.equal(movement.by, desk, "the ledger names who moved it");
+  assert.equal(movement.by, desk.label, "the ledger names who moved it");
   assert.match(
     store.auditLog.find((entry) => entry.entityId === cancelled.id).detail,
     /returned to free stock\./
@@ -414,7 +419,7 @@ test("inventory · a cancellation can never invent stock the boutique does not h
   const availableBefore = row.available;
   const ledgerBefore = store.inventoryMovements.length;
 
-  updateAdminOrderStatus(store, order.id, "Cancelled", "Rajat Dehury — Admin", order.branchId);
+  updateAdminOrderStatus(store, { role: ROLES.SUPER_ADMIN }, order.id, "Cancelled");
 
   assert.equal(row.reserved, 0, "a reservation that never existed stays non-existent");
   assert.equal(row.available, availableBefore, "free stock is not conjured from a cancellation");
@@ -433,11 +438,15 @@ test("orders · the customer, the branch and the Admin console read one book", (
     idempotencyKey: "P13-READ",
   }).order;
 
-  const admin = getAdminOrder(store, placed.id);
+  const admin = getAdminOrder(store, { role: ROLES.SUPER_ADMIN }, placed.id);
   assert.equal(admin.orderNumber, placed.orderNumber);
   assert.equal(admin.branchId, placed.branchId, "one fulfilment branch, everywhere");
   assert.equal(admin.items[0].name, "Eternal Halo Ring", "the console shows the canonical piece");
-  assert.equal(getAdminOrder(store, admin.orderNumber).id, admin.id, "number and id open the same record");
+  assert.equal(
+    getAdminOrder(store, { role: ROLES.SUPER_ADMIN }, admin.orderNumber).id,
+    admin.id,
+    "number and id open the same record"
+  );
 });
 
 /* ------------------------------------------------------------------------- */
@@ -447,7 +456,7 @@ test("orders · the customer, the branch and the Admin console read one book", (
 test("branch drill-down · a global account may name a branch, a scoped account may not", () => {
   const store = createGovernanceStore();
   const employee = { id: "EMP-001", role: "employee", label: "Meera Das — Employee" };
-  const admin = { id: "ADM-001", role: "admin", label: "Rajat Dehury — Admin" };
+  const admin = { id: "ADM-001", role: "admin", label: "Arpita Mohanty — Admin" };
   const superAdmin = { id: "SA-001", role: "super_admin", label: "Rajiv Meher — Super Admin" };
   const reads = [employeeReports, employeeBranchOperations, employeeOverview];
 
@@ -459,20 +468,21 @@ test("branch drill-down · a global account may name a branch, a scoped account 
     }
   }
 
-  /* A named branch is honoured for the two global roles… */
-  for (const actor of [admin, superAdmin]) {
-    for (const read of reads) {
-      assert.equal(read(store, actor, { branchId: "BR-002" }).branch.id, "BR-002");
-    }
+  /* A named branch is honoured for the ONE global role — the Super Admin.
+     Since Phase 14.3 an administrator is branch-scoped like an employee. */
+  for (const read of reads) {
+    assert.equal(read(store, superAdmin, { branchId: "BR-002" }).branch.id, "BR-002");
   }
 
-  /* …and refused for an account that belongs to one boutique. */
-  for (const query of [{ branchId: "BR-002" }, { branchId: "BR-999" }]) {
-    assert.throws(
-      () => employeeReports(store, employee, query),
-      /only branch this account can work in/,
-      "a URL parameter must never widen an employee's reach"
-    );
+  /* …and refused for the accounts that belong to one boutique. */
+  for (const actor of [employee, admin]) {
+    for (const query of [{ branchId: "BR-002" }, { branchId: "BR-999" }]) {
+      assert.throws(
+        () => employeeReports(store, actor, query),
+        /only branch this account can work in/,
+        "a URL parameter must never widen a scoped account's reach"
+      );
+    }
   }
   assert.throws(
     () => employeeReports(store, superAdmin, { branchId: "BR-999" }),
@@ -573,7 +583,11 @@ test("identity · a registered customer is a member everywhere the platform look
   });
 
   assert.equal(registered.customer.password, undefined, "the credential never leaves the store");
-  assert.equal(listAdminCustomers(store, { search: "ishita" }).length, 1, "the Admin book sees them at once");
+  assert.equal(
+    listAdminCustomers(store, { role: ROLES.SUPER_ADMIN }, { search: "ishita" }).length,
+    1,
+    "the Admin book sees them at once"
+  );
 
   const session = authenticateCustomer(store, {
     email: "ishita.nanda@swarnova.in",

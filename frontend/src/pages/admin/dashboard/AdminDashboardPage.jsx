@@ -46,7 +46,7 @@ export default function AdminDashboardPage() {
       <PageHeader
         eyebrow={ROLE_LABELS[ROLES.ADMIN]}
         title="Business Overview"
-        description="The head-office view of the jewellery business — orders, stock, branches and customers, and what needs attention today."
+        description="Your boutique's day at a glance — this branch's orders, stock and customers, and what needs attention today."
         actions={
           canDo(CAPABILITIES.REPORTS_VIEW) ? (
             <Button size="sm" href="/admin/reports">

@@ -114,8 +114,12 @@ DataProvider.propTypes = {
     getPlatformSettings: PropTypes.func,
     updatePlatformSettings: PropTypes.func,
     getAuditLogs: PropTypes.func,
-    /* Phase 9 — shared staff login & Admin operations contract */
+    /* Phase 9 — shared staff login & Admin operations contract.
+       Phase 14.3: the provider resolves the authenticated staff actor from
+       its own session (`authenticateStaff` / `staffSignOut`); browser
+       actor objects and branch claims are never authority. */
     authenticateStaff: PropTypes.func,
+    staffSignOut: PropTypes.func,
     getAdminOverview: PropTypes.func,
     getAdminOrders: PropTypes.func,
     getAdminOrder: PropTypes.func,

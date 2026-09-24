@@ -27,12 +27,20 @@ export default function EmployeeFormDialog({
   profiles,
   actorPermissions,
   branches,
+  fixedBranch = null,
   busy,
   error,
   onClose,
   onSubmit,
 }) {
   const isNew = !employee;
+
+  /* Phase 14.3 — when the creator's branch DERIVES the employee's branch
+     (an Admin creating an employee), the dialog shows the branch as a fixed
+     fact instead of a selector: there is nothing to choose, and nothing the
+     browser could choose otherwise — the provider derives the assignment
+     from the authenticated Admin's own record regardless. */
+  const branchSelectable = !fixedBranch;
 
   /* The actor's own level per capability group — the ceiling for grants. */
   const actorLevels = useMemo(() => {
@@ -94,7 +102,8 @@ export default function EmployeeFormDialog({
     if (!form.phone.trim()) return setLocalError("A phone number is required.");
     if (!form.role.trim())
       return setLocalError("A role title is required — for example, Sales Consultant.");
-    if (!form.branchId) return setLocalError("Choose the branch this employee belongs to.");
+    if (branchSelectable && !form.branchId)
+      return setLocalError("Choose the branch this employee belongs to.");
     if (!form.profileId)
       return setLocalError("Choose the capability profile this employee is hired into.");
 
@@ -103,7 +112,9 @@ export default function EmployeeFormDialog({
       email: form.email,
       phone: form.phone,
       role: form.role,
-      branchId: form.branchId,
+      /* A derived branch is NOT sent: the provider assigns the authenticated
+         Admin's own branch, and a browser claim never overrides it. */
+      ...(branchSelectable ? { branchId: form.branchId } : {}),
       profileId: form.profileId,
       /* New accounts always start active; status changes afterwards are a
          deliberate part of the same record. */
@@ -158,22 +169,36 @@ export default function EmployeeFormDialog({
             value={form.phone}
             onChange={(event) => setForm((prev) => ({ ...prev, phone: event.target.value }))}
           />
-          <Select
-            label="Branch"
-            required
-            size="sm"
-            value={form.branchId}
-            onChange={(event) =>
-              setForm((prev) => ({ ...prev, branchId: event.target.value }))
-            }
-          >
-            <option value="">Choose a branch…</option>
-            {branches.map((branch) => (
-              <option key={branch.id} value={branch.id}>
-                {branch.name}
-              </option>
-            ))}
-          </Select>
+          {branchSelectable ? (
+            <Select
+              label="Branch"
+              required
+              size="sm"
+              value={form.branchId}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, branchId: event.target.value }))
+              }
+            >
+              <option value="">Choose a branch…</option>
+              {branches.map((branch) => (
+                <option key={branch.id} value={branch.id}>
+                  {branch.name}
+                </option>
+              ))}
+            </Select>
+          ) : (
+            <div>
+              <span className="mb-1.5 block font-sans text-caption text-text-secondary">
+                Branch
+              </span>
+              <p className="flex h-8 items-center border border-border-subtle bg-surface-secondary px-2.5 font-sans text-body-sm text-text-primary">
+                {fixedBranch?.name ?? "—"}
+              </p>
+              <p className="mt-1 font-sans text-caption text-text-muted">
+                Derived from your own branch assignment — it cannot be changed.
+              </p>
+            </div>
+          )}
           <Select
             label="Capability Profile"
             required
@@ -295,6 +320,12 @@ EmployeeFormDialog.propTypes = {
   branches: PropTypes.arrayOf(
     PropTypes.shape({ id: PropTypes.string, name: PropTypes.string })
   ).isRequired,
+  /**
+   * When the creator's own branch assigns the employee (an Admin's direct
+   * report), the dialog renders the branch as a fixed fact and sends no
+   * branchId — the provider derives it from the authenticated Admin.
+   */
+  fixedBranch: PropTypes.shape({ id: PropTypes.string, name: PropTypes.string }),
   busy: PropTypes.bool,
   error: PropTypes.instanceOf(Error),
   onClose: PropTypes.func.isRequired,

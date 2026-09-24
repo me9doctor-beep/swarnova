@@ -967,13 +967,20 @@ export function listGovernanceBranches(store) {
   return store.branches.map((branch) => toGovernanceBranch(store, branch));
 }
 
-export function setBranchStatus(store, id, status) {
+export function setBranchStatus(store, id, status, actor = {}) {
+  /* Branch enable/disable is platform governance: the Super Admin alone.
+     Legacy calls (no actor) come from the Super Admin console itself. */
+  const actorRole = actor && typeof actor === "object" ? actor.role : undefined;
+  if (actorRole !== undefined && actorRole !== ROLES.SUPER_ADMIN) {
+    fail("Only the Super Admin can enable or disable branches.");
+  }
   if (!["active", "disabled"].includes(status)) fail(`“${status}” is not a branch status.`);
   const branch = store.branches.find((item) => item.id === id);
   if (!branch) fail(`Branch ${id} could not be found.`);
 
   branch.status = status;
   appendAudit(store, {
+    actor: hasText(actor?.label) ? actor.label : undefined,
     action: status === "active" ? "branch.enable" : "branch.disable",
     entityType: "branch",
     entityId: id,
@@ -986,13 +993,34 @@ export function setBranchStatus(store, id, status) {
   return toGovernanceBranch(store, branch);
 }
 
-export function listGovernanceAdmins(store) {
+export function listGovernanceAdmins(store, actor = {}) {
+  /* The administrator directory is a platform-governance concern: the Super
+     Admin reads it organization-wide; nobody else does. */
+  const scope = resolveStaffScope(store, actor);
+  if (scope.role !== ROLES.SUPER_ADMIN) {
+    fail("Only the Super Admin can view administrator accounts.");
+  }
   return emit(
     store.admins.map((admin) => {
       const branch = store.branches.find((item) => item.id === admin.branchId);
       return { ...admin, branchName: branch?.name ?? null };
     })
   );
+}
+
+/**
+ * The one branch-assignment check for staff creation and reassignment. A
+ * staff member may only be assigned a branch that exists and is active — a
+ * disabled boutique cannot receive staff (Phase 8's branch status rule).
+ */
+function assignableBranchOrFail(store, branchId) {
+  if (!hasText(branchId)) fail("Choose the branch this account belongs to.");
+  const branch = store.branches.find((item) => item.id === branchId);
+  if (!branch) fail("This branch is unavailable — choose a branch from the directory.");
+  if (branch.status === "disabled") {
+    fail(`${branch.name} is disabled — staff cannot be assigned to an inactive branch.`);
+  }
+  return branch;
 }
 
 export function createGovernanceAdmin(store, data = {}, actor = {}) {
@@ -1008,23 +1036,25 @@ export function createGovernanceAdmin(store, data = {}, actor = {}) {
   if (!hasText(data.email) || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
     fail("A valid email address is required.");
   }
-  if (data.scope === "branch" && !hasText(data.branchId)) {
-    fail("Choose the branch this administrator manages.");
+
+  /* Phase 14.3 — branch assignment is a REQUIRED identity attribute. There
+     is no head-office administrator: organization-wide authority belongs to
+     the Super Admin alone. */
+  const branch = assignableBranchOrFail(store, data.branchId);
+  if (emailTaken(store, String(data.email).trim())) {
+    fail(`The email ${String(data.email).trim()} already belongs to another staff account.`);
   }
 
   const id = `ADM-${String(store.admins.length + 1).padStart(3, "0")}-${Date.now().toString(36).toUpperCase()}`;
-  const branch = store.branches.find((item) => item.id === data.branchId);
   const admin = {
     id,
     name: data.name.trim(),
     email: data.email.trim(),
+    password: db.STAFF_TEMP_PASSWORD,
     role: "admin",
-    scope: data.scope === "branch" ? "branch" : "head-office",
-    branchId: data.scope === "branch" ? data.branchId : null,
-    title:
-      data.scope === "branch" && branch
-        ? `Branch Administrator — ${branch.city}`
-        : "Head Office Administrator",
+    scope: "branch",
+    branchId: branch.id,
+    title: `Branch Administrator — ${branch.city}`,
     status: "active",
   };
 
@@ -1034,25 +1064,39 @@ export function createGovernanceAdmin(store, data = {}, actor = {}) {
     entityType: "admin",
     entityId: id,
     entityLabel: admin.name,
-    detail: `Administrator account created (${admin.title}).`,
+    branchId: branch.id,
+    detail: `Administrator account created for ${branch.name}. Their authority is limited to this branch.`,
   });
-  return emit(admin);
+  /* The temporary password travels once, for the invite handover — the same
+     first-sign-in model employee creation uses. */
+  return { ...emit(admin), temporaryPassword: db.STAFF_TEMP_PASSWORD };
 }
 
-export function updateGovernanceAdmin(store, id, patch = {}) {
+export function updateGovernanceAdmin(store, id, patch = {}, actor = {}) {
+  /* Only the Super Admin reassigns or disables an administrator. */
+  const actorRole = actor && typeof actor === "object" ? actor.role : undefined;
+  if (actorRole !== undefined && actorRole !== ROLES.SUPER_ADMIN) {
+    fail("Only the Super Admin can manage administrator accounts.");
+  }
+
   const admin = store.admins.find((item) => item.id === id);
   if (!admin) fail(`Administrator ${id} could not be found.`);
 
   const details = [];
-  if (patch.scope !== undefined && patch.scope !== admin.scope) {
-    admin.scope = patch.scope === "branch" ? "branch" : "head-office";
-    admin.branchId = admin.scope === "branch" ? patch.branchId ?? admin.branchId : null;
-    const branch = store.branches.find((item) => item.id === admin.branchId);
-    admin.title =
-      admin.scope === "branch" && branch
-        ? `Branch Administrator — ${branch.city}`
-        : "Head Office Administrator";
-    details.push(`Scope reassigned to ${admin.title}.`);
+
+  /* Phase 14.3 — head-office scope no longer exists for administrators. */
+  if (patch.scope !== undefined && patch.scope !== "branch") {
+    fail("Administrators are branch-assigned — the Super Admin alone holds organization-wide authority.");
+  }
+
+  if (patch.branchId !== undefined) {
+    const branch = assignableBranchOrFail(store, patch.branchId);
+    if (branch.id !== admin.branchId) {
+      admin.branchId = branch.id;
+      admin.scope = "branch";
+      admin.title = `Branch Administrator — ${branch.city}`;
+      details.push(`Branch assignment changed to ${branch.name}. Their operational scope moves with them.`);
+    }
   }
   if (patch.status !== undefined && patch.status !== admin.status) {
     admin.status = patch.status === "disabled" ? "disabled" : "active";
@@ -1069,24 +1113,37 @@ export function updateGovernanceAdmin(store, id, patch = {}) {
     entityType: "admin",
     entityId: id,
     entityLabel: admin.name,
+    branchId: admin.branchId,
     detail: details.join(" "),
   });
   return emit(admin);
 }
 
-export function listGovernanceEmployees(store) {
+/**
+ * The employee directory, resolved through the caller's staff scope:
+ * the Super Admin sees the whole organization; an Admin sees only the
+ * employees of their own branch — a query or a filter cannot widen that
+ * (Phase 14.3). Resolved branch and profile names travel with each record.
+ */
+export function listGovernanceEmployees(store, actor = {}) {
+  const scope = resolveStaffScope(store, actor);
+  if (![ROLES.ADMIN, ROLES.SUPER_ADMIN].includes(scope.role)) {
+    fail("Only Admins and Super Admins can view employee accounts.");
+  }
   return emit(
-    store.employees.map((employee) => {
-      const branch = store.branches.find((item) => item.id === employee.branchId);
-      const profile = store.capabilityProfiles.find(
-        (item) => item.id === employee.profileId
-      );
-      return {
-        ...employee,
-        branchName: branch?.name ?? null,
-        profileName: profile?.name ?? null,
-      };
-    })
+    store.employees
+      .filter((employee) => !scope.branchId || employee.branchId === scope.branchId)
+      .map((employee) => {
+        const branch = store.branches.find((item) => item.id === employee.branchId);
+        const profile = store.capabilityProfiles.find(
+          (item) => item.id === employee.profileId
+        );
+        return {
+          ...employee,
+          branchName: branch?.name ?? null,
+          profileName: profile?.name ?? null,
+        };
+      })
   );
 }
 
@@ -1103,11 +1160,13 @@ export function updateGovernanceEmployee(store, id, patch = {}, actor = {}) {
   const employee = store.employees.find((item) => item.id === id);
   if (!employee) fail(`Employee ${id} could not be found.`);
 
-  /* `actor` is a record { role, permissions, label }; a bare string (older
-     callers) is treated as a label-only Admin actor. */
+  /* Phase 14.3 — the actor's authority is resolved from their canonical
+     record, never from a client claim. `actor` is a record { id, role,
+     label }; a bare string (older callers) is treated as a label-only Admin
+     actor and resolves like one — which no longer carries authority. */
   const actorRecord =
     actor && typeof actor === "object"
-      ? { role: actor.role ?? ROLES.ADMIN, permissions: actor.permissions ?? [], label: actor.label }
+      ? { id: actor.id, role: actor.role ?? ROLES.ADMIN, permissions: actor.permissions ?? [], label: actor.label }
       : { role: ROLES.ADMIN, permissions: [], label: actor || undefined };
 
   if (![ROLES.ADMIN, ROLES.SUPER_ADMIN].includes(actorRecord.role)) {
@@ -1115,6 +1174,15 @@ export function updateGovernanceEmployee(store, id, patch = {}, actor = {}) {
   }
 
   const details = [];
+
+  /* Branch scope FIRST — an Admin may only manage employees of their own
+     branch, whatever the request asks for. */
+  const scope = resolveStaffScope(store, actorRecord);
+  if (scope.role === ROLES.ADMIN && employee.branchId !== scope.branchId) {
+    fail(
+      `This employee belongs to another boutique — this account manages ${scope.branch.name} only.`
+    );
+  }
 
   if (patch.name !== undefined && patch.name.trim() && patch.name.trim() !== employee.name) {
     employee.name = patch.name.trim();
@@ -1141,6 +1209,13 @@ export function updateGovernanceEmployee(store, id, patch = {}, actor = {}) {
     const branch = store.branches.find((item) => item.id === patch.branchId);
     if (!branch) fail("Choose the branch this employee belongs to.");
     if (branch.id !== employee.branchId) {
+      /* Only the Super Admin reassigns a branch; an Admin can never move an
+         employee — not even into their own branch (capability ≠ branch
+         authority). */
+      if (scope.role !== ROLES.SUPER_ADMIN) {
+        fail("Only the Super Admin can reassign an employee's branch.");
+      }
+      assignableBranchOrFail(store, branch.id);
       employee.branchId = branch.id;
       details.push(`Branch reassigned to ${branch.name}.`);
     }
@@ -1164,7 +1239,9 @@ export function updateGovernanceEmployee(store, id, patch = {}, actor = {}) {
       (profile?.id ?? null) === (employee.profileId ?? null);
 
     if (!unchanged) {
-      if (!capabilitiesWithinAuthority(actorRecord.permissions, capabilities)) {
+      /* Capability authority is the STORE-resolved scope's claim list —
+         never the browser's. */
+      if (!capabilitiesWithinAuthority(scope.permissions, capabilities)) {
         fail("You cannot grant capabilities you do not hold yourself.");
       }
       const profileChanged =
@@ -1198,7 +1275,7 @@ export function updateGovernanceEmployee(store, id, patch = {}, actor = {}) {
     details.length === 1;
 
   appendAudit(store, {
-    actor: actorRecord.label,
+    actor: hasText(actorRecord.label) ? actorRecord.label : scope.label,
     action: statusOnly
       ? employee.status === "disabled"
         ? "employee.disable"
@@ -1305,8 +1382,37 @@ export function authenticateStaff(store, credentials = {}) {
  * The hierarchy guard is enforced store-side, exactly as the API will:
  * the requested capabilities must sit within the creator's own grant.
  */
+/**
+ * Create an EMPLOYEE account — the only staff-creation path open to Admins.
+ * Admins cannot create Admins (that stays with the platform owner's
+ * `createGovernanceAdmin`) and nobody can create a Super Admin here.
+ *
+ * Phase 14.3 branch authority — resolved from the actor's canonical record,
+ * never from the request:
+ *   · Super Admin  MUST name a valid, active branch for the new employee.
+ *   · Admin        the employee's branch is DERIVED from the Admin's own
+ *                  assignment. A request that claims a conflicting branch is
+ *                  refused, not corrected; an omitted branch is derived.
+ *   · Employee     refused.
+ *
+ * The hierarchy guard is enforced store-side, exactly as the API will:
+ * the requested capabilities must sit within the creator's own grant.
+ */
 export function createEmployee(store, data = {}, actor = {}) {
-  if (![ROLES.ADMIN, ROLES.SUPER_ADMIN].includes(actor.role)) {
+  const scope = resolveStaffScope(store, actor);
+
+  if (scope.role === ROLES.ADMIN) {
+    /* An explicit branch claim that conflicts with the Admin's own branch is
+       an authorization failure — the provider never silently overwrites it,
+       and an omitted branchId is simply derived. */
+    if (hasText(data.branchId) && data.branchId !== scope.branchId) {
+      fail(
+        `This employee must belong to your assigned branch — you cannot create staff for another boutique.`
+      );
+    }
+  } else if (scope.role === ROLES.SUPER_ADMIN) {
+    assignableBranchOrFail(store, data.branchId);
+  } else {
     fail("Only Admins and Super Admins can create staff accounts.");
   }
 
@@ -1317,7 +1423,12 @@ export function createEmployee(store, data = {}, actor = {}) {
     fail(`The email ${email} already belongs to another staff account.`);
   }
   if (!hasText(data.phone)) fail("A phone number is required.");
-  const branch = store.branches.find((item) => item.id === data.branchId);
+  /* Branch resolution happens AFTER the Admin derivation above: for an
+     Admin the request value (if any) has already been proven equal to their
+     own branch, so this lookup always resolves the derived branch. */
+  const branch = store.branches.find(
+    (item) => item.id === (scope.role === ROLES.ADMIN ? scope.branchId : data.branchId)
+  );
   if (!branch) fail("Choose the branch this employee belongs to.");
   if (!hasText(data.role)) fail("A role title is required — for example, Sales Consultant.");
 
@@ -1325,7 +1436,7 @@ export function createEmployee(store, data = {}, actor = {}) {
   if (!profile) fail("Choose the capability profile this employee is hired into.");
 
   const capabilities = { ...profile.capabilities, ...(data.capabilities ?? {}) };
-  if (!capabilitiesWithinAuthority(actor.permissions, capabilities)) {
+  if (!capabilitiesWithinAuthority(scope.permissions, capabilities)) {
     fail("You cannot grant capabilities you do not hold yourself.");
   }
 
@@ -1347,16 +1458,22 @@ export function createEmployee(store, data = {}, actor = {}) {
 
   store.employees = [...store.employees, employee];
   appendAudit(store, {
-    actor: actor.label ?? "Admin",
+    actor: hasText(actor?.label) ? actor.label : scope.label,
     action: "employee.create",
     entityType: "employee",
     entityId: id,
     entityLabel: employee.name,
+    branchId: branch.id,
     detail: `Employee account created at ${branch.name} with the ${profile.name} capability profile.`,
   });
 
-  /* The temporary password travels once, for the invite handover. */
-  return { ...emit(employee), temporaryPassword: db.STAFF_TEMP_PASSWORD };
+  /* The temporary password travels once, for the invite handover; the
+     resolved branch name rides along for the confirmation view. */
+  return {
+    ...emit(employee),
+    branchName: branch.name,
+    temporaryPassword: db.STAFF_TEMP_PASSWORD,
+  };
 }
 
 /* ----------------------------------------------------------------------- */
@@ -1556,11 +1673,18 @@ function findOrder(store, id) {
   return order;
 }
 
-export function listAdminOrders(store, query = {}) {
-  let list = [...store.orders];
+export function listAdminOrders(store, actor, query = {}) {
+  /* The order book is scoped by the caller's resolved staff scope: an Admin
+     reads their own branch only, and a branchId naming another boutique is
+     refused — never honoured (Phase 14.3). */
+  const scope = adminScopeOrFail(store, actor);
+  const branchId = resolveScopeBranch(store, scope, query.branchId);
+
+  let list = branchId
+    ? store.orders.filter((order) => order.branchId === branchId)
+    : [...store.orders];
 
   if (query.status) list = list.filter((order) => order.status === query.status);
-  if (query.branchId) list = list.filter((order) => order.branchId === query.branchId);
   if (query.search) {
     const term = String(query.search).toLowerCase();
     list = list.filter((order) => {
@@ -1577,11 +1701,18 @@ export function listAdminOrders(store, query = {}) {
   return list.map((order) => toAdminOrder(store, order));
 }
 
-export function getAdminOrder(store, id) {
+export function getAdminOrder(store, actor, id) {
+  const scope = adminScopeOrFail(store, actor);
   const order = store.orders.find(
     (item) => item.id === id || item.orderNumber === id
   );
-  return order ? toAdminOrder(store, order) : null;
+  if (!order) return null;
+  if (scope.branchId && order.branchId !== scope.branchId) {
+    fail(
+      `“${order.orderNumber}” is fulfilled by another boutique — this account works ${scope.branch.name} only.`
+    );
+  }
+  return toAdminOrder(store, order);
 }
 
 /**
@@ -1641,8 +1772,30 @@ function applyOrderStockEffect(store, order, status, actor) {
  * employee contract passes the branch it already resolved from the session,
  * so a branch action reads as one in the trail.
  */
-export function updateAdminOrderStatus(store, id, status, actor, branchId = null) {
+export function updateAdminOrderStatus(store, actor, id, status) {
+  /* The lifecycle move happens inside the caller's resolved scope: an Admin
+     can only move their own branch's orders, and the audit branch is the
+     RESOLVED scope branch — never a client-supplied value (Phase 14.3). */
+  const scope = adminScopeOrFail(store, actor);
   const order = findOrder(store, id);
+  if (scope.branchId && order.branchId !== scope.branchId) {
+    fail(
+      `“${order.orderNumber}” is fulfilled by another boutique — this account works ${scope.branch.name} only.`
+    );
+  }
+  /* Attribution: the caller's label when one travels with the request,
+     otherwise the label resolved from the canonical record. */
+  const auditLabel = hasText(actor?.label) ? actor.label : scope.label;
+  return applyOrderTransition(store, order, status, auditLabel, scope.branchId ?? null);
+}
+
+/**
+ * The one lifecycle-move core, shared by the scoped Admin book and the
+ * Employee counter contract — each boundary checks scope BEFORE entering,
+ * and this core enforces the flow table and applies the transition, the
+ * stock effect, and one audit line carrying the resolved branch.
+ */
+function applyOrderTransition(store, order, status, auditLabel, auditBranchId) {
   const allowed = ORDER_FLOW[order.status] ?? [];
   if (!allowed.includes(status)) {
     fail(
@@ -1660,7 +1813,10 @@ export function updateAdminOrderStatus(store, id, status, actor, branchId = null
     order.cancelledAt = at;
     order.paymentStatus = "refunded";
   }
-  const stockEffect = applyOrderStockEffect(store, order, status, actor);
+  /* Attribution and audit branch both come from the caller's boundary: the
+     label it resolved (or the canonical record's) and the scope branch it
+     proved — never a client-supplied value. */
+  const stockEffect = applyOrderStockEffect(store, order, status, auditLabel);
 
   /* The audit line carries the stock consequence too: one entry explains both
      the order movement and what the boutique's vitrine did in response. */
@@ -1670,8 +1826,8 @@ export function updateAdminOrderStatus(store, id, status, actor, branchId = null
         (status === "Cancelled" ? "returned to free stock." : "handed over for delivery.")
       : "";
   appendAudit(store, {
-    actor,
-    branchId,
+    actor: auditLabel,
+    branchId: auditBranchId,
     action: "order.status",
     entityType: "order",
     entityId: order.id,
@@ -1706,17 +1862,23 @@ export function toAdminCustomer(store, customer) {
   return emit({ ...withoutCredential(customer), ...customerStats(store, customer.id) });
 }
 
-export function listAdminCustomers(store, query = {}) {
+export function listAdminCustomers(store, actor, query = {}) {
+  /* Scoped by the caller's staff scope: an Admin sees the customers who
+     traded with their own boutique; a branchId naming another boutique is
+     refused, never honoured (Phase 14.3). */
+  const scope = adminScopeOrFail(store, actor);
+  const branchId = resolveScopeBranch(store, scope, query.branchId);
+
   let list = [...store.customers];
 
   /* A branch here is a view of who has traded with that boutique. It does
      not grant a new book and it does not narrow the caller's authority —
      omitting it returns the organization. An unknown branch simply matches
      no one. */
-  if (query.branchId) {
+  if (branchId) {
     const traded = new Set(
       store.orders
-        .filter((order) => order.branchId === query.branchId)
+        .filter((order) => order.branchId === branchId)
         .map((order) => order.customerId)
     );
     list = list.filter((customer) => traded.has(customer.id));
@@ -1737,9 +1899,20 @@ export function listAdminCustomers(store, query = {}) {
   return list.map((customer) => toAdminCustomer(store, customer));
 }
 
-export function getAdminCustomer(store, id) {
+export function getAdminCustomer(store, actor, id) {
+  const scope = adminScopeOrFail(store, actor);
   const customer = store.customers.find((item) => item.id === id);
   if (!customer) return null;
+  if (scope.branchId) {
+    const tradedHere = store.orders.some(
+      (order) => order.customerId === id && order.branchId === scope.branchId
+    );
+    if (!tradedHere) {
+      fail(
+        `This customer has not traded with ${scope.branch.name} — the account only sees its own boutique's customers.`
+      );
+    }
+  }
   const orders = store.orders
     .filter((order) => order.customerId === id)
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
@@ -1777,10 +1950,20 @@ export function toAdminStock(store, row) {
  *   { branchId, productId, stock: "low" | "out", search }
  * `stock: "low"` includes out-of-stock rows — "needs attention" as one bucket.
  */
-export function listAdminInventory(store, query = {}) {
-  let list = [...store.inventory];
+export function listAdminInventory(store, actor, query = {}) {
+  /* Scoped by the caller's staff scope: an Admin sees their own branch's
+     stock; a branchId naming another boutique is refused (Phase 14.3). */
+  const scope = adminScopeOrFail(store, actor);
+  const scopeBranchId = resolveScopeBranch(store, scope, query.branchId);
+  return queryInventoryRows(store, { ...query, branchId: scopeBranchId ?? undefined });
+}
 
-  if (query.branchId) list = list.filter((row) => row.branchId === query.branchId);
+/** The inventory query contract, shared by the scoped Admin and Employee books. */
+function queryInventoryRows(store, query = {}) {
+  let list = query.branchId
+    ? store.inventory.filter((row) => row.branchId === query.branchId)
+    : [...store.inventory];
+
   if (query.productId) list = list.filter((row) => row.productId === query.productId);
   if (query.stock === "low") list = list.filter((row) => stockState(row) !== "ok");
   if (query.stock === "out") list = list.filter((row) => stockState(row) === "out");
@@ -1813,10 +1996,36 @@ export function listAdminInventory(store, query = {}) {
  * `updateAdminOrderStatus`); the employee contract passes the branch it
  * resolved from the session.
  */
-export function adjustAdminInventory(store, stockId, adjustment = {}, actor, branchId = null) {
+export function adjustAdminInventory(store, actor, stockId, adjustment = {}) {
+  /* The adjustment happens inside the caller's resolved scope: an Admin can
+     only adjust their own branch's stock, and the audit branch is the
+     RESOLVED scope branch — never a client-supplied value (Phase 14.3). */
+  const scope = adminScopeOrFail(store, actor);
   const row = store.inventory.find((item) => item.id === stockId);
   if (!row) fail(`Stock record ${stockId} could not be found.`);
+  if (scope.branchId && row.branchId !== scope.branchId) {
+    const rowBranch = store.branches.find((item) => item.id === row.branchId);
+    fail(
+      `This stock belongs to ${rowBranch?.name ?? "another boutique"} — this account works ${scope.branch.name} only.`
+    );
+  }
+  return applyStockAdjustment(
+    store,
+    row,
+    adjustment,
+    hasText(actor?.label) ? actor.label : scope.label,
+    scope.branchId ?? null
+  );
+}
 
+/**
+ * The one stock-adjustment core, shared by the scoped Admin book and the
+ * Employee counter contract — both boundaries check scope/capability BEFORE
+ * entering, and this core enforces the business rules exactly as the API
+ * will: whole pieces only, never below zero, a written reason, always
+ * audited with the real actor and the resolved branch.
+ */
+function applyStockAdjustment(store, row, adjustment = {}, auditLabel, auditBranchId) {
   const delta = Number(adjustment.delta);
   if (!Number.isInteger(delta) || delta === 0) {
     fail("Enter a whole-piece quantity to add or remove.");
@@ -1837,14 +2046,14 @@ export function adjustAdminInventory(store, stockId, adjustment = {}, actor, bra
     stockId: row.id,
     type: "adjustment",
     delta,
-    by: actor,
+    by: auditLabel,
     note: adjustment.reason.trim(),
   });
 
   const stock = toAdminStock(store, row);
   appendAudit(store, {
-    actor,
-    branchId,
+    actor: auditLabel,
+    branchId: auditBranchId,
     action: "inventory.adjust",
     entityType: "inventory",
     entityId: row.id,
@@ -1854,8 +2063,17 @@ export function adjustAdminInventory(store, stockId, adjustment = {}, actor, bra
   return stock;
 }
 
-export function listInventoryMovements(store, query = {}) {
+export function listInventoryMovements(store, actor, query = {}) {
+  /* Scoped callers read only the movements of their own branch's stock
+     rows; a Super Admin reads the whole ledger (Phase 14.3). */
+  const scope = adminScopeOrFail(store, actor);
   let list = [...store.inventoryMovements];
+  if (scope.branchId) {
+    const branchStockIds = new Set(
+      store.inventory.filter((row) => row.branchId === scope.branchId).map((row) => row.id)
+    );
+    list = list.filter((item) => branchStockIds.has(item.stockId));
+  }
   if (query.stockId) list = list.filter((item) => item.stockId === query.stockId);
   list.sort((a, b) => String(b.at).localeCompare(String(a.at)));
   return emit(list.slice(0, query.limit ?? 20));
@@ -1870,8 +2088,18 @@ export function listInventoryMovements(store, query = {}) {
  * boutique — people, stock and open orders. Platform governance of branches
  * (enable/disable) stays with the Super Admin; nothing here duplicates it.
  */
-export function listBranchOperations(store) {
-  return store.branches.map((branch) => {
+export function listBranchOperations(store, actor) {
+  /* Coordination view, scoped like the rest of the book: the Super Admin
+     coordinates the network; an Admin sees their own boutique (Phase 14.3). */
+  const scope = adminScopeOrFail(store, actor);
+  return branchOperationsRows(store, scope.branchId);
+}
+
+/** The branch-coordination rows for an already-resolved scope. */
+function branchOperationsRows(store, branchId) {
+  return store.branches
+    .filter((branch) => !branchId || branch.id === branchId)
+    .map((branch) => {
     const manager = store.admins.find(
       (item) => item.branchId === branch.id && item.status === "active"
     );
@@ -1904,9 +2132,20 @@ export function listBranchOperations(store) {
 /* ----------------------------------------------------------------------- */
 
 /** Business reports — computed from canonical state, never stored. */
-export function adminReports(store) {
-  const ordersByStatus = statusesForReport(store.orders).map((status) => {
-    const list = store.orders.filter((order) => order.status === status);
+export function adminReports(store, actor) {
+  /* Reports are scoped by the caller's staff scope: the Super Admin reads
+     the whole organization; an Admin reads their own branch (Phase 14.3). */
+  const scope = adminScopeOrFail(store, actor);
+  const branchId = scope.branchId ?? null;
+  const orders = branchId
+    ? store.orders.filter((order) => order.branchId === branchId)
+    : store.orders;
+  const inventoryRows = branchId
+    ? store.inventory.filter((row) => row.branchId === branchId)
+    : store.inventory;
+
+  const ordersByStatus = statusesForReport(orders).map((status) => {
+    const list = orders.filter((order) => order.status === status);
     return {
       status,
       count: list.length,
@@ -1914,26 +2153,28 @@ export function adminReports(store) {
     };
   });
 
-  const salesByBranch = store.branches.map((branch) => {
-    const sold = store.orders.filter(
-      (order) => order.branchId === branch.id && order.status !== "Cancelled"
-    );
-    return {
-      branchId: branch.id,
-      branchName: branch.name,
-      city: branch.city,
-      orders: sold.length,
-      units: sold.reduce(
-        (sum, order) =>
-          sum + order.items.reduce((itemSum, item) => itemSum + item.quantity, 0),
-        0
-      ),
-      revenue: sold.reduce((sum, order) => sum + order.total, 0),
-    };
-  });
+  const salesByBranch = store.branches
+    .filter((branch) => !branchId || branch.id === branchId)
+    .map((branch) => {
+      const sold = orders.filter(
+        (order) => order.branchId === branch.id && order.status !== "Cancelled"
+      );
+      return {
+        branchId: branch.id,
+        branchName: branch.name,
+        city: branch.city,
+        orders: sold.length,
+        units: sold.reduce(
+          (sum, order) =>
+            sum + order.items.reduce((itemSum, item) => itemSum + item.quantity, 0),
+          0
+        ),
+        revenue: sold.reduce((sum, order) => sum + order.total, 0),
+      };
+    });
 
   const byProduct = new Map();
-  for (const order of store.orders) {
+  for (const order of orders) {
     if (order.status === "Cancelled") continue;
     for (const item of order.items) {
       const entry = byProduct.get(item.id) ?? {
@@ -1952,11 +2193,14 @@ export function adminReports(store) {
     .sort((a, b) => b.units - a.units || b.revenue - a.revenue)
     .slice(0, 5);
 
+  const lowStock = queryInventoryRows(store, { stock: "low", branchId: branchId ?? undefined });
+
   return emit({
     ordersByStatus,
     salesByBranch,
     topProducts,
-    lowStock: listAdminInventory(store, { stock: "low" }),
+    lowStock,
+    branchId,
   });
 }
 
@@ -1965,15 +2209,34 @@ export function adminReports(store) {
  * business today?" Computed from canonical state, like the platform
  * overview; never stored, never a second database.
  */
-export function adminOverview(store) {
-  const openOrders = store.orders.filter((order) =>
+export function adminOverview(store, actor) {
+  /* The overview is scoped by the caller's staff scope: an Admin's dashboard
+     is their branch's day; the Super Admin's is the organization's
+     (Phase 14.3). */
+  const scope = adminScopeOrFail(store, actor);
+  const branchId = scope.branchId ?? null;
+  const orders = branchId
+    ? store.orders.filter((order) => order.branchId === branchId)
+    : store.orders;
+  const inventory = branchId
+    ? store.inventory.filter((row) => row.branchId === branchId)
+    : store.inventory;
+  const customers = branchId
+    ? store.customers.filter((customer) =>
+        store.orders.some(
+          (order) => order.customerId === customer.id && order.branchId === branchId
+        )
+      )
+    : store.customers;
+
+  const openOrders = orders.filter((order) =>
     OPEN_ORDER_STATUSES.includes(order.status)
   );
-  const placed = store.orders.filter((order) => order.status === "Placed");
-  const confirmed = store.orders.filter((order) => order.status === "Confirmed");
-  const processing = store.orders.filter((order) => order.status === "Processing");
-  const lowStock = store.inventory.filter((row) => stockState(row) !== "ok");
-  const outOfStock = store.inventory.filter((row) => stockState(row) === "out");
+  const placed = orders.filter((order) => order.status === "Placed");
+  const confirmed = orders.filter((order) => order.status === "Confirmed");
+  const processing = orders.filter((order) => order.status === "Processing");
+  const lowStock = inventory.filter((row) => stockState(row) !== "ok");
+  const outOfStock = inventory.filter((row) => stockState(row) === "out");
   const published = store.products.filter((product) => product.status === "published");
   const drafts = store.products.filter((product) => product.status === "draft");
   const rejected = store.products.filter((product) => product.status === "rejected");
@@ -2029,12 +2292,13 @@ export function adminOverview(store) {
     });
   }
 
-  const recentOrders = [...store.orders]
+  const recentOrders = [...orders]
     .sort((a, b) => String(b.createdAt).localeCompare(String(a.createdAt)))
     .slice(0, 5)
     .map((order) => toAdminOrder(store, order));
 
   return emit({
+    branchId,
     business: {
       openOrders: openOrders.length,
       openOrdersValue: openOrders.reduce((sum, order) => sum + order.total, 0),
@@ -2043,22 +2307,26 @@ export function adminOverview(store) {
       outOfStockCount: outOfStock.length,
       publishedProducts: published.length,
       totalProducts: store.products.length,
-      customers: store.customers.length,
-      activeBranches: store.branches.filter((branch) => branch.status !== "disabled").length,
-      totalBranches: store.branches.length,
+      customers: customers.length,
+      activeBranches: branchId
+        ? 1
+        : store.branches.filter((branch) => branch.status !== "disabled").length,
+      totalBranches: branchId ? 1 : store.branches.length,
     },
     attention,
     ordersNeedingAttention: [...placed, ...processing]
       .sort((a, b) => String(a.createdAt).localeCompare(String(b.createdAt)))
       .slice(0, 5)
       .map((order) => toAdminOrder(store, order)),
-    lowStock: listAdminInventory(store, { stock: "low" }).slice(0, 5),
-    branches: listBranchOperations(store),
+    lowStock: queryInventoryRows(store, { stock: "low", branchId: branchId ?? undefined }).slice(0, 5),
+    branches: branchOperationsRows(store, branchId),
     recentOrders,
     campaign: activeCampaign
       ? { title: activeCampaign.title, eyebrow: activeCampaign.eyebrow }
       : null,
-    recentActivity: store.auditLog.slice(0, 6),
+    recentActivity: store.auditLog
+      .filter((entry) => !branchId || entry.branchId === branchId)
+      .slice(0, 6),
   });
 }
 
@@ -2074,9 +2342,11 @@ export function adminOverview(store) {
  * fact an authorization decision depends on is re-resolved, store-side, from
  * the canonical records:
  *
- *   Super Admin   global — every branch may be named explicitly
- *   Admin         head office — global, or its own boutique when the
- *                 administrator account is branch-scoped
+ *   Super Admin   global — every branch may be named explicitly; scope
+ *                 selection is a view filter, never a limit
+ *   Admin         the branch on their OWN administrator record (Phase 14.3:
+ *                 a required assignment — an administrator is never global,
+ *                 and cannot resolve without one)
  *   Employee      the branch on their OWN employee record, and the
  *                 capabilities granted to that record
  *
@@ -2087,7 +2357,8 @@ export function adminOverview(store) {
  * uses, so there is exactly one authorization vocabulary in the platform.
  */
 export function resolveStaffScope(store, actor = {}) {
-  const role = actor.role;
+  /* A missing session actor (no staff sign-in) is simply not an account. */
+  const role = actor?.role;
 
   if (role === ROLES.SUPER_ADMIN) {
     return {
@@ -2105,21 +2376,30 @@ export function resolveStaffScope(store, actor = {}) {
   }
 
   if (role === ROLES.ADMIN) {
+    /* Phase 14.3 — an administrator's identity and branch come from the
+       canonical record, never from the caller: the record IS the authority.
+       A label-only actor (no resolvable id) is not an administrator, and an
+       administrator without a valid branch assignment is a data defect the
+       store refuses to serve rather than a scope it widens. */
     const admin = hasText(actor.id)
       ? store.admins.find((item) => item.id === actor.id) ?? null
       : null;
-    if (hasText(actor.id) && !admin) fail("This administrator account could not be resolved.");
-    if (admin?.status === "disabled") fail("This administrator account is disabled.");
+    if (!admin) fail("This administrator account could not be resolved.");
+    if (admin.status === "disabled") fail("This administrator account is disabled.");
+    if (!hasText(admin.branchId)) {
+      fail(
+        "This administrator account has no branch assignment. The Super Admin must assign a branch before it can operate."
+      );
+    }
 
-    const branchId =
-      admin?.scope === "branch" && hasText(admin.branchId) ? admin.branchId : null;
+    const branch = branchOrFail(store, admin.branchId);
 
     return {
       role,
-      label: hasText(actor.label) ? actor.label : `${admin?.name ?? "Admin"} — Admin`,
-      global: !branchId,
-      branchId,
-      branch: branchId ? branchOrFail(store, branchId) : null,
+      label: hasText(actor.label) ? actor.label : `${admin.name} — Admin`,
+      global: false,
+      branchId: branch.id,
+      branch,
       admin,
       employee: null,
       profile: null,
@@ -2209,6 +2489,23 @@ function requireScopeCapability(scope, key, subject) {
 function hasScopeCapability(scope, key) {
   const granted = scope.permissions ?? [];
   return granted.includes("*") || granted.includes(key);
+}
+
+/**
+ * The scope behind the Admin operational book (Phase 14.3).
+ *
+ * The book is no longer an unscoped "head-office" surface: the caller's
+ * scope is resolved from their canonical staff record, and a branch-scoped
+ * Admin reads exactly their branch — whatever the query, URL or payload
+ * claims. Only the Super Admin keeps the whole organization. An Employee is
+ * refused here outright (the counter-side book is the Phase 10 contract).
+ */
+function adminScopeOrFail(store, actor) {
+  const scope = resolveStaffScope(store, actor);
+  if (![ROLES.ADMIN, ROLES.SUPER_ADMIN].includes(scope.role)) {
+    fail("This account has no head-office operations access.");
+  }
+  return scope;
 }
 
 /**
@@ -2320,13 +2617,7 @@ export function updateEmployeeOrderStatus(store, actor, id, status) {
     );
   }
 
-  return updateAdminOrderStatus(
-    store,
-    order.id,
-    status,
-    scope.label,
-    scope.branchId ?? order.branchId
-  );
+  return applyOrderTransition(store, order, status, scope.label, scope.branchId ?? order.branchId);
 }
 
 /* ----------------------------------------------------------------------- */
@@ -2523,7 +2814,7 @@ export function listEmployeeInventory(store, actor, query = {}) {
   const scope = resolveStaffScope(store, actor);
   requireScopeCapability(scope, CAPABILITIES.INVENTORY_VIEW, "inventory");
   const branchId = resolveScopeBranch(store, scope, query.branchId);
-  return listAdminInventory(store, { ...query, branchId: branchId ?? undefined });
+  return queryInventoryRows(store, { ...query, branchId: branchId ?? undefined });
 }
 
 /**
@@ -2542,7 +2833,7 @@ export function adjustEmployeeInventory(store, actor, stockId, adjustment = {}) 
     fail(`${scope.branch.name} can only adjust its own stock — that line belongs to another boutique.`);
   }
 
-  return adjustAdminInventory(store, stockId, adjustment, scope.label, row.branchId);
+  return applyStockAdjustment(store, row, adjustment, scope.label, scope.branchId ?? row.branchId);
 }
 
 /** Movement history, restricted to the stock lines the account may see. */
@@ -2557,7 +2848,7 @@ export function listEmployeeInventoryMovements(store, actor, query = {}) {
   }
 
   const limit = query.limit ?? 20;
-  const movements = listInventoryMovements(store, {
+  const movements = queryInventoryMovements(store, {
     stockId: query.stockId,
     limit: query.stockId ? limit : 200,
   });

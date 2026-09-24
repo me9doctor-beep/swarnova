@@ -20,6 +20,7 @@ function fresh() {
     ...mockProvider,
     _store: createGovernanceStore(),
     _customerSessionId: "CUST-84920",
+    _staffSession: null,
   };
   // Pin the provider session, never supply a customer claim with request data.
   provider.customerSessionId = function () {
@@ -241,24 +242,18 @@ for (const kind of ["custom", "appointment", "service"])
       branchId: other,
       permissions: ["*"],
     };
+    /* Phase 14.3 — the provider resolves the staff actor from ITS OWN
+       session; the claims above (branchId, permissions) are ignored. */
+    p._staffSession = { id: employee.id, role: ROLES.EMPLOYEE };
     assert.equal((await intakeService.operations(p, actor, kind)).length, 1);
     await assert.rejects(
       intakeService.operations(p, actor, kind, { branchId: other }),
     );
-    const admin = store.admins.find((a) => a.status !== "disabled");
-    admin.scope = "head-office";
-    assert.equal(
-      (
-        await intakeService.operations(
-          p,
-          { id: admin.id, role: ROLES.ADMIN },
-          kind,
-        )
-      ).length,
-      2,
+    /* A branch-scoped Admin reads only their own boutique's requests. */
+    const admin = store.admins.find(
+      (a) => a.status !== "disabled" && a.branchId === branchId,
     );
-    admin.scope = "branch";
-    admin.branchId = branchId;
+    p._staffSession = { id: admin.id, role: ROLES.ADMIN };
     assert.equal(
       (
         await intakeService.operations(
@@ -269,13 +264,17 @@ for (const kind of ["custom", "appointment", "service"])
       ).length,
       1,
     );
+    /* The Super Admin remains global. */
+    p._staffSession = { id: "SA-001", role: ROLES.SUPER_ADMIN };
     assert.equal(
       (await intakeService.operations(p, { role: ROLES.SUPER_ADMIN }, kind))
         .length,
       2,
     );
     employee.capabilities.orders = "none";
+    p._staffSession = { id: employee.id, role: ROLES.EMPLOYEE };
     await assert.rejects(intakeService.operations(p, actor, kind));
+    p._staffSession = { id: "CUST-84920", role: ROLES.CUSTOMER };
     await assert.rejects(
       intakeService.operations(p, { role: ROLES.CUSTOMER }, kind),
     );

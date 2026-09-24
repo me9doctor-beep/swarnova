@@ -24,9 +24,11 @@ import {
  * sign-in. The Roles & Permissions governance screen reads this map so the
  * permission surface lives in exactly one place.
  *
- * Admin holds every business capability at its top level (head-office scope).
- * Employee claims are granted per person through a capability profile at
- * sign-in, so the role itself carries no fixed claim here.
+ * Admin holds every business capability at its top level — CAPABILITIES and
+ * BRANCH SCOPE are separate axes (Phase 14.3): the claims say WHAT an admin
+ * may operate, while their required branch assignment says WHICH boutique's
+ * data it applies to. Employee claims are granted per person through a
+ * capability profile at sign-in, so the role itself carries no fixed claim.
  */
 export const ROLE_PERMISSIONS = {
   [ROLES.SUPER_ADMIN]: ["*"],
@@ -46,7 +48,7 @@ export const ROLE_DESCRIPTIONS = {
   [ROLES.SUPER_ADMIN]:
     "Organization-wide authority — platform governance, and the same order, customer, inventory and report book head office operates.",
   [ROLES.ADMIN]:
-    "Head-office business operations — products, orders, customers, inventory, branches, business content, reports and employees for their scope.",
+    "One boutique's business operations — products, orders, customers, inventory, branches, business content, reports and employees for their assigned branch.",
   [ROLES.EMPLOYEE]:
     "Counter-side operations — day-to-day branch work inside their boutique, shaped by their capability profile.",
   [ROLES.CUSTOMER]:

@@ -41,6 +41,10 @@ export default function AdminInventoryPage() {
   const [stockFilter, setStockFilter] = useState(searchParams.get("stock") ?? "all");
   const [branchFilter, setBranchFilter] = useState(searchParams.get("branch") ?? "all");
   const { user, role } = useAuth();
+  /* A branch-scoped administrator works their own boutique: the provider
+     pins the book to their branch, so no branch selector is offered. The
+     Super Admin (global session) keeps the branch filter. */
+  const branchScoped = Boolean(user?.branchId);
   const { can: canDo } = useCapability();
   const mutation = useGovernanceMutation();
   const [adjusting, setAdjusting] = useState(null); // stock row being adjusted
@@ -56,9 +60,9 @@ export default function AdminInventoryPage() {
     () => ({
       search: search.trim() || undefined,
       stock: stockFilter === "all" ? undefined : stockFilter,
-      branchId: branchFilter === "all" ? undefined : branchFilter,
+      branchId: branchScoped ? undefined : branchFilter === "all" ? undefined : branchFilter,
     }),
-    [search, stockFilter, branchFilter]
+    [search, stockFilter, branchFilter, branchScoped]
   );
 
   const { status, data: inventory, error, retry } = useAdminInventory(query);
@@ -111,16 +115,22 @@ export default function AdminInventoryPage() {
               onChange: setStockFilter,
               options: STOCK_FILTER_OPTIONS,
             },
-            {
-              id: "branch",
-              label: "Branch",
-              value: branchFilter,
-              onChange: setBranchFilter,
-              options: branchOptions,
-            },
+            /* Branch selection is a Super Admin view filter only — a
+               branch-scoped account's book is already provider-pinned. */
+            ...(branchScoped
+              ? []
+              : [
+                  {
+                    id: "branch",
+                    label: "Branch",
+                    value: branchFilter,
+                    onChange: setBranchFilter,
+                    options: branchOptions,
+                  },
+                ]),
           ]}
         />
-        <OperationsViewNote narrowed={branchFilter !== "all"} />
+        <OperationsViewNote narrowed={!branchScoped && branchFilter !== "all"} />
 
         <AsyncBoundary
           status={status === "loading" ? "loading" : status === "error" ? "error" : "success"}
