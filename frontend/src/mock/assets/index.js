@@ -30,22 +30,22 @@ import heroReelContemporaryPoster from "./images/homepage/hero-reel/contemporary
 import heroReelHeritagePoster from "./images/homepage/hero-reel/heritage-gold-poster.avif";
 
 /* Hero reel footage slots. Real campaign MP4s are imported here — and only
-   here — once delivered, e.g.
-     import heroReelSignatureVideo from "./videos/homepage/hero-reel/signature-gold.mp4";
-   Until then each slot is null: the hero shows the still photograph and is
-   never animated with a synthetic stand-in. */
-// const heroReelSignatureVideo = null;
+   here. The four desktop films (Phase 14.4A) were supplied as 1280×720
+   H.264 MP4s (~10 s each, see mock/assets/videos/homepage/hero-reel/README.md);
+   the filenames already match the slot contract, so each file maps to its
+   slot one-to-one. No dedicated -mobile captures were delivered yet, so the
+   mobile slots stay null and narrow viewports reuse the desktop film through
+   the service's mobileSrc → src fallback (cropped by the hero's mobile focal
+   point). A slot without footage is never animated with a synthetic
+   stand-in. */
 import heroReelSignatureVideo from "./videos/homepage/hero-reel/signature-gold.mp4";
-// const heroReelSignatureMobileVideo = null;
-// const heroReelBridalVideo = null;
-import heroReelSignatureVideo from "./videos/homepage/hero-reel/bridal-gold.mp4";
-// const heroReelBridalMobileVideo = null;
-// const heroReelContemporaryVideo = null;
-import heroReelSignatureVideo from "./videos/homepage/hero-reel/contemporary.mp4";
-// const heroReelContemporaryMobileVideo = null;
-// const heroReelHeritageVideo = null;
-import heroReelSignatureVideo from "./videos/homepage/hero-reel/heritage-statement.mp4";
-// const heroReelHeritageMobileVideo = null;
+const heroReelSignatureMobileVideo = null;
+import heroReelBridalVideo from "./videos/homepage/hero-reel/bridal-gold.mp4";
+const heroReelBridalMobileVideo = null;
+import heroReelContemporaryVideo from "./videos/homepage/hero-reel/contemporary.mp4";
+const heroReelContemporaryMobileVideo = null;
+import heroReelHeritageVideo from "./videos/homepage/hero-reel/heritage-statement.mp4";
+const heroReelHeritageMobileVideo = null;
 
 /* Brand film placeholder (Phase 14.4; unchanged in 14.4A — out of scope).
    See mock/assets/videos/PLACEHOLDER_README.md. */

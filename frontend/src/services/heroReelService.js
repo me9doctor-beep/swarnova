@@ -23,14 +23,26 @@
 /** Breakpoint below which `mobileSrc` is preferred (matches CinematicVideo). */
 export const HERO_MOBILE_QUERY = "(max-width: 767px)";
 
-/** Default rotation timing: ~10 s clips, slow cinematic crossfade. */
+/** Default rotation timing: ~10 s clips, slow cinematic crossfade.
+ *
+ * The dissolve is motion-to-motion: the next film is *staged* (mounted
+ * invisibly, preloading) `stageLeadMs` before the active film ends, and the
+ * crossfade begins `crossfadeMs` before the end — while the active film is
+ * still playing — so the reel reads as one continuous campaign film instead
+ * of a slideshow of frozen frames. `stageLeadMs` must exceed `crossfadeMs`
+ * so the incoming film is buffered before it fades in. */
 export const HERO_ROTATION_DEFAULTS = Object.freeze({
   enabled: true,
   /** Upper bound per clip — rotation normally advances on the video's `ended`
       event; this is the watchdog in case `ended` never arrives. */
   maxClipMs: 14000,
-  /** Crossfade between the outgoing last frame and the incoming poster/film. */
-  crossfadeMs: 1800,
+  /** Crossfade between the outgoing film (still playing) and the incoming
+      film. */
+  crossfadeMs: 2200,
+  /** How long before the active film ends the NEXT film is staged — mounted
+      invisibly with `preload="auto"` so it is fully buffered, then played the
+      moment its dissolve begins. */
+  stageLeadMs: 3200,
 });
 
 const CONTRACT_DEFAULTS = Object.freeze({

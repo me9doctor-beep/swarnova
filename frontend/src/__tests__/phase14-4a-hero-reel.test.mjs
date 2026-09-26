@@ -208,7 +208,8 @@ test("14.4A · video mode renders ONE <video>, muted, inline, autoplaying, poste
   const cv = read("components/ui/CinematicVideo.jsx");
   assert.match(cv, /muted=\{muted\}/);
   assert.match(cv, /video\.muted = muted;/);
-  assert.match(read("pages/customer/home/components/HeroSection.jsx"), /\n            muted\n            playsInline\n/);
+  /* The hero passes muted + playsInline (block-body indentation may change). */
+  assert.match(read("pages/customer/home/components/HeroSection.jsx"), /\n\s+muted\n\s+playsInline\n/);
 });
 
 test("14.4A · a single delivered film loops instead of rotating", async () => {
@@ -261,6 +262,35 @@ test("14.4A · rotation skips undelivered films and is slow + cinematic", async 
   assert.match(hero, /paused=\{outgoing\}/, "the outgoing film must not keep playing");
   const css = read("index.css");
   assert.match(css, /@keyframes heroReelDissolve \{\s*from \{ opacity: 0; \}\s*to\s+\{ opacity: 1; \}/);
+});
+
+test("14.4A · the dissolve is motion-to-motion (staged next film)", async () => {
+  const content = withFootage(await heroContent());
+  const reel = resolveHeroReel(content);
+  assert.ok(
+    reel.rotation.stageLeadMs > reel.rotation.crossfadeMs,
+    "the next film must be staged before the crossfade begins so it is buffered and moving"
+  );
+  /* Staging and dissolve timing are driven by the active film's real
+     playhead, not by wall-clock timers. */
+  const hook = read("hooks/useHeroReel.js");
+  assert.match(hook, /handleActiveProgress/);
+  assert.match(hook, /stageLeadMs/);
+  assert.match(hook, /crossfadeMs/);
+  const cv = read("components/ui/CinematicVideo.jsx");
+  assert.match(cv, /onTimeUpdate=\{handleTimeUpdate\}/);
+  assert.match(cv, /onProgress\(video\.currentTime, video\.duration\)/);
+  const hero = read("pages/customer/home/components/HeroSection.jsx");
+  assert.match(hero, /onProgress=\{outgoing \|\| staged \? undefined : reel\.handleActiveProgress\}/);
+  /* The staged film plays only once its dissolve begins, and is never seen
+     or felt before that. */
+  assert.match(hero, /autoplay=\{record\.autoplay && !\(staged && !entering\)\}/);
+  assert.match(hero, /hero__reel-layer--staged/);
+  assert.match(hero, /data-hero-staged=\{staged \? "true" : undefined\}/);
+  const css = read("index.css");
+  assert.match(css, /\.hero__reel-layer--staged \{\s*opacity: 0;\s*pointer-events: none;\s*\}/);
+  /* A gentle symmetric curve — no fast-then-idle ease-out arrival. */
+  assert.match(css, /--ease-dissolve: cubic-bezier\(0\.37, 0, 0\.63, 1\)/);
 });
 
 /* ==========================================================================

@@ -78,6 +78,7 @@ export default function CinematicVideo({
   holdFinalFrame = false,
   onEnded,
   onReady,
+  onProgress,
   onError,
 }) {
   const videoRef = useRef(null);
@@ -196,6 +197,14 @@ export default function CinematicVideo({
     onEnded?.();
   };
 
+  /** Real playhead position (~4 Hz) — the hero reel uses it to stage the
+      next film and begin its dissolve while this one is still playing. */
+  const handleTimeUpdate = () => {
+    const video = videoRef.current;
+    if (!video || !onProgress) return;
+    onProgress(video.currentTime, video.duration);
+  };
+
   const handleError = () => {
     setFailed(true);
     setCanPlay(false);
@@ -283,6 +292,7 @@ export default function CinematicVideo({
           onPlaying={handlePlaying}
           onPause={handlePause}
           onEnded={handleEnded}
+          onTimeUpdate={handleTimeUpdate}
           onError={handleError}
           aria-hidden="true"
           tabIndex={-1}
@@ -346,5 +356,7 @@ CinematicVideo.propTypes = {
   onEnded: PropTypes.func,
   /** Called once the browser confirms the film is actually playing. */
   onReady: PropTypes.func,
+  /** Called on `timeupdate` with (currentTime, duration) — real playhead. */
+  onProgress: PropTypes.func,
   onError: PropTypes.func,
 };

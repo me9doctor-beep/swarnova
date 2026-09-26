@@ -12,6 +12,11 @@ function readMobile() {
   return window.matchMedia(HERO_MOBILE_QUERY).matches;
 }
 
+/* timeupdate fires roughly every 250 ms; the staging thresholds lead by a
+   little more than that so the dissolve completes just before the active
+   film ends, never after it. */
+const TIMEUPDATE_GRACE_MS = 300;
+
 /**
  * useHeroReel — Phase 14.4A.
  *
@@ -22,11 +27,26 @@ function readMobile() {
  *
  *   Video 1 → Video 2 → Video 3 → Video 4 → Video 1
  *
- * Only ONE clip is mounted as a playing video at a time. During the
- * crossfade the outgoing layer is kept for `crossfadeMs` — it has already
- * ended, so it rests on its final frame (paused) while the incoming poster
- * and film fade in above it. Nothing else is fetched: the next clip is not
- * mounted until it becomes active.
+ * The dissolve is motion-to-motion, so the reel reads as one continuous
+ * luxury campaign rather than a sequence of separate videos:
+ *
+ *   · `stageLeadMs` before the active film ends, the NEXT film is staged —
+ *     mounted invisibly (opacity 0, pointer-events none) with
+ *     `preload="auto"`, so it is fully buffered before it is needed.
+ *   · `crossfadeMs` before the end, the dissolve begins: the staged film
+ *     starts playing and fades in above the active film while that film is
+ *     STILL PLAYING — never a frozen frame into a still poster.
+ *   · The active film ends just as the dissolve completes, so it is moving
+ *     for every frame it is on screen. Its `ended` event (with the watchdog
+ *     as backstop) then promotes the incoming film and the old layer is
+ *     unmounted.
+ *
+ * Staging is driven by the active film's own `timeupdate` (the real
+ * playhead), not by wall-clock timers, so the timing self-corrects even
+ * though each film begins playing slightly before it is promoted. Outside
+ * the crossfade window exactly one video plays, and only one film is ever
+ * being fetched at a time — the staged fetch begins long after the active
+ * film's own fetch has completed.
  */
 export function useHeroReel(content) {
   const reducedMotion = usePrefersReducedMotion();
@@ -34,6 +54,11 @@ export function useHeroReel(content) {
   const [failedIds, setFailedIds] = useState([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [previous, setPrevious] = useState(null);
+  /* The film staged for the next dissolve, and the id of the layer currently
+     entering (kept until the next dissolve so the finished animation holds
+     its final opacity through the promotion). */
+  const [staged, setStaged] = useState(null);
+  const [enteringId, setEnteringId] = useState(null);
 
   useEffect(() => {
     if (typeof window === "undefined" || !window.matchMedia) return undefined;
@@ -60,8 +85,15 @@ export function useHeroReel(content) {
   const advance = useCallback(() => {
     if (!reel.rotates) return;
     const outgoing = reel.playable[safeIndex];
+    const nextIndex = nextHeroIndex(safeIndex, count);
     setPrevious(outgoing ? { ...outgoing, resolvedSrc: resolveHeroVideoSource(outgoing, { isMobile }) } : null);
-    setActiveIndex(nextHeroIndex(safeIndex, count));
+    setActiveIndex(nextIndex);
+    setStaged(null);
+    /* Keep the entering state of the film that just dissolved in (its
+       animation has completed; the class holds the final opacity through
+       the role change). On the watchdog path there was no dissolve yet, so
+       start one now — the incoming film fades in over the outgoing layer. */
+    setEnteringId(reel.playable[nextIndex]?.id ?? null);
   }, [reel, safeIndex, count, isMobile]);
 
   /* Clear the outgoing layer once the crossfade has completed. */
@@ -81,6 +113,28 @@ export function useHeroReel(content) {
     return () => clearTimeout(timer);
   }, [reel.rotates, active, reel.rotation.maxClipMs]);
 
+  /* Stage the next film and begin its dissolve from the active film's real
+     playhead. Called on the active film's `timeupdate` only. */
+  const handleActiveProgress = useCallback(
+    (currentTime, duration) => {
+      if (!reel.rotates || !Number.isFinite(duration) || duration <= 0) return;
+      const next = reel.playable[nextHeroIndex(safeIndex, count)];
+      if (!next || next.id === active?.id) return;
+      const remainingMs = (duration - currentTime) * 1000;
+      if (remainingMs <= reel.rotation.stageLeadMs + TIMEUPDATE_GRACE_MS) {
+        setStaged((current) =>
+          current?.id === next.id
+            ? current
+            : { ...next, resolvedSrc: resolveHeroVideoSource(next, { isMobile }) }
+        );
+      }
+      if (remainingMs <= reel.rotation.crossfadeMs + TIMEUPDATE_GRACE_MS) {
+        setEnteringId((current) => (current === next.id ? current : next.id));
+      }
+    },
+    [reel, safeIndex, count, active?.id, isMobile]
+  );
+
   const markFailed = useCallback((id) => {
     if (!id) return;
     setFailedIds((ids) => (ids.includes(id) ? ids : [...ids, id]));
@@ -99,8 +153,11 @@ export function useHeroReel(content) {
     activeIndex: safeIndex,
     activeSrc,
     previous: previous && previous.id !== active?.id ? previous : null,
+    staged: staged && staged.id !== active?.id ? staged : null,
+    enteringId,
     advance,
     markFailed,
+    handleActiveProgress,
   };
 }
 

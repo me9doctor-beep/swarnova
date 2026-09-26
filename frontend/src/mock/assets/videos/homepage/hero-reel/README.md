@@ -1,10 +1,15 @@
 # Swarnova Hero Reel — Footage Slots (Phase 14.4A)
 
-This folder is where the four cinematic homepage hero films go. **It is
-intentionally empty of video**: no real campaign footage has been delivered
-yet, and the hero is never animated with a synthetic stand-in (no gradients,
-no shimmer, no Ken Burns, no stills-to-video fakes). Until a slot is filled,
-the hero shows the Signature campaign photograph, still.
+This folder holds the four cinematic homepage hero films. **The four desktop
+films have been delivered and are live** (Phase 14.4A final): the filenames
+matched the slot contract below exactly, so each file maps to its slot
+one-to-one through `src/mock/assets/index.js`. The four `-mobile` variants
+have **not** been delivered yet — those slots stay `null` and narrow viewports
+reuse the desktop film through the reel service's `mobileSrc → src` fallback,
+cropped by the hero's mobile focal point. The hero is never animated with a
+synthetic stand-in (no gradients, no shimmer, no Ken Burns, no
+stills-to-video fakes). While a slot is empty, the hero shows the Signature
+campaign photograph, still.
 
 ## Drop-in procedure (no UI change)
 
