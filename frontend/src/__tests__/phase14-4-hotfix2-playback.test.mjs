@@ -30,31 +30,30 @@ const FRONTEND_DIR = join(SRC_DIR, "..");
 const read = (rel) => readFileSync(join(SRC_DIR, rel), "utf8");
 const readRoot = (rel) => readFileSync(join(FRONTEND_DIR, rel), "utf8");
 
+/* Phase 14.4A removed the two abstract champagne-gold hero placeholders
+   (`homepage/hero-cinematic*.mp4`): the brief forbids abstract motion in the
+   hero, and real hero footage is supplied through the reel slots checked in
+   phase14-4a-hero-reel.test.mjs. The structural playback checks below still
+   run, unchanged, against the remaining placeholder (the brand film). */
 const HERO = "mock/assets/videos/homepage/hero-cinematic.mp4";
 const HERO_MOBILE = "mock/assets/videos/homepage/hero-cinematic-mobile.mp4";
 const BRAND = "mock/assets/videos/editorial/art-of-gold.mp4";
-const ALL = [HERO, HERO_MOBILE, BRAND];
+const ALL = [BRAND];
 
 /* ==========================================================================
    1. ACTUAL DIMENSIONS / SOURCE RESOLUTION
    ========================================================================== */
 
 test("hotfix2 · placeholders carry the real intended dimensions", () => {
-  const desktop = readMp4(join(SRC_DIR, HERO));
-  const mobile = readMp4(join(SRC_DIR, HERO_MOBILE));
   const brand = readMp4(join(SRC_DIR, BRAND));
-
-  assert.deepEqual([desktop.width, desktop.height], [640, 360], "hero desktop must be 640x360");
-  assert.deepEqual([mobile.width, mobile.height], [360, 640], "hero mobile must be portrait 360x640");
   assert.deepEqual([brand.width, brand.height], [640, 360], "brand film must be 640x360");
+  assert.ok(brand.width >= 640, `brand width too small: ${brand.width}`);
 
-  /* Source resolution must actually differ per placement — the 64x64 /
-     32x32 stubs were technically valid and visually useless. */
-  assert.ok(desktop.width >= 640, `desktop width too small: ${desktop.width}`);
-  assert.ok(mobile.height > mobile.width, "mobile source must be portrait");
-  const digest = (rel) =>
-    createHash("sha256").update(readFileSync(join(SRC_DIR, rel))).digest("hex");
-  assert.notEqual(digest(HERO), digest(HERO_MOBILE), "desktop and mobile must be distinct files");
+  /* 14.4A: the abstract hero placeholders must stay gone — they are exactly
+     the "golden gradient" motion the hero brief rejects. */
+  for (const rel of [HERO, HERO_MOBILE]) {
+    assert.throws(() => statSync(join(SRC_DIR, rel)), `${rel} must not return`);
+  }
 });
 
 test("hotfix2 · every placement is 16:9 or 9:16, never square", () => {
@@ -206,8 +205,12 @@ test("hotfix2 · autoplay stays muted and reduced-motion stays static", () => {
   assert.match(cv, /video\.muted = muted;/, "the muted property must be kept in step for autoplay policy");
   assert.match(cv, /effectiveSrc && !failed && !\(reducedMotion && autoplay && !needsTap\)/);
 
+  /* 14.4A: the hero decides via the reel resolver — reduced motion forces
+     poster mode, and only a mode of "video" mounts footage. */
   const hero = read("pages/customer/home/components/HeroSection.jsx");
-  assert.match(hero, /const hasVideo = Boolean\(video\?\.src\) && !reducedMotion;/);
+  assert.match(hero, /const hasVideo = reel\.mode === "video" && Boolean\(reel\.activeSrc\);/);
+  const service = read("services/heroReelService.js");
+  assert.match(service, /const mode = !reducedMotion && playable\.length > 0 \? "video" : "poster";/);
 });
 
 test("hotfix2 · the play fallback appears only when autoplay genuinely fails", () => {
@@ -284,8 +287,9 @@ test("hotfix2 · the document declares a favicon so /favicon.ico is never reques
 
 test("hotfix2 · the replaceable media contract is intact", () => {
   const homepage = read("mock/data/homepage/index.js");
-  assert.match(homepage, /src: media\.heroCinematicVideo/);
-  assert.match(homepage, /mobileSrc: media\.heroCinematicMobileVideo/);
+  /* 14.4A: the hero carries four records of the same contract. */
+  assert.match(homepage, /src: media\.heroReelSignatureVideo/);
+  assert.match(homepage, /mobileSrc: media\.heroReelSignatureMobileVideo/);
   assert.match(homepage, /poster: media\.heroEditorial/);
   for (const key of ["alt", "autoplay", "loop", "muted", "playsInline"]) {
     assert.ok(homepage.includes(`${key}:`), `hero video contract lost \`${key}\``);
@@ -297,5 +301,5 @@ test("hotfix2 · the replaceable media contract is intact", () => {
   for (const prop of ["src", "mobileSrc", "poster", "alt", "autoplay", "loop", "muted", "playsInline"]) {
     assert.ok(cv.includes(prop), `CinematicVideo lost the \`${prop}\` prop`);
   }
-  assert.doesNotMatch(cv, /hero-cinematic\.mp4/, "the component must not hard-code an asset path");
+  assert.doesNotMatch(cv, /\.mp4/, "the component must not hard-code an asset path");
 });

@@ -51,9 +51,10 @@ function readAll(rel) {
 
 test("14.4 · hero content exposes CMS-ready video fields", () => {
   const homepage = read("mock/data/homepage/index.js");
-  assert.match(homepage, /video:\s*\{/);
-  assert.match(homepage, /src:\s*media\.heroCinematicVideo/);
-  assert.match(homepage, /mobileSrc:\s*media\.heroCinematicMobileVideo/);
+  /* Phase 14.4A: the hero carries a four-record reel of the same contract. */
+  assert.match(homepage, /videos:\s*\[/);
+  assert.match(homepage, /src:\s*media\.heroReelSignatureVideo/);
+  assert.match(homepage, /mobileSrc:\s*media\.heroReelSignatureMobileVideo/);
   assert.match(homepage, /poster:\s*media\.heroEditorial/);
   assert.match(homepage, /alt:/);
   assert.match(homepage, /autoplay:\s*true/);
@@ -69,10 +70,12 @@ test("14.4 · HeroSection renders poster <img> even when video is configured", (
   /* The CinematicVideo takes poster={image.src} and always paints the poster
      first; the plain <img> fallback path is still there and carries the
      hero photograph when video is unavailable or reduced-motion is on. */
+  /* 14.4A: the poster <img> is now always rendered (not only on the
+     fallback path); the resolved poster is the campaign photograph. */
   assert.match(hero, /<img/);
-  assert.match(hero, /image\.src/);
+  assert.match(hero, /reel\.poster\.src/);
   assert.match(hero, /CinematicVideo/);
-  assert.match(hero, /reducedMotion/);
+  assert.match(hero, /reel\.mode/);
   assert.match(hero, /hasVideo/);
 });
 
@@ -186,10 +189,11 @@ test("14.4 · no UI component imports mock assets directly", () => {
 
 test("14.4 · video assets are registered through the mock asset index", () => {
   const assets = read("mock/assets/index.js");
-  assert.match(assets, /heroCinematicVideo/);
-  assert.match(assets, /heroCinematicMobileVideo/);
+  /* 14.4A: hero footage slots replace the abstract placeholder imports. */
+  assert.match(assets, /heroReelSignatureVideo/);
+  assert.match(assets, /heroReelSignatureMobileVideo/);
   assert.match(assets, /artOfGoldVideo/);
-  assert.match(assets, /videos\/homepage\/hero-cinematic\.mp4/);
+  assert.doesNotMatch(assets, /videos\/homepage\/hero-cinematic\.mp4/);
 });
 
 test("14.4 · brand film section is registered in the homepage section registry", () => {

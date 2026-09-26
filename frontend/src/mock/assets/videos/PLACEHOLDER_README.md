@@ -1,5 +1,11 @@
 # Swarnova Video Placeholders
 
+> **Phase 14.4A:** the two homepage hero placeholders
+> (`homepage/hero-cinematic*.mp4`, an abstract champagne-gold wash) were
+> removed — the hero no longer uses abstract motion. Hero footage slots and
+> generation prompts now live in `homepage/hero-reel/README.md`. Only the
+> brand-film placeholder below remains.
+
 The `.mp4` files in this folder are intentionally minimal placeholder
 stand-ins for production campaign footage. They are small enough to ship
 with the mock bundle while still exercising the native `<video>` pipeline
@@ -14,8 +20,6 @@ They are **genuinely moving** clips, not stills:
 
 | file                      | geometry   | frames | duration | fps |
 | ------------------------- | ---------- | ------ | -------- | --- |
-| `homepage/hero-cinematic.mp4`        | 640×360  | 96 | 4.000 s | 24 |
-| `homepage/hero-cinematic-mobile.mp4` | 360×640  | 96 | 4.000 s | 24 |
 | `editorial/art-of-gold.mp4`          | 640×360  | 96 | 4.000 s | 24 |
 
 Each clip is a looping champagne-gold wash with a key light that sweeps
