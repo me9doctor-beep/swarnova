@@ -514,6 +514,47 @@ button:hover .motion-zoom-subtle {
   transform: scale(1.03);
 }
 
+/* Multi-angle product hover (Phase 14.4B) — photographs of the same piece
+   from other camera positions, layered over the primary still inside the
+   card's image frame. `useProductMediaHover` writes the state attributes;
+   these rules only dissolve opacity:
+
+     .product-media-layers[data-engaged="true"]  the angle layer is showing
+     .product-media-frame[data-shown="true"]     this angle (and every one
+                                                 beneath it) is opaque
+
+   Later frames stack above earlier ones and the earlier frame stays opaque
+   underneath, so each step is a true crossfade — never a dip back to the
+   primary. On leave the whole layer fades as ONE surface (detail → primary).
+   Touch, hover-less and reduced-motion environments never show the layer. */
+.product-media-layers {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 700ms var(--ease-dissolve);
+}
+.product-media-layers[data-engaged="true"] {
+  opacity: 1;
+}
+.product-media-frame {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 680ms var(--ease-dissolve);
+}
+.product-media-frame[data-shown="true"] {
+  opacity: 1;
+}
+@media (hover: none), (pointer: coarse), (prefers-reduced-motion: reduce) {
+  .product-media-layers {
+    display: none;
+  }
+}
+
 /* Slow cinematic drift — for hero/editorial video or poster when video is
    unavailable. A very gentle 1.02→1.04 Ken Burns over 24s creates atmosphere
    without any perceptible "animation" while reading. */

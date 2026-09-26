@@ -76,6 +76,22 @@ import boutiqueBhubaneswar from "./images/branches/branch1.avif";
 import boutiqueCuttackImg from "./images/branches/branch2.avif";
 import boutiqueRourkelaImg from "./images/branches/branch3.avif";
 
+/* Multi-angle product photography (Phase 14.4B). The same piece from the
+   same shoot, re-photographed from a slight left / slight right camera
+   position and, where the frame passed consistency QA, a closer detail
+   perspective. Each piece's canonical front still stays its existing
+   catalogue photograph (above) — only the additional angles live here, under
+   images/products/<product-id>/, so no primary image is duplicated. Frames
+   are 1200×800 (landscape pieces) or 800×1200 (the pendant) AVIF, matching
+   the aspect of the primary so card crossfades register exactly. */
+import pendantAngleLeft from "./images/products/JWL-001/angle-left.avif";
+import pendantAngleRight from "./images/products/JWL-001/angle-right.avif";
+import pendantDetail from "./images/products/JWL-001/detail.avif";
+import haloRingAngleLeft from "./images/products/JWL-002/angle-left.avif";
+import haloRingAngleRight from "./images/products/JWL-002/angle-right.avif";
+import dropEarringsAngleLeft from "./images/products/JWL-003/angle-left.avif";
+import dropEarringsAngleRight from "./images/products/JWL-003/angle-right.avif";
+
 /* Media library — uploaded editorial awaiting a placement (Phase 8 media
    governance seeds; not yet referenced by any product or content block) */
 import festiveMakar from "./images/media/festive-makar.jpg";
@@ -136,6 +152,16 @@ export const media = {
   productDiamondHoops: earringsCategory,
   productTennisBracelet: braceletsCategory,
   productEternalBracelet: braceletsCategory,
+
+  /* Multi-angle hover frames (Phase 14.4B) — additional camera positions of
+     the piece whose primary still is named above. */
+  productPendantAngleLeft: pendantAngleLeft,
+  productPendantAngleRight: pendantAngleRight,
+  productPendantDetail: pendantDetail,
+  productSolitaireRingAngleLeft: haloRingAngleLeft,
+  productSolitaireRingAngleRight: haloRingAngleRight,
+  productDropEarringsAngleLeft: dropEarringsAngleLeft,
+  productDropEarringsAngleRight: dropEarringsAngleRight,
 
   /* Media library (unplaced uploads) */
   festiveMakar,
