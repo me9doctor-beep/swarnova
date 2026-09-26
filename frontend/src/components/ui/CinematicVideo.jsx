@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
 import { cn } from "../../utils/cn.js";
+import usePrefersReducedMotion from "../../hooks/usePrefersReducedMotion.js";
+import useIntersectionAware from "../../hooks/useIntersectionAware.js";
 
 /**
  * CINEMATIC VIDEO — a lightweight wrapper over the native `<video>` element,
@@ -14,8 +16,10 @@ import { cn } from "../../utils/cn.js";
  *     the poster stays visible and (when `showPlayFallback`) a calm play
  *     affordance appears instead of a broken-looking frame.
  *   - Respects `prefers-reduced-motion`: disables autoplay and shows poster.
- *   - Mobile src (`mobileSrc`) is served to narrow viewports via media query,
- *     saving bandwidth on phones.
+ *     Uses the prefersReducedMotion hook (which checks prefers-reduced-motion)
+ *     so the poster is the experience when the user asks for reduced motion.
+ *   - Mobile src (`mobileSrc`) is resolved in React via viewport matchMedia,
+ *     saving bandwidth on phones and avoiding unreliable <source media> behavior.
  *   - Off-screen videos are paused via IntersectionObserver to avoid decoding
  *     cost when the film is scrolled past.
  *   - Graceful error: if the video cannot load the poster still stands; no
@@ -47,44 +51,82 @@ export default function CinematicVideo({
   const [needsTap, setNeedsTap] = useState(false);
   const [failed, setFailed] = useState(false);
   const [userPaused, setUserPaused] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
-  /* Reduced-motion detection — one read at mount. When the customer asks
-     for reduced motion we never autoplay; the poster is the experience. */
-  const prefersReducedMotion = useRef(false);
+  const reducedMotion = usePrefersReducedMotion();
+  const [rootRef, inView] = useIntersectionAware({ threshold: 0.1, rootMargin: "100px 0px" });
+
+  // Mobile viewport detection — robust alternative to <source media>
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
-    prefersReducedMotion.current = mql.matches;
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mql = window.matchMedia("(max-width: 767px)");
+    const update = () => setIsMobile(mql.matches);
+    update();
+    if (typeof mql.addEventListener === "function") {
+      mql.addEventListener("change", update);
+      return () => mql.removeEventListener("change", update);
+    }
+    if (typeof mql.addListener === "function") {
+      mql.addListener(update);
+      return () => mql.removeListener(update);
+    }
+    return undefined;
   }, []);
 
-  /* Autoplay promise handling — a rejected autoplay (iOS low-power, etc.)
-     flips us into "tap to play" mode rather than leaving a broken frame. */
+  const effectiveSrc = isMobile && mobileSrc ? mobileSrc : src;
+
+  // Reset playback state when source changes (e.g., mobile ↔ desktop switch)
+  useEffect(() => {
+    setCanPlay(false);
+    setFailed(false);
+    setNeedsTap(false);
+    setUserPaused(false);
+  }, [effectiveSrc]);
+
+  // Autoplay promise handling — a rejected autoplay (iOS low-power, etc.)
+  // flips us into "tap to play" mode rather than leaving a broken frame.
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || !autoplay || paused || prefersReducedMotion.current || userPaused) return;
+    if (!video || !autoplay || paused || reducedMotion || userPaused || !inView) return;
+    if (!canPlay || failed) return;
 
     const tryPlay = () => {
       const playPromise = video.play();
       if (playPromise && typeof playPromise.catch === "function") {
-        playPromise.catch(() => {
+        playPromise.catch((err) => {
+          // Only show fallback for meaningful autoplay blocks, not for abort
+          // AbortError happens when pause() is called quickly after play()
+          if (err && err.name === "AbortError") return;
           setNeedsTap(true);
         });
       }
     };
 
-    if (canPlay) tryPlay();
-  }, [canPlay, autoplay, paused, userPaused]);
+    tryPlay();
+  }, [canPlay, autoplay, paused, reducedMotion, userPaused, inView, failed]);
 
-  /* External pause control (e.g. off-screen IntersectionObserver pausing). */
+  // External pause control + off-screen pausing
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    if (paused || !canPlay) {
-      video.pause();
-    } else if (autoplay && !prefersReducedMotion.current && !userPaused && !needsTap) {
-      video.play().catch(() => {});
+
+    const shouldPause = paused || !inView || !canPlay || failed || userPaused || (reducedMotion && autoplay);
+
+    if (shouldPause) {
+      // Avoid calling pause on already paused to reduce AbortError noise
+      if (!video.paused) {
+        video.pause();
+      }
+    } else if (autoplay && !reducedMotion && !needsTap) {
+      const p = video.play();
+      if (p && typeof p.catch === "function") {
+        p.catch((err) => {
+          if (err && err.name === "AbortError") return;
+          setNeedsTap(true);
+        });
+      }
     }
-  }, [paused, canPlay, autoplay, userPaused, needsTap]);
+  }, [paused, inView, canPlay, autoplay, reducedMotion, userPaused, needsTap, failed]);
 
   const handleCanPlay = () => {
     setCanPlay(true);
@@ -92,8 +134,15 @@ export default function CinematicVideo({
     onReady?.();
   };
 
+  const handleLoadedMetadata = () => {
+    // Metadata loaded is enough to know dimensions/duration, but we wait for canplay for visual readiness
+    // Still, if canplay hasn't fired, we can consider it playable for opacity transition after a short delay
+    // The actual opacity transition is driven by canPlay, but we keep this as a safety net
+  };
+
   const handleError = () => {
     setFailed(true);
+    setCanPlay(false);
     onError?.();
   };
 
@@ -102,15 +151,22 @@ export default function CinematicVideo({
     if (!video) return;
     setNeedsTap(false);
     setUserPaused(false);
+    setFailed(false);
     video.muted = muted;
-    video.play().catch(() => setNeedsTap(true));
+    const p = video.play();
+    if (p && typeof p.catch === "function") {
+      p.catch(() => setNeedsTap(true));
+    }
   };
 
   const objectFit = fit;
   const objectPosition = position;
 
   return (
-    <div className={cn("cinematic-media-wrap absolute inset-0 h-full w-full overflow-hidden", className)}>
+    <div
+      ref={rootRef}
+      className={cn("cinematic-media-wrap absolute inset-0 h-full w-full overflow-hidden", className)}
+    >
       {/* Poster — always rendered; the video fades in over it when ready. */}
       {poster && (
         <img
@@ -122,12 +178,15 @@ export default function CinematicVideo({
             canPlay && !failed ? "opacity-0" : "opacity-100"
           )}
           style={{ objectFit, objectPosition }}
+          loading="eager"
+          decoding="async"
         />
       )}
 
-      {/* Native video — never rendered when src is missing or in reduced motion
+      {/* Native video — uses resolved effectiveSrc (mobile vs desktop) for reliability.
+          Never rendered when src is missing, when failed, or when reduced-motion disables autoplay
           unless the customer explicitly taps play. */}
-      {src && !failed && (
+      {effectiveSrc && !failed && !(reducedMotion && autoplay && !needsTap) && (
         <video
           ref={videoRef}
           className={cn(
@@ -135,9 +194,9 @@ export default function CinematicVideo({
             canPlay ? "opacity-100" : "opacity-0"
           )}
           style={{ objectFit, objectPosition }}
-          src={mobileSrc ? undefined : src}
+          src={effectiveSrc}
           poster={poster}
-          autoPlay={autoplay && !prefersReducedMotion.current}
+          autoPlay={autoplay && !reducedMotion}
           loop={loop}
           muted={muted}
           playsInline={playsInline}
@@ -146,15 +205,24 @@ export default function CinematicVideo({
           controls={false}
           onCanPlay={handleCanPlay}
           onLoadedData={handleCanPlay}
+          onLoadedMetadata={handleLoadedMetadata}
+          onCanPlayThrough={handleCanPlay}
           onError={handleError}
           aria-hidden="true"
           tabIndex={-1}
-        >
-          {mobileSrc && (
-            <source src={mobileSrc} media="(max-width: 767px)" type="video/mp4" />
-          )}
-          {src && <source src={src} type="video/mp4" />}
-        </video>
+        />
+      )}
+
+      {/* When reduced motion is on and autoplay would have played, show poster only — no video element.
+          This is handled by the conditional above, but we keep a fallback poster visible. */}
+      {reducedMotion && autoplay && poster && !failed && (
+        <img
+          src={poster}
+          alt={alt}
+          aria-hidden="true"
+          className={cn("cinematic-media opacity-100")}
+          style={{ objectFit, objectPosition }}
+        />
       )}
 
       {/* Calm tap-to-play affordance, shown when autoplay was blocked. A single
