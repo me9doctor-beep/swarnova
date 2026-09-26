@@ -51,8 +51,13 @@ export const homepage = {
            points). `src` / `mobileSrc` stay null until real footage is
            delivered — a record without footage never plays and is never
            faked; the hero then stands still on the Signature poster.
-           The abstract champagne-gold placeholder clip is no longer used. */
-        rotation: { enabled: true, maxClipMs: 14000, crossfadeMs: 1800 },
+           The abstract champagne-gold placeholder clip is no longer used.
+           Rotation is a motion-to-motion dissolve: `stageLeadMs` before the
+           active film ends, the next film is staged invisibly (preloading);
+           `crossfadeMs` before the end it starts dissolving in while the
+           active film is still playing, so the reel feels like one
+           continuous campaign film. */
+        rotation: { enabled: true, maxClipMs: 14000, crossfadeMs: 2200, stageLeadMs: 3200 },
         videos: [
           {
             id: "signature-gold",

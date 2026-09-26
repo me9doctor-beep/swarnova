@@ -152,6 +152,9 @@
   --ease-standard: cubic-bezier(0.22, 0.61, 0.36, 1);
   --ease-entrance: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-exit: cubic-bezier(0.7, 0, 0.84, 0);
+  /* Symmetric S-curve for long cross-dissolves: opacity arrives evenly,
+     without the fast-then-idle arrival of an ease-out. */
+  --ease-dissolve: cubic-bezier(0.37, 0, 0.63, 1);
 
   /* Typography families (Phase 0 — unchanged) */
   --font-serif: "Cormorant Garamond", Georgia, "Times New Roman", serif;
@@ -299,14 +302,24 @@ img.hero__media {
 }
 
 /* Phase 14.4A reel layers. Each film sits in its own full-bleed layer above
-   the static poster and beneath the veil/copy. An incoming film fades in
-   slowly over the outgoing film's final frame — a cinematic dissolve, not a
+   the static poster and beneath the veil/copy. Shortly before the active
+   film ends, the next film is staged invisibly (preloading at opacity 0);
+   the crossfade then dissolves it in above the active film while that film
+   is still playing — a motion-to-motion dissolve, not a frozen frame or a
    carousel slide. Opacity only. */
 .hero__reel-layer {
   z-index: 0;
 }
+/* A film staged for the next dissolve is mounted but never seen or felt:
+   no opacity, no pointer. The entering animation overrides the static
+   opacity while it runs and holds the final value afterwards, so the class
+   stays on harmlessly through the promotion that follows. */
+.hero__reel-layer--staged {
+  opacity: 0;
+  pointer-events: none;
+}
 .hero__reel-layer--entering {
-  animation: heroReelDissolve var(--hero-crossfade, 1800ms) var(--ease-standard) both;
+  animation: heroReelDissolve var(--hero-crossfade, 2200ms) var(--ease-dissolve) both;
 }
 @keyframes heroReelDissolve {
   from { opacity: 0; }

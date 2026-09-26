@@ -12,10 +12,14 @@ import { cn } from "../../../../utils/cn.js";
  * the reference.
  *
  * Phase 14.4A — CINEMATIC HERO REEL. The hero plays real campaign footage:
- * four ~10 s films (Signature · Bridal · Contemporary · Heritage) that rotate
- * one at a time with a slow crossfade. The abstract champagne-gold placeholder
- * and the Ken Burns drift are gone — when footage plays, the footage is the
- * motion; when it cannot, the campaign photograph stands still.
+ * four ~10 s films (Signature · Bridal · Contemporary · Heritage) that
+ * rotate with a slow motion-to-motion crossfade: shortly before the active
+ * film ends, the next film is staged invisibly (preloading), and the
+ * dissolve begins while the active film is still playing — so the reel
+ * reads as one continuous campaign, never a slideshow of frozen frames.
+ * The abstract champagne-gold placeholder and the Ken Burns drift are gone
+ * — when footage plays, the footage is the motion; when it cannot, the
+ * campaign photograph stands still.
  *
  * Media priority:
  *   1. The Signature poster (the existing campaign photograph) is painted
@@ -46,6 +50,9 @@ export default function HeroSection({ content }) {
     ? [
         ...(reel.previous ? [{ record: reel.previous, src: reel.previous.resolvedSrc, outgoing: true }] : []),
         { record: reel.active, src: reel.activeSrc, outgoing: false },
+        ...(reel.staged
+          ? [{ record: reel.staged, src: reel.staged.resolvedSrc, outgoing: false, staged: true }]
+          : []),
       ]
     : [];
 
@@ -66,45 +73,55 @@ export default function HeroSection({ content }) {
         decoding="async"
       />
 
-      {/* Cinematic reel: only the active film is mounted as a playing video.
-          During a rotation the outgoing film rests on its final frame while
-          the incoming one crossfades in above it. */}
-      {layers.map(({ record, src, outgoing }) => (
-        <div
-          key={record.id}
-          className={cn(
-            "hero__reel-layer absolute inset-0",
-            !outgoing && reel.previous && "hero__reel-layer--entering"
-          )}
-          style={{
-            "--hero-crossfade": `${reel.rotation.crossfadeMs}ms`,
-            ...(record.focal?.mobile ? { "--hero-focal": record.focal.mobile } : null),
-            ...(record.focal?.desktop ? { "--hero-focal-desktop": record.focal.desktop } : null),
-          }}
-          data-hero-video={record.id}
-          data-hero-outgoing={outgoing ? "true" : undefined}
-          aria-hidden="true"
-        >
-          <CinematicVideo
-            src={src}
-            poster={record.poster}
-            alt={record.alt}
-            className="hero__media"
-            fit="cover"
-            position={null}
-            preload={outgoing ? "none" : "auto"}
-            autoplay={record.autoplay}
-            loop={!reel.rotates && record.loop}
-            muted
-            playsInline
-            paused={outgoing}
-            holdFinalFrame={reel.rotates}
-            showPlayFallback={!outgoing}
-            onEnded={outgoing ? undefined : reel.advance}
-            onError={() => reel.markFailed(record.id)}
-          />
-        </div>
-      ))}
+      {/* Cinematic reel: only the active film is mounted as a playing video,
+          plus — just before it ends — the next film staged invisibly: it
+          preloads at opacity 0, then dissolves in over the active film WHILE
+          that film is still playing, so the transition is motion-to-motion
+          and never reads as a slideshow. The outgoing film rests on its
+          final frame only after it has ended, fully covered by the incoming
+          one. */}
+      {layers.map(({ record, src, outgoing, staged }) => {
+        const entering = record.id === reel.enteringId;
+        return (
+          <div
+            key={record.id}
+            className={cn(
+              "hero__reel-layer absolute inset-0",
+              staged && "hero__reel-layer--staged",
+              entering && "hero__reel-layer--entering"
+            )}
+            style={{
+              "--hero-crossfade": `${reel.rotation.crossfadeMs}ms`,
+              ...(record.focal?.mobile ? { "--hero-focal": record.focal.mobile } : null),
+              ...(record.focal?.desktop ? { "--hero-focal-desktop": record.focal.desktop } : null),
+            }}
+            data-hero-video={record.id}
+            data-hero-outgoing={outgoing ? "true" : undefined}
+            data-hero-staged={staged ? "true" : undefined}
+            aria-hidden="true"
+          >
+            <CinematicVideo
+              src={src}
+              poster={record.poster}
+              alt={record.alt}
+              className="hero__media"
+              fit="cover"
+              position={null}
+              preload={outgoing ? "none" : "auto"}
+              autoplay={record.autoplay && !(staged && !entering)}
+              loop={!reel.rotates && record.loop}
+              muted
+              playsInline
+              paused={outgoing}
+              holdFinalFrame={reel.rotates}
+              showPlayFallback={!outgoing && !staged}
+              onEnded={outgoing ? undefined : reel.advance}
+              onProgress={outgoing || staged ? undefined : reel.handleActiveProgress}
+              onError={() => reel.markFailed(record.id)}
+            />
+          </div>
+        );
+      })}
 
       {/* Gradient veil over the media so copy stays legible. Decorative over the
           media layer: pointer-events-none so clicks fall through to the
