@@ -29,7 +29,7 @@ const variants = {
 };
 
 const base =
-  "relative inline-flex shrink-0 items-center justify-center rounded-sm transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-60";
+  "relative inline-flex shrink-0 items-center justify-center rounded-sm transition-[color,background-color,border-color,opacity,transform] duration-[var(--motion-standard)] ease-[var(--ease-standard)] disabled:cursor-not-allowed disabled:opacity-60 active:scale-[0.96]";
 
 export default function IconButton({
   label,

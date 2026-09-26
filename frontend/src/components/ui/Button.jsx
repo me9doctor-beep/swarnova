@@ -15,7 +15,7 @@ import { externalLinkProps, isExternalUrl, isInternalPath } from "../../utils/li
  * for dark surfaces (wine sections, campaign imagery).
  */
 const base =
-  "inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-sm border font-sans font-medium uppercase tracking-[0.22em] transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-60";
+  "inline-flex items-center justify-center gap-2.5 whitespace-nowrap rounded-sm border font-sans font-medium uppercase tracking-[0.22em] transition-[color,background-color,border-color,opacity,transform] duration-[var(--motion-standard)] ease-[var(--ease-standard)] disabled:cursor-not-allowed disabled:opacity-60 active:scale-[0.98]";
 
 const sizes = {
   sm: "px-6 py-2.5 text-[10px]",

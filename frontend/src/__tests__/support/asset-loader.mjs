@@ -16,7 +16,7 @@
  */
 import { readFile } from "node:fs/promises";
 
-const ASSET_EXTENSIONS = /\.(avif|jpe?g|png|webp|gif|svg)$/i;
+const ASSET_EXTENSIONS = /\.(avif|jpe?g|png|webp|gif|svg|mp4|webm|mov)$/i;
 
 let esbuildModule = null;
 

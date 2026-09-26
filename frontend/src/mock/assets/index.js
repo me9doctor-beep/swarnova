@@ -19,6 +19,16 @@ import campaignStill from "./images/homepage/campaign.jpg";
 import atelierStill from "./images/homepage/atelier.avif";
 import bridalEditorial from "./images/homepage/bridal.avif";
 
+/* Cinematic video — placeholder stand-ins for Phase 14.4. These are minimal
+   valid MP4 containers that exercise the native <video> pipeline (muted
+   autoplay, loop, playsInline, poster fallback, error recovery). They are
+   intentionally tiny (sub-kilobyte, still champagne frame) so the hero
+   photograph remains the dominant visual until the house delivers final
+   compressed H.264/H.265 campaign footage. */
+import heroCinematicVideo from "./videos/homepage/hero-cinematic.mp4";
+import heroCinematicMobileVideo from "./videos/homepage/hero-cinematic-mobile.mp4";
+import artOfGoldVideo from "./videos/editorial/art-of-gold.mp4";
+
 /* Collection discovery */
 import ringsCategory from "./images/categories/rings.jpg";
 import necklacesCategory from "./images/categories/necklaces.jpg";
@@ -54,6 +64,11 @@ export const media = {
   promiseEditorial,
   campaignStill,
   atelierStill,
+
+  /* Cinematic video placeholders (Phase 14.4) */
+  heroCinematicVideo,
+  heroCinematicMobileVideo,
+  artOfGoldVideo,
 
   /* Collection discovery */
   ringsCategory,
