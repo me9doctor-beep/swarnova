@@ -34,14 +34,18 @@ import heroReelHeritagePoster from "./images/homepage/hero-reel/heritage-gold-po
      import heroReelSignatureVideo from "./videos/homepage/hero-reel/signature-gold.mp4";
    Until then each slot is null: the hero shows the still photograph and is
    never animated with a synthetic stand-in. */
-const heroReelSignatureVideo = null;
-const heroReelSignatureMobileVideo = null;
-const heroReelBridalVideo = null;
-const heroReelBridalMobileVideo = null;
-const heroReelContemporaryVideo = null;
-const heroReelContemporaryMobileVideo = null;
-const heroReelHeritageVideo = null;
-const heroReelHeritageMobileVideo = null;
+// const heroReelSignatureVideo = null;
+import heroReelSignatureVideo from "./videos/homepage/hero-reel/signature-gold.mp4";
+// const heroReelSignatureMobileVideo = null;
+// const heroReelBridalVideo = null;
+import heroReelSignatureVideo from "./videos/homepage/hero-reel/bridal-gold.mp4";
+// const heroReelBridalMobileVideo = null;
+// const heroReelContemporaryVideo = null;
+import heroReelSignatureVideo from "./videos/homepage/hero-reel/contemporary.mp4";
+// const heroReelContemporaryMobileVideo = null;
+// const heroReelHeritageVideo = null;
+import heroReelSignatureVideo from "./videos/homepage/hero-reel/heritage-statement.mp4";
+// const heroReelHeritageMobileVideo = null;
 
 /* Brand film placeholder (Phase 14.4; unchanged in 14.4A — out of scope).
    See mock/assets/videos/PLACEHOLDER_README.md. */
