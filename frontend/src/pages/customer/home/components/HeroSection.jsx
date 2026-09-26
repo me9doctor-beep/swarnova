@@ -72,14 +72,16 @@ export default function HeroSection({ content }) {
         />
       )}
 
-      {/* Gradient veil over the media so copy stays legible */}
+      {/* Gradient veil over the media so copy stays legible. Decorative over the
+          media layer: pointer-events-none so clicks fall through to the
+          tap-to-play affordance beneath when autoplay is blocked. */}
       <div
-        className="hero__veil absolute inset-0 bg-gradient-to-r from-ink/80 via-ink/40 to-transparent"
+        className="hero__veil pointer-events-none absolute inset-0 bg-gradient-to-r from-ink/80 via-ink/40 to-transparent"
         aria-hidden="true"
       />
       {/* Subtle top fade for nav readability */}
       <div
-        className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-ink/30 to-transparent"
+        className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-ink/30 to-transparent"
         aria-hidden="true"
       />
 
@@ -179,7 +181,7 @@ export default function HeroSection({ content }) {
 
       {/* Gold hairline at the bottom */}
       <div
-        className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-brand-accent/50 via-brand-accent/20 to-transparent"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-brand-accent/50 via-brand-accent/20 to-transparent"
         aria-hidden="true"
       />
     </section>

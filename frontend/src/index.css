@@ -302,6 +302,15 @@ img.hero__media {
   display: flex;
   flex: 1 1 auto;
   align-items: center;
+  /* The copy block spans the full hero height. When autoplay is blocked the
+     tap-to-play affordance lives in the media layer beneath it, so the copy
+     wrapper must not swallow clicks in its empty regions — only the copy's own
+     links and CTAs stay interactive. */
+  pointer-events: none;
+}
+.hero__copy a,
+.hero__copy button {
+  pointer-events: auto;
 }
 
 @media (max-width: 1279px) {
@@ -537,6 +546,29 @@ button:hover .motion-zoom-subtle {
   height: 100%;
   object-fit: cover;
   z-index: 0;
+}
+
+/* The wrap must establish its own stacking context (positioned + z-index 0).
+   Without it, the positioned video's z-index would escape the wrap and paint
+   above the section's gradient veil and copy, which are later positioned
+   siblings at z-index auto — exactly the "video swallowed the veil and made
+   the copy invisible" bug. Containing it keeps the whole media layer beneath
+   the veil and the copy. */
+.cinematic-media-wrap {
+  z-index: 0;
+}
+/* Explicit stacking inside the media wrap: poster beneath, video above.
+   DOM order alone would decide this, and both elements carry .cinematic-media,
+   so the order is stated rather than implied. These rules are intentionally
+   unlayered — Tailwind v4 emits its utilities into `@layer utilities`, and
+   unlayered CSS outranks layered CSS regardless of source order, so a
+   `z-[1]` utility on the video would otherwise lose to the z-index above.
+   The section's gradient veil lives outside this wrap and stays on top. */
+.cinematic-media-wrap img.cinematic-media {
+  z-index: 0;
+}
+.cinematic-media-wrap video.cinematic-media {
+  z-index: 1;
 }
 
 /* Loading veil for hero — fades out once the video/poster is ready. */

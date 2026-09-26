@@ -164,6 +164,11 @@ export default function BrandFilmSection({ content }) {
                 onLoadedMetadata={handleCanPlay}
                 onCanPlayThrough={handleCanPlay}
                 onPlay={() => setPlaying(true)}
+                /* `playing` — not `play` — is the event that proves frames are
+                   actually advancing; it is the gate for revealing the film
+                   over the poster, so the UI never claims a playback that
+                   stalled at the first frame. */
+                onPlaying={() => setPlaying(true)}
                 onPause={handlePause}
                 onEnded={handleEnded}
                 onError={handleError}
