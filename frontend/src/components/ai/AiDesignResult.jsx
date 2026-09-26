@@ -6,6 +6,7 @@ import AiRefinePrompt from "./AiRefinePrompt.jsx";
 import AiStudioActions from "./AiStudioActions.jsx";
 import AiVariationCard from "./AiVariationCard.jsx";
 import { optionLabel } from "../../utils/optionLabel.js";
+import { cn } from "../../utils/cn.js";
 
 /**
  * The generated concept, presented as the studio's focal point: a framed
@@ -31,11 +32,14 @@ export default function AiDesignResult({
   onShare,
 }) {
   const [refining, setRefining] = useState(false);
+  const [plateLoaded, setPlateLoaded] = useState(false);
 
-  /* A new concept closes any refinement conversation that preceded it. */
+  /* A new concept closes any refinement conversation that preceded it, and
+     resets the reveal state so the curtain pulls again on each new plate. */
   useEffect(() => {
     setRefining(false);
-  }, [concept.id]);
+    setPlateLoaded(false);
+  }, [concept.id, activePlate]);
 
   const { result, context, refine: refineCopy } = copy;
   const plateIndex = Math.min(activePlate, concept.images.length - 1);
@@ -59,19 +63,29 @@ export default function AiDesignResult({
   return (
     <div>
       <figure>
-        <div className="border border-brand-accent/30 bg-surface-primary p-2.5 sm:p-3">
+        <div className="relative overflow-hidden border border-brand-accent/30 bg-surface-primary p-2.5 sm:p-3">
           <img
             src={plate.src}
             alt={plate.alt ?? concept.title}
-            className="aspect-[4/3] w-full object-cover"
+            onLoad={() => setPlateLoaded(true)}
+            className={cn(
+              "aspect-[4/3] w-full object-cover transition-opacity duration-[var(--motion-slow)]",
+              plateLoaded ? "opacity-100" : "opacity-0"
+            )}
           />
+          {plateLoaded && (
+            <div
+              className="pointer-events-none absolute inset-2.5 sm:inset-3 motion-reveal-clip bg-ink/10"
+              aria-hidden="true"
+            />
+          )}
         </div>
         <figcaption className="mt-3 font-sans text-label uppercase tracking-[0.24em] text-text-muted">
           {plateLabel}
         </figcaption>
       </figure>
 
-      <div className="mt-7">
+      <div className={cn("mt-7", plateLoaded && "motion-reveal")} data-delay="1">
         <div className="flex flex-wrap items-center gap-2">
           <Badge variant="brand">{concept.purity} Gold</Badge>
           {details.map((detail) => (

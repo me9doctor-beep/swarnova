@@ -18,6 +18,7 @@ import AiStudioSection from "./components/AiStudioSection.jsx";
 import FeaturedProductsSection from "./components/FeaturedProductsSection.jsx";
 import VirtualTryOnSection from "./components/VirtualTryOnSection.jsx";
 import EditorialSection from "./components/EditorialSection.jsx";
+import BrandFilmSection from "./components/BrandFilmSection.jsx";
 import WhyChooseUsSection from "./components/WhyChooseUsSection.jsx";
 import GoldRateSection from "./components/GoldRateSection.jsx";
 import CampaignSection from "./components/CampaignSection.jsx";
@@ -38,6 +39,7 @@ const sectionRegistry = {
   featured_products: FeaturedProductsSection,
   virtual_tryon: VirtualTryOnSection,
   editorial: EditorialSection,
+  brand_film: BrandFilmSection,
   why_choose_us: WhyChooseUsSection,
   gold_rate: GoldRateSection,
   campaign: CampaignSection,

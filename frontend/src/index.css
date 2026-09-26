@@ -141,6 +141,18 @@
   --shadow-subtle: 0 1px 2px rgba(47, 42, 37, 0.05), 0 1px 3px rgba(47, 42, 37, 0.04);
   --shadow-medium: 0 12px 32px -16px rgba(47, 42, 37, 0.24);
 
+  /* ---------- Motion (Phase 14.4) ---------- */
+  /* Timings — restrained, editorial. Animations stay on opacity/transform/clip. */
+  --motion-fast: 150ms;
+  --motion-standard: 220ms;
+  --motion-slow: 420ms;
+  --motion-cinematic: 720ms;
+
+  /* Easings — composed; no bounce, elastic or exaggerated overshoot. */
+  --ease-standard: cubic-bezier(0.22, 0.61, 0.36, 1);
+  --ease-entrance: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-exit: cubic-bezier(0.7, 0, 0.84, 0);
+
   /* Typography families (Phase 0 — unchanged) */
   --font-serif: "Cormorant Garamond", Georgia, "Times New Roman", serif;
   --font-sans: "Jost", ui-sans-serif, system-ui, -apple-system, sans-serif;
@@ -273,7 +285,16 @@
   inset: 0;
   width: 100%;
   height: 100%;
+}
+/* When .hero__media is a plain <img> (no-video path) it needs object-fit too. */
+img.hero__media {
   object-fit: cover;
+  object-position: 64% 26%;
+}
+/* CinematicVideo root (the .cinematic-media-wrap) fills the frame; its inner
+   poster/video already use cover positioning from the component. Override
+   focal point to match the hero's crop on desktop. */
+.hero__media .cinematic-media {
   object-position: 64% 26%;
 }
 
@@ -327,8 +348,12 @@
 }
 
 @media (min-width: 1280px) {
-  /* Keep the photograph's left-hand negative space under the copy. */
-  .hero__media {
+  /* Keep the photograph's left-hand negative space under the copy. Target
+     both the plain <img> path and the CinematicVideo inner media layer. */
+  img.hero__media {
+    object-position: 18% 30%;
+  }
+  .hero__media .cinematic-media {
     object-position: 18% 30%;
   }
 
@@ -378,3 +403,147 @@
     display: none;
   }
 }
+
+/* ===========================================================================
+   MOTION UTILITIES & REDUCED MOTION  (Phase 14.4)
+   ---------------------------------------------------------------------------
+   All decorative motion lives behind the prefers-reduced-motion media query:
+   when the customer asks for reduced motion, crossfades, slow drifts and
+   editorial reveals resolve to instant state changes, while functional
+   feedback (focus rings, button active states, dialog open/close for
+   dismissal comprehension) is preserved.
+
+   Utilities:
+     .motion-reveal      gentle opacity/transform entrance (cinematic reveal)
+     .motion-fade        simple crossfade
+     .motion-zoom-subtle extremely restrained scale on hover (product media)
+     .motion-ken-burns   very slow drift for editorial/cinematic imagery
+   =========================================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .motion-ken-burns,
+  .motion-ken-burns img,
+  .motion-ken-burns video {
+    animation: none !important;
+    transform: none !important;
+  }
+}
+
+/* Reveal — content fades in + slight upward lift. Used for:
+   - hero copy entrance
+   - AI / Try-On result reveal
+   - cinematic section entry */
+.motion-reveal {
+  opacity: 0;
+  transform: translateY(8px);
+  animation: motionReveal var(--motion-cinematic) var(--ease-entrance) forwards;
+  will-change: opacity, transform;
+}
+
+.motion-reveal[data-delay="1"] { animation-delay: 120ms; }
+.motion-reveal[data-delay="2"] { animation-delay: 260ms; }
+.motion-reveal[data-delay="3"] { animation-delay: 400ms; }
+.motion-reveal[data-delay="4"] { animation-delay: 540ms; }
+.motion-reveal[data-delay="5"] { animation-delay: 680ms; }
+
+@keyframes motionReveal {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Subtle crossfade — used for image swap transitions (gallery, product plate). */
+.motion-fade {
+  transition: opacity var(--motion-slow) var(--ease-standard);
+}
+
+/* Restrained hover zoom — product cards, gallery. Never dramatic. */
+.motion-zoom-subtle {
+  transition: transform var(--motion-slow) var(--ease-standard);
+}
+.group:hover .motion-zoom-subtle,
+a:hover .motion-zoom-subtle,
+button:hover .motion-zoom-subtle {
+  transform: scale(1.03);
+}
+
+/* Slow cinematic drift — for hero/editorial video or poster when video is
+   unavailable. A very gentle 1.02→1.04 Ken Burns over 24s creates atmosphere
+   without any perceptible "animation" while reading. */
+.motion-ken-burns {
+  animation: motionKenBurns 24s var(--ease-standard) infinite alternate;
+  will-change: transform;
+}
+
+@keyframes motionKenBurns {
+  from { transform: scale(1.02) translate3d(0, 0, 0); }
+  to   { transform: scale(1.06) translate3d(-0.8%, -0.4%, 0); }
+}
+
+/* Atelier "crafting" pulse — the quiet progress treatment for AI / Try-On
+   processing states. No neon, no spinner; a soft gold shimmer. */
+.motion-atelier-pulse {
+  position: relative;
+  overflow: hidden;
+}
+.motion-atelier-pulse::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 0%,
+    rgba(216, 191, 147, 0.08) 45%,
+    rgba(216, 191, 147, 0.18) 50%,
+    rgba(216, 191, 147, 0.08) 55%,
+    transparent 100%
+  );
+  animation: motionAtelierShimmer 2.4s var(--ease-standard) infinite;
+  transform: translateX(-100%);
+  pointer-events: none;
+}
+
+@keyframes motionAtelierShimmer {
+  to { transform: translateX(100%); }
+}
+
+/* Image reveal — used when a generated/try-on image loads. The plate is
+   clipped at the top and reveals downward to feel like a curtain pull. */
+.motion-reveal-clip {
+  animation: motionClipReveal var(--motion-slow) var(--ease-entrance) forwards;
+  clip-path: inset(0 0 100% 0);
+}
+
+@keyframes motionClipReveal {
+  to { clip-path: inset(0 0 0 0); }
+}
+
+/* Cinematic video container — ensures the video fills its frame like cover,
+   and sits visually beneath copy (z-0). */
+.cinematic-media {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+
+/* Loading veil for hero — fades out once the video/poster is ready. */
+.cinematic-veil-loading {
+  transition: opacity var(--motion-cinematic) var(--ease-standard);
+}
+.cinematic-veil-loading[data-ready="true"] {
+  opacity: 0;
+}
+

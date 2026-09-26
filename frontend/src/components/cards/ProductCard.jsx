@@ -36,7 +36,7 @@ export default function ProductCard({ product, showTryOn = false }) {
         ratio="4/3"
         href={product.href}
         ariaLabel={`View ${product.name}`}
-        className="border border-border-default transition-colors duration-200 group-hover:border-brand-accent/45"
+        className="border border-border-default transition-colors duration-[var(--motion-standard)] group-hover:border-brand-accent/45"
         overlay={
           <IconButton
             label={
@@ -48,12 +48,19 @@ export default function ProductCard({ product, showTryOn = false }) {
             variant="outline"
             size="touch"
             onClick={() => toggle(product.id)}
-            className="absolute right-3 top-3 bg-surface-primary/90 sm:h-9 sm:w-9"
+            className={cn(
+              "absolute right-3 top-3 bg-surface-primary/90 transition-all duration-[var(--motion-standard)] sm:h-9 sm:w-9",
+              "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100",
+              wished && "opacity-100"
+            )}
           >
             <Heart
               size={15}
               strokeWidth={1.5}
-              className={cn(wished && "fill-brand-primary text-brand-primary")}
+              className={cn(
+                "transition-colors duration-[var(--motion-standard)]",
+                wished && "fill-brand-primary text-brand-primary"
+              )}
             />
           </IconButton>
         }
@@ -62,7 +69,7 @@ export default function ProductCard({ product, showTryOn = false }) {
           src={image?.src}
           alt={image?.alt ?? product.name}
           loading="lazy"
-          className="h-full w-full object-cover"
+          className="motion-zoom-subtle h-full w-full object-cover"
         />
       </Card.Media>
 
@@ -71,7 +78,7 @@ export default function ProductCard({ product, showTryOn = false }) {
           {product.purity} Gold
         </p>
         <h3 className="mt-2 font-serif text-h4 leading-snug">
-          <ContentLink href={product.href} className="transition-colors duration-200 hover:text-brand-primary">
+          <ContentLink href={product.href} className="transition-colors duration-[var(--motion-standard)] hover:text-brand-primary">
             {product.name}
           </ContentLink>
         </h3>
@@ -87,7 +94,7 @@ export default function ProductCard({ product, showTryOn = false }) {
             variant="outline"
             size="sm"
             href={`/virtual-try-on?product=${product.id}`}
-            className="mt-2.5 w-full"
+            className="mt-2.5 w-full transition-all duration-[var(--motion-standard)]"
           >
             <Sparkles size={12} strokeWidth={1.5} aria-hidden="true" />
             Try It On

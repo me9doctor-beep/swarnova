@@ -188,9 +188,20 @@ export default function AiStudioPage() {
                   <div
                     role="status"
                     aria-live="polite"
-                    className="flex min-h-[320px] items-center justify-center border border-dashed border-border-default bg-surface-primary px-6 py-16 text-center"
+                    className="motion-atelier-pulse flex min-h-[320px] flex-col items-center justify-center border border-brand-accent/30 bg-surface-primary px-6 py-16 text-center"
                   >
-                    <p className="eyebrow eyebrow-light">{busyMessage}</p>
+                    <p className="eyebrow tracking-[0.34em] text-brand-accent-strong">
+                      {atelier?.generation?.atelierLabel ?? "Creating Your Design"}
+                    </p>
+                    <p className="mt-4 font-serif text-h3 italic leading-relaxed text-text-secondary">
+                      {busyMessage}
+                    </p>
+                    {/* Ornamental gold hairline — the "atelier is at work" sign. */}
+                    <div className="mt-8 flex items-center gap-3" aria-hidden="true">
+                      <span className="h-px w-12 bg-brand-accent/40" />
+                      <span className="h-[5px] w-[5px] rotate-45 border border-brand-accent/50" />
+                      <span className="h-px w-12 bg-brand-accent/40" />
+                    </div>
                   </div>
                 ) : studio.status === "error" ? (
                   <div

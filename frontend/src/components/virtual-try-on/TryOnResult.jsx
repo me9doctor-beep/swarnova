@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import PropTypes from "prop-types";
 import Badge from "../ui/Badge.jsx";
 import { cn } from "../../utils/cn.js";
@@ -8,17 +8,27 @@ import { cn } from "../../utils/cn.js";
  * lightweight compare the house prescribes: a two-way [Original] [Try-On]
  * toggle over the one frame, no comparison framework. The result's own
  * metadata — piece, lineage, readiness — sits quietly beneath.
+ *
+ * Phase 14.4: the try-on image reveals with a restrained crossfade when
+ * switching between original and try-on views; no flash, no carousel.
  */
 export default function TryOnResult({ copy, result }) {
   const [view, setView] = useState("try-on");
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   const jewellery = result.source.jewellery;
   const showingOriginal = view === "original";
   const image = showingOriginal ? result.photo.image : result.image;
 
+  /* Reset the reveal state each time the customer flips the compare toggle
+     so the crossfade is perceptible but not theatrical. */
+  useEffect(() => {
+    setImageLoaded(false);
+  }, [showingOriginal, image.src]);
+
   const segment = (active) =>
     cn(
-      "min-h-10 px-4 font-sans text-label font-medium uppercase tracking-[0.18em] transition-colors duration-200",
+      "min-h-10 px-4 font-sans text-label font-medium uppercase tracking-[0.18em] transition-colors duration-[var(--motion-standard)]",
       active
         ? "bg-brand-primary text-text-inverse"
         : "bg-surface-primary text-text-secondary hover:text-brand-primary"
@@ -26,12 +36,28 @@ export default function TryOnResult({ copy, result }) {
 
   return (
     <figure>
-      <div className="border border-brand-accent/30 bg-surface-primary p-2.5 sm:p-3">
+      <div className="relative overflow-hidden border border-brand-accent/30 bg-surface-primary p-2.5 sm:p-3">
         <img
           src={image.src}
           alt={image.alt ?? `${jewellery.name} try-on preview`}
-          className="aspect-[3/4] w-full object-cover"
+          onLoad={() => setImageLoaded(true)}
+          className={cn(
+            "aspect-[3/4] w-full object-cover transition-opacity duration-[var(--motion-slow)] ease-[var(--ease-standard)]",
+            imageLoaded ? "opacity-100" : "opacity-0"
+          )}
         />
+        {!imageLoaded && (
+          <div
+            className="absolute inset-2.5 flex items-center justify-center bg-surface-secondary sm:inset-3"
+            aria-hidden="true"
+          >
+            <div className="flex items-center gap-3">
+              <span className="h-px w-10 bg-brand-accent/40" />
+              <span className="h-[5px] w-[5px] rotate-45 border border-brand-accent/50" />
+              <span className="h-px w-10 bg-brand-accent/40" />
+            </div>
+          </div>
+        )}
       </div>
 
       <figcaption className="mt-3">

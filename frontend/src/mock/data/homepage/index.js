@@ -11,6 +11,12 @@ import { media } from "../../assets/index.js";
  * Domain data (products, branches, articles, rates, campaign, AI studio) is
  * fetched through hooks/services and referenced via config such as
  * `query` / `campaignId`.
+ *
+ * Phase 14.4 video contract: a `video` object is added to sections that
+ * support cinematic media. Fields map one-to-one to a future CMS/DAM:
+ *   src, mobileSrc, poster, alt, autoplay, loop, muted, playsInline.
+ * When `video.src` is omitted the section renders its image exactly as
+ * before — static imagery remains the default.
  */
 export const homepage = {
   id: "HOME-2026",
@@ -35,6 +41,19 @@ export const homepage = {
         image: {
           src: media.heroEditorial,
           alt: "Indian model in a deep burgundy silk drape wearing an ornate 22K gold and polki diamond choker necklace",
+        },
+        /* Cinematic hero video (Phase 14.4). The mock placeholder is a
+           still frame that exercises the video pipeline; replace with
+           final compressed campaign footage before launch. */
+        video: {
+          src: media.heroCinematicVideo,
+          mobileSrc: media.heroCinematicMobileVideo,
+          poster: media.heroEditorial,
+          alt: "Gold jewellery catching warm light",
+          autoplay: true,
+          loop: true,
+          muted: true,
+          playsInline: true,
         },
       },
     },
@@ -186,10 +205,32 @@ export const homepage = {
       },
     },
     {
+      /* Brand / craftsmanship film (Phase 14.4). A calm editorial pause
+         between the "Tradition, Reimagined" storytelling and the "Why
+         Choose Us" pillars. Static poster is the default; the film plays
+         only when the customer invites it. */
+      type: "brand_film",
+      id: "art-of-gold",
+      enabled: true,
+      order: 9,
+      content: {
+        eyebrow: "The Art of Gold",
+        title: "Where Heritage Meets Innovation",
+        lead: "Jewellery is not simply worn. It becomes part of your story.",
+        caption: "A Swarnova atelier film",
+        playLabel: "Play the art of gold film",
+        poster: media.atelierStill,
+        video: {
+          src: media.artOfGoldVideo,
+          alt: "Master goldsmith at work in the Swarnova atelier — sketching, setting, polishing",
+        },
+      },
+    },
+    {
       type: "why_choose_us",
       id: "why-choose-us",
       enabled: true,
-      order: 9,
+      order: 10,
       content: {
         eyebrow: "Why Choose Us",
         title: "More Than Jewellery",
@@ -221,7 +262,7 @@ export const homepage = {
       type: "gold_rate",
       id: "gold-rate",
       enabled: true,
-      order: 10,
+      order: 11,
       content: {
         eyebrow: "Today's Gold",
         title: "The Daily Gold Rate",
@@ -232,7 +273,7 @@ export const homepage = {
       type: "campaign",
       id: "campaign",
       enabled: true,
-      order: 11,
+      order: 12,
       content: {
         campaignId: "CMP-2026-PRECIOUS",
         emptyMessage:
@@ -243,7 +284,7 @@ export const homepage = {
       type: "stores",
       id: "stores",
       enabled: true,
-      order: 12,
+      order: 13,
       content: {
         eyebrow: "Experience Swarnova",
         title: "Visit Us In Person",
@@ -256,7 +297,7 @@ export const homepage = {
       type: "journal",
       id: "journal",
       enabled: true,
-      order: 13,
+      order: 14,
       content: {
         eyebrow: "The Swarnova Journal",
         title: "Notes on Gold, Craft & Occasion",
@@ -268,7 +309,7 @@ export const homepage = {
       type: "newsletter",
       id: "newsletter",
       enabled: true,
-      order: 14,
+      order: 15,
       content: {
         title: "Enter the World of Swarnova",
         body: "New collections, craft stories and invitations to private previews — with our compliments.",
