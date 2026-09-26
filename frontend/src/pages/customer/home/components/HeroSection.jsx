@@ -43,7 +43,9 @@ export default function HeroSection({ content }) {
       aria-label="Featured campaign"
       className="hero relative overflow-hidden bg-ink"
     >
-      {/* Cinematic media layer: video when available, poster always first. */}
+      {/* Cinematic media layer: video when available, poster always first.
+          showPlayFallback ensures a calm tap affordance appears if autoplay is blocked
+          (iOS low-power, data-saver) rather than leaving a paused-looking frame. */}
       {hasVideo ? (
         <CinematicVideo
           src={video.src}
@@ -58,6 +60,7 @@ export default function HeroSection({ content }) {
           loop
           muted
           playsInline
+          showPlayFallback
         />
       ) : (
         <img

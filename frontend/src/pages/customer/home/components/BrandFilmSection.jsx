@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import PropTypes from "prop-types";
 import Section from "../../../../components/ui/Section.jsx";
 import Container from "../../../../components/ui/Container.jsx";
@@ -26,22 +26,58 @@ export default function BrandFilmSection({ content }) {
   const [canPlay, setCanPlay] = useState(false);
   const [failed, setFailed] = useState(false);
   const reducedMotion = usePrefersReducedMotion();
-  const [sentinelRef, inView] = useIntersectionAware();
+  const [sentinelRef, inView] = useIntersectionAware({ threshold: 0.1, rootMargin: "100px 0px" });
 
   const hasVideo = Boolean(content.video?.src) && !failed;
+  // Poster visible until film is actually playing and canPlay, or when failed/reducedMotion
+  // We keep poster visible while canPlay is false to avoid black frame during load
   const showPoster = !playing || !canPlay || failed || reducedMotion;
+
+  // Reset state when src changes or when reduced motion toggles
+  useEffect(() => {
+    if (reducedMotion) {
+      setPlaying(false);
+    }
+  }, [reducedMotion]);
+
+  useEffect(() => {
+    setCanPlay(false);
+    setPlaying(false);
+    setFailed(false);
+  }, [content.video?.src]);
 
   const handlePlay = () => {
     const v = videoRef.current;
     if (!v) return;
+    // Ensure video is ready to play — if preload was none, this will trigger loading
+    // Try unmuted first (user gesture allows sound), fallback to muted if blocked
     v.muted = false;
-    v.play()
-      .then(() => setPlaying(true))
-      .catch(() => {
-        /* If unmuted autoplay is rejected (common), retry muted. */
-        v.muted = true;
-        v.play().then(() => setPlaying(true)).catch(() => {});
-      });
+    const playPromise = v.play();
+    if (playPromise && typeof playPromise.then === "function") {
+      playPromise
+        .then(() => {
+          setPlaying(true);
+        })
+        .catch(() => {
+          // If unmuted autoplay is rejected (common), retry muted
+          v.muted = true;
+          const retry = v.play();
+          if (retry && typeof retry.then === "function") {
+            retry
+              .then(() => setPlaying(true))
+              .catch(() => {
+                // If even muted fails, stay on poster — no broken UI
+                setPlaying(false);
+              });
+          } else {
+            // Fallback for browsers without promise
+            setPlaying(true);
+          }
+        });
+    } else {
+      // Older browsers without promise
+      setPlaying(true);
+    }
   };
 
   const handlePause = () => {
@@ -50,7 +86,24 @@ export default function BrandFilmSection({ content }) {
 
   const handleEnded = () => {
     setPlaying(false);
-    if (videoRef.current) videoRef.current.currentTime = 0;
+    if (videoRef.current) {
+      try {
+        videoRef.current.currentTime = 0;
+      } catch {
+        // Ignore if currentTime not settable
+      }
+    }
+  };
+
+  const handleCanPlay = () => {
+    setCanPlay(true);
+    setFailed(false);
+  };
+
+  const handleError = () => {
+    setFailed(true);
+    setCanPlay(false);
+    setPlaying(false);
   };
 
   return (
@@ -79,7 +132,7 @@ export default function BrandFilmSection({ content }) {
           className="relative mx-auto mt-12 max-w-5xl"
         >
           <div className="relative aspect-[16/9] overflow-hidden border border-brand-accent/30 bg-ink shadow-medium">
-            {/* Poster frame — always present, fades when the film is playing. */}
+            {/* Poster frame — always present, fades when the film is playing and canPlay. */}
             {content.poster && (
               <img
                 src={content.poster}
@@ -89,10 +142,11 @@ export default function BrandFilmSection({ content }) {
                   !showPoster ? "opacity-0" : "opacity-100"
                 )}
                 loading="lazy"
+                decoding="async"
               />
             )}
 
-            {/* The film */}
+            {/* The film — native video with explicit ref handling and promise-aware play() */}
             {hasVideo && !reducedMotion && (
               <video
                 ref={videoRef}
@@ -105,11 +159,14 @@ export default function BrandFilmSection({ content }) {
                 controls={playing}
                 playsInline
                 preload={inView ? "metadata" : "none"}
-                onCanPlay={() => setCanPlay(true)}
+                onCanPlay={handleCanPlay}
+                onLoadedData={handleCanPlay}
+                onLoadedMetadata={handleCanPlay}
+                onCanPlayThrough={handleCanPlay}
                 onPlay={() => setPlaying(true)}
                 onPause={handlePause}
                 onEnded={handleEnded}
-                onError={() => setFailed(true)}
+                onError={handleError}
                 aria-label={content.video?.alt ?? content.title}
               />
             )}
