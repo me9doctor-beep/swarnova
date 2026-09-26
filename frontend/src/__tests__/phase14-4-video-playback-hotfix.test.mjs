@@ -81,19 +81,37 @@ test("hotfix · video files are valid MP4 containers with ftyp, moov, mdat", () 
     const entryCount = data.readUInt32BE(stsdPos + 8);
     assert.equal(entryCount, 1, `${rel}: stsd entry_count should be 1, got ${entryCount} (malformed)`);
 
-    // Must contain at least one IDR NAL (0x65) with length prefix
-    // First sample: 4-byte length + NAL header 0x65
-    const mdatDataStart = mdatPos + 4; // type is at mdatPos, data starts after 8 byte header
-    // Actually mdat header is 8 bytes: size + type, so data starts at mdatPos+4? Wait type at mdatPos, need to find box start
-    // Simpler: check that file contains 0x65 NAL header after mdat
+    // Must contain at least one IDR NAL with length prefix
     const mdatBoxStart = data.indexOf(Buffer.from("mdat")) - 4;
     const mdatSize = data.readUInt32BE(mdatBoxStart);
     assert.ok(mdatSize > 100, `${rel}: mdat too small`);
     // Check first sample length
     const firstSampleLen = data.readUInt32BE(mdatBoxStart + 8);
     assert.ok(firstSampleLen > 100 && firstSampleLen < 100000, `${rel}: first sample length invalid ${firstSampleLen}`);
-    const nalHeader = data[mdatBoxStart + 8 + 4];
-    assert.equal(nalHeader, 0x65, `${rel}: first NAL should be IDR (0x65), got 0x${nalHeader.toString(16)}`);
+    /* Walk the first sample's length-prefixed AVCC NAL units and require that
+       it carries an IDR slice (nal_unit_type 5) — i.e. it is a genuine
+       random-access keyframe.
+
+       This used to pin the very first NAL byte to 0x65. That only ever held
+       for the hand-rolled placeholder: any real encoder (x264 included) emits
+       SEI (6) before the IDR slice, so the old assertion would have rejected
+       legitimate production footage — which the media contract explicitly
+       requires to be swappable without component changes. Checking that an IDR
+       slice is present in the keyframe is both correct and stricter. */
+    const nalTypes = [];
+    let cursor = mdatBoxStart + 8;
+    const sampleEnd = cursor + mdatSize - 8;
+    while (cursor + 4 <= sampleEnd && nalTypes.length < 8) {
+      const nalLen = data.readUInt32BE(cursor);
+      if (nalLen === 0 || cursor + 4 + nalLen > sampleEnd) break;
+      nalTypes.push(data[cursor + 4] & 0x1f);
+      cursor += 4 + nalLen;
+    }
+    assert.ok(nalTypes.length > 0, `${rel}: could not parse any NAL units from mdat`);
+    assert.ok(
+      nalTypes.includes(5),
+      `${rel}: first keyframe carries no IDR slice (nal_unit_type 5); parsed [${nalTypes}]`
+    );
   }
 });
 

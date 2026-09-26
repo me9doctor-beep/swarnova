@@ -19,12 +19,13 @@ import campaignStill from "./images/homepage/campaign.jpg";
 import atelierStill from "./images/homepage/atelier.avif";
 import bridalEditorial from "./images/homepage/bridal.avif";
 
-/* Cinematic video — placeholder stand-ins for Phase 14.4. These are minimal
-   valid MP4 containers that exercise the native <video> pipeline (muted
-   autoplay, loop, playsInline, poster fallback, error recovery). They are
-   intentionally tiny (sub-kilobyte, still champagne frame) so the hero
-   photograph remains the dominant visual until the house delivers final
-   compressed H.264/H.265 campaign footage. */
+/* Cinematic video — placeholder stand-ins for Phase 14.4. These are real,
+   genuinely moving H.264 clips (640x360 / 360x640, 4s @ 24fps, baseline
+   profile, yuv420p, faststart) that exercise the native <video> pipeline
+   end to end: muted autoplay, loop, playsInline, poster fallback and error
+   recovery. They replace the earlier single-IDR "living poster" files, which
+   parsed as valid MP4 but were rejected by the decoder (MEDIA_ERR_DECODE).
+   See mock/assets/videos/PLACEHOLDER_README.md. */
 import heroCinematicVideo from "./videos/homepage/hero-cinematic.mp4";
 import heroCinematicMobileVideo from "./videos/homepage/hero-cinematic-mobile.mp4";
 import artOfGoldVideo from "./videos/editorial/art-of-gold.mp4";

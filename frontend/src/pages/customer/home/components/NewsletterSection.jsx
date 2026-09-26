@@ -2,6 +2,7 @@ import PropTypes from "prop-types";
 import Section from "../../../../components/ui/Section.jsx";
 import Container from "../../../../components/ui/Container.jsx";
 import NewsletterForm from "../../../../components/forms/NewsletterForm.jsx";
+import ContentLink from "../../../../components/ui/ContentLink.jsx";
 
 export default function NewsletterSection({ content }) {
   return (
@@ -25,9 +26,12 @@ export default function NewsletterSection({ content }) {
         />
         <p className="mx-auto mt-4 max-w-md text-caption leading-relaxed text-text-muted">
           {content.privacyNote}{" "}
-          <Link to="/privacy" className="underline underline-offset-2 hover:text-text-primary">
+          <ContentLink
+            href="/privacy"
+            className="underline underline-offset-2 hover:text-text-primary"
+          >
             Privacy Policy
-          </Link>
+          </ContentLink>
         </p>
       </Container>
     </Section>

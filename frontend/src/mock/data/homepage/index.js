@@ -42,9 +42,10 @@ export const homepage = {
           src: media.heroEditorial,
           alt: "Indian model in a deep burgundy silk drape wearing an ornate 22K gold and polki diamond choker necklace",
         },
-        /* Cinematic hero video (Phase 14.4). The mock placeholder is a
-           still frame that exercises the video pipeline; replace with
-           final compressed campaign footage before launch. */
+        /* Cinematic hero video (Phase 14.4). The placeholder is a real moving
+           clip that exercises the video pipeline end to end; replace with
+           final compressed campaign footage before launch — the contract
+           below is the only thing the CMS has to satisfy. */
         video: {
           src: media.heroCinematicVideo,
           mobileSrc: media.heroCinematicMobileVideo,

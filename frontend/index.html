@@ -3,6 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- House favicon: the BrandMark facet rendered inline as SVG. The build is a
+         single self-contained index.html (vite-plugin-singlefile), so the mark is
+         inlined rather than emitted as a separate file — declaring it also stops
+         the browser's implicit GET /favicon.ico, which this app never served. -->
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg%20xmlns%3D%27http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%27%20viewBox%3D%270%200%2040%2040%27%3E%3Crect%20width%3D%2740%27%20height%3D%2740%27%20rx%3D%279%27%20fill%3D%27%232f2a25%27%2F%3E%3Cg%20fill%3D%27none%27%20stroke%3D%27%23d8bf93%27%20stroke-linejoin%3D%27round%27%3E%3Cpath%20d%3D%27M11%205h18l7%2010-16%2020L4%2015l7-10Z%27%20stroke-width%3D%271.7%27%2F%3E%3Cpath%20d%3D%27M4%2015h32M14%205l-3.5%2010L20%2035M26%205l3.5%2010L20%2035M14%205h12%27%20stroke-width%3D%271.05%27%20opacity%3D%27.7%27%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E"
+    />
     <meta
       name="description"
       content="SWARNOVA — a next-generation Indian gold jewellery house. Timeless craftsmanship, AI Jewellery Studio, Virtual Try-On and flagship boutiques. Where heritage meets innovation."
