@@ -6,13 +6,22 @@ import { useEffect, useState } from "react";
  * film, AI atelier and try-on reveal to disable decorative animation while
  * preserving all content and functional state changes.
  */
+const QUERY = "(prefers-reduced-motion: reduce)";
+
+/* Read synchronously on first render so a reduced-motion visitor never gets a
+   single autoplaying frame before the effect below runs (Phase 14.4A). */
+function readReduced() {
+  if (typeof window === "undefined" || !window.matchMedia) return false;
+  return window.matchMedia(QUERY).matches;
+}
+
 export function usePrefersReducedMotion() {
-  const [reduced, setReduced] = useState(false);
+  const [reduced, setReduced] = useState(readReduced);
 
   useEffect(() => {
     if (typeof window === "undefined" || !window.matchMedia) return;
 
-    const mql = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const mql = window.matchMedia(QUERY);
     const update = () => setReduced(mql.matches);
     update();
 

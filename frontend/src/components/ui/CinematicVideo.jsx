@@ -75,6 +75,8 @@ export default function CinematicVideo({
   paused = false,
   fit = "cover",
   position = "center",
+  holdFinalFrame = false,
+  onEnded,
   onReady,
   onError,
 }) {
@@ -180,9 +182,19 @@ export default function CinematicVideo({
     onReady?.();
   };
 
-  const handlePause = () => setPlaying(false);
+  /* With `holdFinalFrame` a clip that has ended stays revealed on its last
+     frame (the hero reel crossfades out of it) instead of dropping back to its
+     poster. The spec fires `pause` immediately before `ended`, so both
+     handlers honour it. */
+  const handlePause = () => {
+    if (holdFinalFrame && videoRef.current?.ended) return;
+    setPlaying(false);
+  };
 
-  const handleEnded = () => setPlaying(false);
+  const handleEnded = () => {
+    if (!holdFinalFrame) setPlaying(false);
+    onEnded?.();
+  };
 
   const handleError = () => {
     setFailed(true);
@@ -237,7 +249,7 @@ export default function CinematicVideo({
             "cinematic-media transition-opacity duration-700",
             videoRevealed ? "opacity-0" : "opacity-100"
           )}
-          style={{ objectFit, objectPosition }}
+          style={objectPosition ? { objectFit, objectPosition } : { objectFit }}
           loading="eager"
           decoding="async"
         />
@@ -254,7 +266,7 @@ export default function CinematicVideo({
             "cinematic-media transition-opacity duration-700",
             videoRevealed ? "opacity-100" : "opacity-0"
           )}
-          style={{ objectFit, objectPosition }}
+          style={objectPosition ? { objectFit, objectPosition } : { objectFit }}
           src={effectiveSrc}
           poster={poster}
           autoPlay={autoplay && !reducedMotion}
@@ -328,6 +340,10 @@ CinematicVideo.propTypes = {
   fit: PropTypes.oneOf(["cover", "contain"]),
   /** object-position focal point. */
   position: PropTypes.string,
+  /** Keep the final frame visible after `ended` (non-looping reel clips). */
+  holdFinalFrame: PropTypes.bool,
+  /** Called when a non-looping clip reaches its end. */
+  onEnded: PropTypes.func,
   /** Called once the browser confirms the film is actually playing. */
   onReady: PropTypes.func,
   onError: PropTypes.func,

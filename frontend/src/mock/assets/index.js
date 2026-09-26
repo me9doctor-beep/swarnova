@@ -19,15 +19,32 @@ import campaignStill from "./images/homepage/campaign.jpg";
 import atelierStill from "./images/homepage/atelier.avif";
 import bridalEditorial from "./images/homepage/bridal.avif";
 
-/* Cinematic video — placeholder stand-ins for Phase 14.4. These are real,
-   genuinely moving H.264 clips (640x360 / 360x640, 4s @ 24fps, baseline
-   profile, yuv420p, faststart) that exercise the native <video> pipeline
-   end to end: muted autoplay, loop, playsInline, poster fallback and error
-   recovery. They replace the earlier single-IDR "living poster" files, which
-   parsed as valid MP4 but were rejected by the decoder (MEDIA_ERR_DECODE).
+/* Cinematic hero reel (Phase 14.4A). Four campaign films share this poster
+   set. The Signature poster is the existing campaign photograph (`hero.avif`);
+   the Bridal / Contemporary / Heritage posters are keyframes composed to the
+   same frame — model right, negative space left for the headline — and are
+   also the start frames the films are generated/graded from. See
+   mock/assets/videos/homepage/hero-reel/README.md for the footage slots. */
+import heroReelBridalPoster from "./images/homepage/hero-reel/bridal-gold-poster.avif";
+import heroReelContemporaryPoster from "./images/homepage/hero-reel/contemporary-gold-poster.avif";
+import heroReelHeritagePoster from "./images/homepage/hero-reel/heritage-gold-poster.avif";
+
+/* Hero reel footage slots. Real campaign MP4s are imported here — and only
+   here — once delivered, e.g.
+     import heroReelSignatureVideo from "./videos/homepage/hero-reel/signature-gold.mp4";
+   Until then each slot is null: the hero shows the still photograph and is
+   never animated with a synthetic stand-in. */
+const heroReelSignatureVideo = null;
+const heroReelSignatureMobileVideo = null;
+const heroReelBridalVideo = null;
+const heroReelBridalMobileVideo = null;
+const heroReelContemporaryVideo = null;
+const heroReelContemporaryMobileVideo = null;
+const heroReelHeritageVideo = null;
+const heroReelHeritageMobileVideo = null;
+
+/* Brand film placeholder (Phase 14.4; unchanged in 14.4A — out of scope).
    See mock/assets/videos/PLACEHOLDER_README.md. */
-import heroCinematicVideo from "./videos/homepage/hero-cinematic.mp4";
-import heroCinematicMobileVideo from "./videos/homepage/hero-cinematic-mobile.mp4";
 import artOfGoldVideo from "./videos/editorial/art-of-gold.mp4";
 
 /* Collection discovery */
@@ -66,9 +83,20 @@ export const media = {
   campaignStill,
   atelierStill,
 
-  /* Cinematic video placeholders (Phase 14.4) */
-  heroCinematicVideo,
-  heroCinematicMobileVideo,
+  /* Cinematic hero reel (Phase 14.4A) — posters + footage slots */
+  heroReelBridalPoster,
+  heroReelContemporaryPoster,
+  heroReelHeritagePoster,
+  heroReelSignatureVideo,
+  heroReelSignatureMobileVideo,
+  heroReelBridalVideo,
+  heroReelBridalMobileVideo,
+  heroReelContemporaryVideo,
+  heroReelContemporaryMobileVideo,
+  heroReelHeritageVideo,
+  heroReelHeritageMobileVideo,
+
+  /* Brand film placeholder (Phase 14.4) */
   artOfGoldVideo,
 
   /* Collection discovery */

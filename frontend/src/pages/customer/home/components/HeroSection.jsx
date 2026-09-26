@@ -3,7 +3,7 @@ import PropTypes from "prop-types";
 import Button from "../../../../components/ui/Button.jsx";
 import Eyebrow from "../../../../components/ui/Eyebrow.jsx";
 import CinematicVideo from "../../../../components/ui/CinematicVideo.jsx";
-import usePrefersReducedMotion from "../../../../hooks/usePrefersReducedMotion.js";
+import { useHeroReel } from "../../../../hooks/useHeroReel.js";
 import { cn } from "../../../../utils/cn.js";
 
 /**
@@ -11,22 +11,27 @@ import { cn } from "../../../../utils/cn.js";
  * frame, copy lives in the negative space on the left, CTA treatment matches
  * the reference.
  *
- * Phase 14.4: the static hero photograph becomes a cinematic background video
- * with a graceful poster-first lifecycle. The copy remains real HTML above
- * the media layer; the composition, type hierarchy, veils and CTA behaviour
- * are unchanged.
+ * Phase 14.4A — CINEMATIC HERO REEL. The hero plays real campaign footage:
+ * four ~10 s films (Signature · Bridal · Contemporary · Heritage) that rotate
+ * one at a time with a slow crossfade. The abstract champagne-gold placeholder
+ * and the Ken Burns drift are gone — when footage plays, the footage is the
+ * motion; when it cannot, the campaign photograph stands still.
  *
  * Media priority:
- *   1. Poster image is painted immediately (fetchPriority high).
- *   2. Cinematic video begins muted-autoplaying only after canplay, then
- *      crossfades in over the poster.
- *   3. If video fails, or reduced-motion is enabled, or autoplay is rejected,
- *      the poster remains — no black frame, no broken icon, no degradation
- *      of copy legibility.
+ *   1. The Signature poster (the existing campaign photograph) is painted
+ *      immediately as a plain <img> (fetchPriority high) — always present.
+ *   2. The active film mounts above it (muted, inline, autoplay) and is
+ *      revealed only on the browser's real `playing` event.
+ *   3. Reduced motion, no delivered footage, a decode/network failure, or a
+ *      refused autoplay all leave the photograph in place; a refused autoplay
+ *      also shows the calm play affordance. No black frame, no broken icon.
+ *
+ * The copy, CTAs, trust line, veils and spacing are unchanged.
+ * Rotation/resolution rules: hooks/useHeroReel → services/heroReelService.
  */
 export default function HeroSection({ content }) {
-  const { title, eyebrow, body, primaryCta, secondaryCta, image, video } = content;
-  const reducedMotion = usePrefersReducedMotion();
+  const { title, eyebrow, body, primaryCta, secondaryCta } = content;
+  const reel = useHeroReel(content);
   const [entered, setEntered] = useState(false);
 
   /* Stagger the copy entrance so the brand word-mark arrives first, then the
@@ -36,41 +41,70 @@ export default function HeroSection({ content }) {
     return () => cancelAnimationFrame(frame);
   }, []);
 
-  const hasVideo = Boolean(video?.src) && !reducedMotion;
+  const hasVideo = reel.mode === "video" && Boolean(reel.activeSrc);
+  const layers = hasVideo
+    ? [
+        ...(reel.previous ? [{ record: reel.previous, src: reel.previous.resolvedSrc, outgoing: true }] : []),
+        { record: reel.active, src: reel.activeSrc, outgoing: false },
+      ]
+    : [];
 
   return (
     <section
       aria-label="Featured campaign"
       className="hero relative overflow-hidden bg-ink"
+      data-hero-mode={hasVideo ? "video" : "poster"}
+      data-hero-active={hasVideo ? reel.active.id : undefined}
     >
-      {/* Cinematic media layer: video when available, poster always first.
-          showPlayFallback ensures a calm tap affordance appears if autoplay is blocked
-          (iOS low-power, data-saver) rather than leaving a paused-looking frame. */}
-      {hasVideo ? (
-        <CinematicVideo
-          src={video.src}
-          mobileSrc={video.mobileSrc}
-          poster={image.src}
-          alt={image.alt}
-          className="hero__media"
-          fit="cover"
-          position="64% 26%"
-          preload="metadata"
-          autoplay
-          loop
-          muted
-          playsInline
-          showPlayFallback
-        />
-      ) : (
-        <img
-          src={image.src}
-          alt={image.alt}
-          className={cn("hero__media block w-full h-auto", "motion-ken-burns")}
-          fetchPriority="high"
+      {/* First paint and permanent fallback: the campaign photograph, static.
+          No drift, no shimmer — motion comes only from real footage. */}
+      <img
+        src={reel.poster.src}
+        alt={reel.poster.alt}
+        className="hero__media hero__poster block w-full h-auto"
+        fetchPriority="high"
+        decoding="async"
+      />
+
+      {/* Cinematic reel: only the active film is mounted as a playing video.
+          During a rotation the outgoing film rests on its final frame while
+          the incoming one crossfades in above it. */}
+      {layers.map(({ record, src, outgoing }) => (
+        <div
+          key={record.id}
+          className={cn(
+            "hero__reel-layer absolute inset-0",
+            !outgoing && reel.previous && "hero__reel-layer--entering"
+          )}
+          style={{
+            "--hero-crossfade": `${reel.rotation.crossfadeMs}ms`,
+            ...(record.focal?.mobile ? { "--hero-focal": record.focal.mobile } : null),
+            ...(record.focal?.desktop ? { "--hero-focal-desktop": record.focal.desktop } : null),
+          }}
+          data-hero-video={record.id}
+          data-hero-outgoing={outgoing ? "true" : undefined}
           aria-hidden="true"
-        />
-      )}
+        >
+          <CinematicVideo
+            src={src}
+            poster={record.poster}
+            alt={record.alt}
+            className="hero__media"
+            fit="cover"
+            position={null}
+            preload={outgoing ? "none" : "auto"}
+            autoplay={record.autoplay}
+            loop={!reel.rotates && record.loop}
+            muted
+            playsInline
+            paused={outgoing}
+            holdFinalFrame={reel.rotates}
+            showPlayFallback={!outgoing}
+            onEnded={outgoing ? undefined : reel.advance}
+            onError={() => reel.markFailed(record.id)}
+          />
+        </div>
+      ))}
 
       {/* Gradient veil over the media so copy stays legible. Decorative over the
           media layer: pointer-events-none so clicks fall through to the
@@ -179,6 +213,22 @@ export default function HeroSection({ content }) {
         </div>
       </div>
 
+      {/* Reel position — four hairlines, deliberately faint and
+          non-interactive; present only while more than one film can play. */}
+      {hasVideo && reel.rotates ? (
+        <div className="hero__reel-index pointer-events-none absolute bottom-6 right-6 z-[2] flex gap-2 sm:right-10" aria-hidden="true">
+          {reel.playable.map((record, index) => (
+            <span
+              key={record.id}
+              className={cn(
+                "block h-px w-5 transition-colors duration-[1200ms]",
+                index === reel.activeIndex ? "bg-brand-accent-soft/70" : "bg-surface-muted/20"
+              )}
+            />
+          ))}
+        </div>
+      ) : null}
+
       {/* Gold hairline at the bottom */}
       <div
         className="pointer-events-none absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-brand-accent/50 via-brand-accent/20 to-transparent"
@@ -196,10 +246,26 @@ HeroSection.propTypes = {
     primaryCta: PropTypes.object,
     secondaryCta: PropTypes.object,
     image: PropTypes.object,
-    video: PropTypes.shape({
-      src: PropTypes.string,
-      mobileSrc: PropTypes.string,
-      poster: PropTypes.string,
+    rotation: PropTypes.shape({
+      enabled: PropTypes.bool,
+      maxClipMs: PropTypes.number,
+      crossfadeMs: PropTypes.number,
     }),
+    /** Phase 14.4A reel — each record is the shared media contract. */
+    videos: PropTypes.arrayOf(
+      PropTypes.shape({
+        id: PropTypes.string.isRequired,
+        title: PropTypes.string,
+        src: PropTypes.string,
+        mobileSrc: PropTypes.string,
+        poster: PropTypes.string,
+        alt: PropTypes.string,
+        autoplay: PropTypes.bool,
+        loop: PropTypes.bool,
+        muted: PropTypes.bool,
+        playsInline: PropTypes.bool,
+        placement: PropTypes.string,
+      })
+    ),
   }).isRequired,
 };

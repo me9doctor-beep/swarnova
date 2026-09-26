@@ -42,20 +42,83 @@ export const homepage = {
           src: media.heroEditorial,
           alt: "Indian model in a deep burgundy silk drape wearing an ornate 22K gold and polki diamond choker necklace",
         },
-        /* Cinematic hero video (Phase 14.4). The placeholder is a real moving
-           clip that exercises the video pipeline end to end; replace with
-           final compressed campaign footage before launch — the contract
-           below is the only thing the CMS has to satisfy. */
-        video: {
-          src: media.heroCinematicVideo,
-          mobileSrc: media.heroCinematicMobileVideo,
-          poster: media.heroEditorial,
-          alt: "Gold jewellery catching warm light",
-          autoplay: true,
-          loop: true,
-          muted: true,
-          playsInline: true,
-        },
+        /* Cinematic hero reel (Phase 14.4A). Four campaign films, one playing
+           at a time: Signature → Bridal → Contemporary → Heritage → Signature.
+           Every record is the shared media contract
+             { src, mobileSrc, poster, alt, autoplay, loop, muted,
+               playsInline, placement }
+           plus editorial metadata (title, mood, target duration, focal
+           points). `src` / `mobileSrc` stay null until real footage is
+           delivered — a record without footage never plays and is never
+           faked; the hero then stands still on the Signature poster.
+           The abstract champagne-gold placeholder clip is no longer used. */
+        rotation: { enabled: true, maxClipMs: 14000, crossfadeMs: 1800 },
+        videos: [
+          {
+            id: "signature-gold",
+            title: "Signature Gold",
+            mood: "Timeless · Elegant · Premium",
+            src: media.heroReelSignatureVideo,
+            mobileSrc: media.heroReelSignatureMobileVideo,
+            poster: media.heroEditorial,
+            alt: "Indian model in a deep burgundy silk drape wearing an ornate gold and polki necklace with ruby drop earrings",
+            autoplay: true,
+            loop: true,
+            muted: true,
+            playsInline: true,
+            placement: "hero",
+            targetDurationSec: 10,
+            focal: { mobile: "64% 26%", desktop: "18% 30%" },
+          },
+          {
+            id: "bridal-gold",
+            title: "Bridal Gold",
+            mood: "Bridal · Rich · Elegant",
+            src: media.heroReelBridalVideo,
+            mobileSrc: media.heroReelBridalMobileVideo,
+            poster: media.heroReelBridalPoster,
+            alt: "Indian bride in a burgundy bridal lehenga and red dupatta wearing a gold kundan necklace, jhumka earrings and maang tikka",
+            autoplay: true,
+            loop: true,
+            muted: true,
+            playsInline: true,
+            placement: "hero",
+            targetDurationSec: 10,
+            focal: { mobile: "64% 26%", desktop: "18% 30%" },
+          },
+          {
+            id: "contemporary",
+            title: "Contemporary",
+            mood: "Modern · Minimal · Premium",
+            src: media.heroReelContemporaryVideo,
+            mobileSrc: media.heroReelContemporaryMobileVideo,
+            poster: media.heroReelContemporaryPoster,
+            alt: "Indian woman in an off-shoulder wine silk dress wearing a sculptural gold collar with a diamond pendant and geometric gold earrings",
+            autoplay: true,
+            loop: true,
+            muted: true,
+            playsInline: true,
+            placement: "hero",
+            targetDurationSec: 10,
+            focal: { mobile: "64% 26%", desktop: "18% 30%" },
+          },
+          {
+            id: "heritage-statement",
+            title: "Heritage Statement Gold",
+            mood: "Heritage · Timeless · Luxury",
+            src: media.heroReelHeritageVideo,
+            mobileSrc: media.heroReelHeritageMobileVideo,
+            poster: media.heroReelHeritagePoster,
+            alt: "Indian woman in a burgundy silk sari wearing layered antique temple gold necklaces and ornate chandbali earrings",
+            autoplay: true,
+            loop: true,
+            muted: true,
+            playsInline: true,
+            placement: "hero",
+            targetDurationSec: 10,
+            focal: { mobile: "64% 26%", desktop: "18% 30%" },
+          },
+        ],
       },
     },
     {

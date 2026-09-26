@@ -295,7 +295,22 @@ img.hero__media {
    poster/video already use cover positioning from the component. Override
    focal point to match the hero's crop on desktop. */
 .hero__media .cinematic-media {
-  object-position: 64% 26%;
+  object-position: var(--hero-focal, 64% 26%);
+}
+
+/* Phase 14.4A reel layers. Each film sits in its own full-bleed layer above
+   the static poster and beneath the veil/copy. An incoming film fades in
+   slowly over the outgoing film's final frame — a cinematic dissolve, not a
+   carousel slide. Opacity only. */
+.hero__reel-layer {
+  z-index: 0;
+}
+.hero__reel-layer--entering {
+  animation: heroReelDissolve var(--hero-crossfade, 1800ms) var(--ease-standard) both;
+}
+@keyframes heroReelDissolve {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 .hero__copy {
@@ -363,7 +378,7 @@ img.hero__media {
     object-position: 18% 30%;
   }
   .hero__media .cinematic-media {
-    object-position: 18% 30%;
+    object-position: var(--hero-focal-desktop, 18% 30%);
   }
 
   /* Clear the fixed header at desktop; smaller widths are handled by the
