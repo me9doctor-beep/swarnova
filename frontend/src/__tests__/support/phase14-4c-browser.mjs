@@ -20,6 +20,17 @@ const snapshot = v => ({
   controls: v.controls, autoplay: v.autoplay, loop: v.loop, playsInline: v.playsInline,
   muted: v.muted, preload: v.preload, opacity: getComputedStyle(v).opacity,
 });
+// Art of Gold media URLs. The dev server serves the source files
+// (/src/mock/assets/.../art-of-gold-web.mp4); the production build emits
+// Vite's default `assets/[name]-[hash][extname]` with an 8-character base64url
+// hash (/assets/art-of-gold-web-BY8rk0MG.mp4). Match either form, and only the
+// Art of Gold film/poster: never another MP4.
+const craftFilm = /\/art-of-gold-web(?:-[A-Za-z0-9_-]{8})?\.mp4$/;
+const craftPoster = /\/art-of-gold-poster(?:-[A-Za-z0-9_-]{8})?\.jpg$/;
+const craftPath = url => new URL(url).pathname;
+for (const path of ["/src/mock/assets/videos/editorial/art-of-gold-web.mp4", "/assets/art-of-gold-web-BY8rk0MG.mp4", "/assets/art-of-gold-web-D_f-5Z9E.mp4"]) assert.ok(craftFilm.test(path), path);
+for (const path of ["/assets/signature-gold-BzDWWpUD.mp4", "/assets/art-of-gold-poster-DpurFjEJ.jpg", "/assets/art-of-gold-web-BY8rk0MG.jpg", "/assets/art-of-gold-web-BY8rk0MGX.mp4", "/assets/art-of-gold-web-extra.mp4", "/assets/bridal-art-of-gold-web.mp4.map"]) assert.ok(!craftFilm.test(path), path);
+assert.ok(craftPoster.test("/assets/art-of-gold-poster-DpurFjEJ.jpg") && craftPoster.test("/src/mock/assets/images/homepage/art-of-gold-poster.jpg"));
 const posterVisible = page => page.waitForFunction(() => getComputedStyle(document.querySelector("#art-of-gold img")).opacity === "1");
 try {
   for (const [width, height] of [[1280,800], [1536,864], [1024,768], [768,1024], [375,812]]) {
@@ -30,7 +41,7 @@ try {
     page.on("pageerror", e => result.errors.push(e.message));
     page.on("requestfailed", q => result.failedRequests.push({ url: q.url(), error: q.failure()?.errorText }));
     page.on("response", r => {
-      if (/art-of-gold-(web\.mp4|poster\.jpg)$/.test(r.url())) result.network.push({ url:r.url(), status:r.status(), type:r.headers()["content-type"], range:r.headers()["content-range"] });
+      if (craftFilm.test(craftPath(r.url())) || craftPoster.test(craftPath(r.url()))) result.network.push({ url:r.url(), status:r.status(), type:r.headers()["content-type"], range:r.headers()["content-range"] });
     });
     await page.goto(base);
     const section = page.locator("#art-of-gold"), video = section.locator("video"), poster = section.locator("img"), play = section.locator("button");
@@ -47,8 +58,15 @@ try {
     const viewportHeight = await page.evaluate(() => innerHeight);
     // Approach: frame still 300px below the fold. It prepares (metadata) but
     // must not play, and the poster-first state is intact.
+    const approachResponse = page.waitForResponse(r => craftFilm.test(craftPath(r.url())));
     await scrollToY(result.geometry.top - viewportHeight - 300);
     await page.waitForFunction(() => document.querySelector("#art-of-gold video")?.preload === "metadata");
+    // The film request begins here, on approach, and is the element's own source.
+    const firstFilm = await approachResponse;
+    result.approachRequest = { url: firstFilm.url(), status: firstFilm.status(), type: firstFilm.headers()["content-type"], range: firstFilm.request().headers().range ?? null };
+    assert.ok([200,206].includes(result.approachRequest.status));
+    assert.equal(result.approachRequest.type, "video/mp4");
+    assert.equal(result.approachRequest.url, await video.evaluate(v => v.currentSrc));
     await poster.evaluate(i => i.decode());
     await posterVisible(page);
     result.buttonLabel = await play.getAttribute("aria-label");
@@ -137,6 +155,11 @@ try {
     assert.equal(result.overflow, false);
     assert.deepEqual(result.errors, []);
     assert.ok(result.network.every(r => [200,206].includes(r.status)));
+    const filmResponses = result.network.filter(r => r.type === "video/mp4");
+    assert.ok(filmResponses.length > 0, "the Art of Gold MP4 request was observed");
+    const filmSrc = await video.evaluate(v => v.currentSrc);
+    assert.ok(filmResponses.every(r => r.url === filmSrc && craftFilm.test(craftPath(r.url))));
+    assert.ok(result.network.some(r => craftPoster.test(craftPath(r.url)) && r.type === "image/jpeg"), "the Art of Gold poster request was observed");
     report.viewports.push(result);
     console.log(`CRAFT ${width}×${height}: autoplay ${result.t1.currentTime.toFixed(2)} → ${result.t2.currentTime.toFixed(2)}, away ${result.away.currentTime.toFixed(2)} (held), back ${result.backStart.currentTime.toFixed(2)} → ${result.back.currentTime.toFixed(2)}, pause/resume/end/replay pass`);
     await context.close();
