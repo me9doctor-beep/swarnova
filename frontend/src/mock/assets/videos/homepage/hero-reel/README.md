@@ -77,6 +77,13 @@ ffmpeg -i master.mov -an -c:v libx264 -profile:v main -pix_fmt yuv420p \
   gold catches and releases light as she moves.
 * No text, no logos, no watermark, no lens flares, no particles.
 
+> **Delivered footage note.** The four films as delivered do carry the
+> generator's small corner mark: a 48×48 px star at x 1136…1183, y 576…623 of
+> the 1280×720 frame (96 px in from the right and the bottom) — identical in
+> all four, and at the same fractions of the 1920×1080 Art of Gold film. The
+> media files were not touched; the campaign credit plate
+> (`components/ui/FilmCredit.jsx`) covers it in the UI at every viewport.
+
 ## Generation prompts (image-to-video from the poster keyframe)
 
 Use each slot's poster as the **start frame** (image-to-video), so the film

@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import PropTypes from "prop-types";
 import Button from "../../../../components/ui/Button.jsx";
 import Eyebrow from "../../../../components/ui/Eyebrow.jsx";
 import CinematicVideo from "../../../../components/ui/CinematicVideo.jsx";
+import FilmCredit from "../../../../components/ui/FilmCredit.jsx";
 import { useHeroReel } from "../../../../hooks/useHeroReel.js";
 import { cn } from "../../../../utils/cn.js";
 
@@ -37,6 +38,9 @@ export default function HeroSection({ content }) {
   const { title, eyebrow, body, primaryCta, secondaryCta } = content;
   const reel = useHeroReel(content);
   const [entered, setEntered] = useState(false);
+  /* The hero section element — the film credit anchors itself to the rendered
+     video inside it, so the section only needs to be addressable. */
+  const heroRef = useRef(null);
 
   /* Stagger the copy entrance so the brand word-mark arrives first, then the
      headline, then body, then CTAs — a quiet editorial reveal. */
@@ -58,6 +62,7 @@ export default function HeroSection({ content }) {
 
   return (
     <section
+      ref={heroRef}
       aria-label="Featured campaign"
       className="hero relative overflow-hidden bg-ink"
       data-hero-mode={hasVideo ? "video" : "poster"}
@@ -135,6 +140,21 @@ export default function HeroSection({ content }) {
         className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-ink/30 to-transparent"
         aria-hidden="true"
       />
+
+      {/* Campaign credit — the editorial plate carried inside the film frame.
+          One plate for the whole reel: every delivered film carries the same
+          corner mark at the same fraction of the frame, so the plate is placed
+          once, from the rendered frame, and holds through every dissolve and
+          at every viewport. See components/ui/FilmCredit.jsx. */}
+      {hasVideo ? (
+        <FilmCredit
+          title="Swarnova"
+          caption="Signature"
+          placement="hero"
+          revision={reel.active?.id}
+          getMedia={() => heroRef.current?.querySelector(".hero__reel-layer video")}
+        />
+      ) : null}
 
       {/* Copy block — in flow, vertically centred in whatever height the hero
           takes, so it is never cropped by the section. */}
