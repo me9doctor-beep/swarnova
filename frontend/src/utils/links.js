@@ -3,9 +3,9 @@
  * content is rendered into the DOM.
  *
  * A root-relative path belongs to this SPA and must be navigated by the
- * router: the production artefact is one `index.html` (see
- * `vite-plugin-singlefile`), so a plain anchor would hand the browser a URL no
- * static host can answer, and would reload the document, the session state and
+ * router: the production build has a single HTML entry (`index.html`), so a
+ * plain anchor would hand the browser a URL a static host without an SPA
+ * fallback cannot answer, and would reload the document, the session state and
  * the scroll position for a link that never left the app.
  *
  * Everything else stays native and on purpose:

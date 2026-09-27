@@ -11,22 +11,41 @@ import { cn } from "../../../../utils/cn.js";
  * THE ART OF GOLD — the brand/craftsmanship film (Phase 14.4).
  *
  * A premium editorial video placement between the editorial storytelling and
- * the Why-Choose-Us block. Initial state shows the cinematic poster with a
- * restrained play affordance; pressing play begins the film in place, with
- * native controls kept minimal. No YouTube-style chrome, no auto-play with
- * sound, no decorative carousel. The film is a quiet invitation, not an
- * auto-starting billboard.
+ * the Why-Choose-Us block. The poster is the first frame; the film plays in
+ * place, muted and inline, as the customer scrolls to it, with native
+ * controls kept minimal. No YouTube-style chrome, no sound, no loop.
+ *
+ * Scroll playback — two IntersectionObservers, loading kept apart from play:
+ *   · PREPARE  (`useIntersectionAware`, rootMargin 600px): the frame sits
+ *     ≥5,000px below the fold at page load, so this never fires on startup.
+ *     Within 600px of the viewport the element switches to
+ *     preload="metadata" (~160 kB: index + first frames), which is enough for
+ *     play() to start in ~10 ms instead of ~370 ms cold on 4G.
+ *   · PLAY     (local observer, threshold 0.5): once half of the 16:9 frame
+ *     is on screen the film plays from wherever it last stopped; once less
+ *     than half is on screen it pauses. Position is never reset by
+ *     scrolling — only a natural end returns the film to its poster (and a
+ *     later return to the section plays it again from the start).
+ * The labelled play button remains the fallback when the browser refuses
+ * playback, and for replaying after the film has ended in view.
  *
  * Accessibility: poster-first, labelled play button, muted, keyboard-
- * operable, reduced-motion shows poster only.
+ * operable, reduced-motion shows poster only (no film, no playback).
  */
+
+/* Share of the frame that must be visible for playback to be meaningful. */
+const PLAY_VISIBLE_RATIO = 0.5;
 export default function BrandFilmSection({ content }) {
   const videoRef = useRef(null);
   const [playing, setPlaying] = useState(false);
   const [canPlay, setCanPlay] = useState(false);
   const [failed, setFailed] = useState(false);
   const reducedMotion = usePrefersReducedMotion();
-  const [sentinelRef, inView] = useIntersectionAware({ threshold: 0.1, rootMargin: "100px 0px" });
+  // PREPARE zone: begin fetching metadata/first frames 600px ahead of view.
+  const [sentinelRef, inView] = useIntersectionAware({ threshold: 0, rootMargin: "600px 0px" });
+  // PLAY zone: true only while at least PLAY_VISIBLE_RATIO of the frame shows.
+  const frameRef = useRef(null);
+  const [inPlayZone, setInPlayZone] = useState(false);
 
   const hasVideo = Boolean(content.video?.src) && !failed;
   // Poster visible until film is actually playing and canPlay, or when failed/reducedMotion
@@ -45,6 +64,43 @@ export default function BrandFilmSection({ content }) {
     setPlaying(false);
     setFailed(false);
   }, [content.video?.src]);
+
+  /* `isIntersecting` alone is true for a one-pixel sliver, so the ratio is
+     checked too. Callbacks arrive only when the 0.5 line is crossed (or the
+     frame fully enters/leaves), never per scroll frame. */
+  useEffect(() => {
+    const node = frameRef.current;
+    if (!node || typeof IntersectionObserver === "undefined") return undefined;
+    const observer = new IntersectionObserver(
+      ([entry]) => setInPlayZone(entry.isIntersecting && entry.intersectionRatio >= PLAY_VISIBLE_RATIO),
+      { threshold: PLAY_VISIBLE_RATIO }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
+  /* Scroll playback. Entering the play zone resumes from the current position
+     (muted, so no gesture is needed); leaving it pauses without touching
+     currentTime. A refused play() leaves the poster and play button in place
+     — playback never began, so `playing` never flipped. AbortError only means
+     a pause (scrolling away) interrupted a pending play(); buffering never
+     rejects, so it is never mistaken for a refusal. */
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v || reducedMotion || !hasVideo) return;
+    if (!inPlayZone) {
+      if (!v.paused) v.pause();
+      return;
+    }
+    v.muted = true;
+    const playPromise = v.play();
+    if (playPromise && typeof playPromise.catch === "function") {
+      playPromise.catch((err) => {
+        if (err?.name === "AbortError") return;
+        setPlaying(false);
+      });
+    }
+  }, [inPlayZone, reducedMotion, hasVideo]);
 
   const handlePlay = () => {
     const v = videoRef.current;
@@ -131,7 +187,10 @@ export default function BrandFilmSection({ content }) {
           ref={sentinelRef}
           className="relative mx-auto mt-12 max-w-5xl"
         >
-          <div className="relative aspect-[16/9] overflow-hidden border border-brand-accent/30 bg-ink shadow-medium">
+          <div
+            ref={frameRef}
+            className="relative aspect-[16/9] overflow-hidden border border-brand-accent/30 bg-ink shadow-medium"
+          >
             {/* Poster frame — always present, fades when the film is playing and canPlay. */}
             {content.poster && (
               <img
@@ -182,8 +241,10 @@ export default function BrandFilmSection({ content }) {
               aria-hidden="true"
             />
 
-            {/* Play affordance — calm, gold, only when not playing. Replaced by
-                native controls once playback begins. */}
+            {/* Play affordance — calm, gold, only when not playing: the fallback
+                when the browser refuses playback, and replay after the film
+                ended in view. Replaced by native controls once playback
+                begins. */}
             {!playing && !reducedMotion && hasVideo && (
               <button
                 type="button"
