@@ -288,10 +288,10 @@ export const homepage = {
         lead: "Jewellery is not simply worn. It becomes part of your story.",
         caption: "A Swarnova atelier film",
         playLabel: "Play the art of gold film",
-        poster: media.atelierStill,
+        poster: media.artOfGoldPoster,
         video: {
           src: media.artOfGoldVideo,
-          alt: "Master goldsmith at work in the Swarnova atelier — sketching, setting, polishing",
+          alt: "Indian jewellery atelier — sketching, gold preparation, shaping, stone setting, polishing and a finished gold necklace",
         },
       },
     },

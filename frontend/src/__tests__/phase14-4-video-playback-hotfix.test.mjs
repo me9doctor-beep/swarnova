@@ -34,25 +34,25 @@ function readBinary(rel) {
 test("hotfix · hero cinematic video asset exists", () => {
   /* Phase 14.4A: the abstract hero placeholders were removed (the hero brief
      forbids gradient motion); real hero footage uses the reel slots in
-     phase14-4a-hero-reel.test.mjs. The brand-film placeholder remains. */
+     phase14-4a-hero-reel.test.mjs. 14.4C replaces the brand-film placeholder with supplied footage. */
   assert.ok(!fileExists("mock/assets/videos/homepage/hero-cinematic.mp4"), "abstract hero placeholder must stay removed");
   assert.ok(!fileExists("mock/assets/videos/homepage/hero-cinematic-mobile.mp4"), "abstract hero placeholder must stay removed");
   assert.ok(fileExists("mock/assets/videos/homepage/hero-reel/README.md"), "hero reel footage slots must be documented");
-  assert.ok(fileExists("mock/assets/videos/editorial/art-of-gold.mp4"), "art-of-gold.mp4 missing");
+  assert.ok(fileExists("mock/assets/videos/editorial/art-of-gold-web.mp4"), "art-of-gold-web.mp4 missing");
 });
 
 // ---------- 2. video asset is non-zero ----------
 test("hotfix · video assets are non-zero and not sub-kilobyte stubs", () => {
-  const brand = fileSize("mock/assets/videos/editorial/art-of-gold.mp4");
+  const brand = fileSize("mock/assets/videos/editorial/art-of-gold-web.mp4");
   // Old invalid files were 675 bytes — valid files must be larger and contain actual frames
-  assert.ok(brand > 1000, `art-of-gold.mp4 too small: ${brand} bytes`);
-  assert.ok(brand < 500000, `brand video unexpectedly large: ${brand}`);
+  assert.ok(brand > 1000, `art-of-gold-web.mp4 too small: ${brand} bytes`);
+  assert.ok(brand < 12_000_000, `brand video unexpectedly large: ${brand}`);
 });
 
 // ---------- 3. valid MP4 container ----------
 test("hotfix · video files are valid MP4 containers with ftyp, moov, mdat", () => {
   for (const rel of [
-    "mock/assets/videos/editorial/art-of-gold.mp4",
+    "mock/assets/videos/editorial/art-of-gold-web.mp4",
   ]) {
     const data = readBinary(rel);
     // ftyp at start
@@ -131,7 +131,7 @@ test("hotfix · CinematicVideo has required autoplay attributes", () => {
 test("hotfix · hero video source resolves via mock asset boundary", () => {
   /* Phase 14.4A: the abstract hero placeholders were removed (the hero brief
      forbids gradient motion); real hero footage uses the reel slots in
-     phase14-4a-hero-reel.test.mjs. The brand-film placeholder remains. */
+     phase14-4a-hero-reel.test.mjs. 14.4C replaces the brand-film placeholder with supplied footage. */
   const assets = read("mock/assets/index.js");
   assert.match(assets, /heroReelSignatureVideo/, "hero reel slot not in asset index");
   assert.doesNotMatch(assets, /hero-cinematic\.mp4/, "abstract placeholder import must stay removed");
@@ -239,21 +239,21 @@ test("hotfix · video error falls back to poster gracefully", () => {
 });
 
 // ---------- 12. H264 codec validation ----------
-test("hotfix · videos are H264 baseline, yuv420p, browser compatible", () => {
+test("hotfix · videos are production H264 High at level 4.0", () => {
   for (const rel of [
-    "mock/assets/videos/editorial/art-of-gold.mp4",
+    "mock/assets/videos/editorial/art-of-gold-web.mp4",
   ]) {
     const data = readBinary(rel);
     const avcCPos = data.indexOf(Buffer.from("avcC"));
     assert.ok(avcCPos !== -1, `${rel}: avcC not found`);
     // avcC payload: after header (8), version, profile, compat, level, etc
-    // profile should be baseline (66 = 0x42)
+    // Production profile is High (100), not High 10 (110).
     const profile = data[avcCPos + 4 + 1]; // after box header, first byte of payload is version, second is profile
     // Actually avcC payload: version (1), profile (1), compat (1), level (1), ...
     // So profile at avcCPos+4+1
     const avcProfile = data[avcCPos + 4 + 1];
-    assert.equal(avcProfile, 0x42, `${rel}: expected baseline profile 0x42, got 0x${avcProfile.toString(16)}`);
+    assert.equal(avcProfile, 100, `${rel}: expected 8-bit High profile, got ${avcProfile}`);
     const level = data[avcCPos + 4 + 3];
-    assert.ok(level <= 0x1f, `${rel}: level should be low (<=31) for tiny video, got ${level}`);
+    assert.equal(level, 40, `${rel}: expected level 4.0 for 1080p, got ${level}`);
   }
 });

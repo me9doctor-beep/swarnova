@@ -51,6 +51,9 @@ export function readMp4(file) {
   const boxes = walkBoxes(data);
   const box = (type) => boxes.find((b) => b.type === type);
   const out = { bytes: data.length };
+  // Track handlers distinguish a truly silent delivery from a muted audio track.
+  out.trackHandlers = boxes.filter((b) => b.type === "hdlr")
+    .map((b) => data.toString("latin1", b.start + 16, b.start + 20));
 
   out.moovBeforeMdat =
     boxes.findIndex((b) => b.type === "moov") !== -1 &&
@@ -83,7 +86,11 @@ export function readMp4(file) {
   if (stts) {
     const entries = data.readUInt32BE(stts.start + 12);
     let total = 0;
-    for (let i = 0; i < entries; i += 1) total += data.readUInt32BE(stts.start + 16 + i * 8);
+    out.sampleDeltas = [];
+    for (let i = 0; i < entries; i += 1) {
+      total += data.readUInt32BE(stts.start + 16 + i * 8);
+      out.sampleDeltas.push(data.readUInt32BE(stts.start + 20 + i * 8));
+    }
     out.samples = total;
     out.fps = out.seconds ? out.samples / out.seconds : 0;
   }
@@ -115,6 +122,12 @@ export function readMp4(file) {
   if (avcC !== -1) {
     out.profile = data[avcC + 5];
     out.level = data[avcC + 7];
+    // Read the first SPS instead of assuming High profile means 8-bit 4:2:0.
+    if ((data[avcC + 9] & 31) > 0) {
+      const length = data.readUInt16BE(avcC + 10);
+      const sps = data.subarray(avcC + 12, avcC + 12 + length);
+      Object.assign(out, readSpsFormat(sps));
+    }
   }
 
   /* NAL units of the first sample (length-prefixed AVCC), so we can prove the
@@ -132,6 +145,43 @@ export function readMp4(file) {
   }
 
   return out;
+}
+
+// Minimal SPS prefix parser (H.264 7.3.2.1.1). No external media dependency.
+function readSpsFormat(sps) {
+  const rbsp = [];
+  for (let i = 1; i < sps.length; i += 1) {
+    if (i >= 3 && sps[i] === 3 && sps[i - 1] === 0 && sps[i - 2] === 0) continue;
+    rbsp.push(sps[i]);
+  }
+  let cursor = 0;
+  const bits = (count) => {
+    let value = 0;
+    for (let i = 0; i < count; i += 1) {
+      if (cursor >= rbsp.length * 8) throw new Error("Truncated AVC SPS");
+      value = value * 2 + ((rbsp[cursor >> 3] >> (7 - (cursor & 7))) & 1);
+      cursor += 1;
+    }
+    return value;
+  };
+  const ue = () => {
+    let zeros = 0;
+    while (bits(1) === 0) {
+      if (++zeros > 31) throw new Error("Invalid SPS Exp-Golomb code");
+    }
+    return 2 ** zeros - 1 + bits(zeros);
+  };
+  const profile = bits(8);
+  bits(16); // constraints + level
+  ue(); // seq_parameter_set_id
+  let chromaFormat = 1, bitDepthLuma = 8, bitDepthChroma = 8;
+  if ([100, 110, 122, 244, 44, 83, 86, 118, 128, 138, 139, 134, 135].includes(profile)) {
+    chromaFormat = ue();
+    if (chromaFormat === 3) bits(1);
+    bitDepthLuma = ue() + 8;
+    bitDepthChroma = ue() + 8;
+  }
+  return { chromaFormat, bitDepthLuma, bitDepthChroma };
 }
 
 export const NAL_TYPE = { SLICE: 1, IDR: 5, SEI: 6, SPS: 7, PPS: 8 };

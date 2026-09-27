@@ -34,20 +34,22 @@ const readRoot = (rel) => readFileSync(join(FRONTEND_DIR, rel), "utf8");
    (`homepage/hero-cinematic*.mp4`): the brief forbids abstract motion in the
    hero, and real hero footage is supplied through the reel slots checked in
    phase14-4a-hero-reel.test.mjs. The structural playback checks below still
-   run, unchanged, against the remaining placeholder (the brand film). */
+   now run against the supplied 14.4C film. Placeholder-only dimensions,
+   timing/profile and byte budgets are replaced by the production contract;
+   decoder, keyframe and faststart assertions remain enforced. */
 const HERO = "mock/assets/videos/homepage/hero-cinematic.mp4";
 const HERO_MOBILE = "mock/assets/videos/homepage/hero-cinematic-mobile.mp4";
-const BRAND = "mock/assets/videos/editorial/art-of-gold.mp4";
+const BRAND = "mock/assets/videos/editorial/art-of-gold-web.mp4";
 const ALL = [BRAND];
 
 /* ==========================================================================
    1. ACTUAL DIMENSIONS / SOURCE RESOLUTION
    ========================================================================== */
 
-test("hotfix2 · placeholders carry the real intended dimensions", () => {
+test("hotfix2 · production craftsmanship film carries the intended dimensions", () => {
   const brand = readMp4(join(SRC_DIR, BRAND));
-  assert.deepEqual([brand.width, brand.height], [640, 360], "brand film must be 640x360");
-  assert.ok(brand.width >= 640, `brand width too small: ${brand.width}`);
+  assert.deepEqual([brand.width, brand.height], [1920, 1080], "brand film must be full HD");
+  assert.ok(brand.width >= 1920, `brand width too small: ${brand.width}`);
 
   /* 14.4A: the abstract hero placeholders must stay gone — they are exactly
      the "golden gradient" motion the hero brief rejects. */
@@ -75,7 +77,7 @@ test("hotfix2 · videos are multi-frame with non-zero duration (not single-IDR l
   for (const rel of ALL) {
     const m = readMp4(join(SRC_DIR, rel));
     assert.ok(m.duration > 0, `${rel}: duration must be non-zero`);
-    assert.ok(m.seconds >= 3 && m.seconds <= 5, `${rel}: ${m.seconds}s outside the 3-5s brief`);
+    assert.ok(m.seconds >= 30 && m.seconds <= 40, `${rel}: ${m.seconds}s outside the 30-40s craftsmanship delivery`);
     assert.ok(m.samples >= 48, `${rel}: only ${m.samples} frames — a still is not a playback test`);
     assert.ok(m.fps >= 23 && m.fps <= 31, `${rel}: ${m.fps.toFixed(2)}fps outside 24/30`);
     /* Distinct frames, not one frame repeated: with a real encoder a repeated
@@ -85,11 +87,11 @@ test("hotfix2 · videos are multi-frame with non-zero duration (not single-IDR l
   }
 });
 
-test("hotfix2 · hero and brand film are 4s @ 24fps with 96 samples", () => {
+test("hotfix2 · approved trimmed craft film is 800 frames at 24fps", () => {
   for (const rel of ALL) {
     const m = readMp4(join(SRC_DIR, rel));
-    assert.equal(m.samples, 96, `${rel}: expected 96 samples`);
-    assert.equal(Math.round(m.seconds * 1000), 4000, `${rel}: expected 4.000s`);
+    assert.equal(m.samples, 800, `${rel}: expected 800 samples`);
+    assert.equal(Math.round(m.seconds * 1000), 33333, `${rel}: expected 33.333s`);
     assert.equal(Math.round(m.fps), 24, `${rel}: expected 24fps`);
   }
 });
@@ -115,15 +117,15 @@ test("hotfix2 · MP4 structure is what a browser decoder needs", () => {
     assert.ok(data.includes(Buffer.from("avc1")), `${rel}: missing avc1 sample entry`);
     assert.ok(data.includes(Buffer.from("avcC")), `${rel}: missing avcC decoder config`);
 
-    /* Baseline profile (66 / 0x42). Baseline is 4:2:0 by definition, which is
-       exactly the yuv420p requirement, and it is the widest-compatibility
-       H.264 profile for Edge/Chrome. */
-    assert.equal(m.profile, 0x42, `${rel}: expected baseline profile 0x42, got 0x${m.profile?.toString(16)}`);
-    assert.ok(m.level > 0 && m.level <= 0x1f, `${rel}: implausible level_idc ${m.level}`);
+    /* Production 1080p: High profile at level 4.0. Read SPS bit depth and
+       chroma explicitly so a High-10 upload cannot silently pass. */
+    assert.equal(m.profile, 100, `${rel}: expected H.264 High profile`);
+    assert.equal(m.level, 40, `${rel}: expected level 4.0`);
+    assert.deepEqual([m.chromaFormat, m.bitDepthLuma, m.bitDepthChroma], [1, 8, 8]);
   }
 });
 
-test("hotfix2 · every placeholder declares keyframes and starts with an IDR slice", () => {
+test("hotfix2 · every film declares keyframes and starts with an IDR slice", () => {
   for (const rel of ALL) {
     const m = readMp4(join(SRC_DIR, rel));
     assert.ok(m.keyframes >= 1, `${rel}: no stss keyframes declared`);
@@ -141,11 +143,11 @@ test("hotfix2 · every placeholder declares keyframes and starts with an IDR sli
   }
 });
 
-test("hotfix2 · placeholders stay small enough to bundle", () => {
+test("hotfix2 · craftsmanship film stays within the web-delivery budget", () => {
   for (const rel of ALL) {
     const bytes = statSync(join(SRC_DIR, rel)).size;
     assert.ok(bytes > 20_000, `${rel}: ${bytes} bytes is suspiciously close to a stub`);
-    assert.ok(bytes < 400_000, `${rel}: ${bytes} bytes is too large for a diagnostic placeholder`);
+    assert.ok(bytes < 12_000_000, `${rel}: ${bytes} bytes is exceeds the 12 MB web-delivery budget`);
   }
 });
 
