@@ -442,6 +442,182 @@ img.hero__media {
 }
 
 /* ===========================================================================
+   FILM CREDIT PLATE  ·  the editorial credit carried inside a campaign film
+   ---------------------------------------------------------------------------
+   One component, two placements — and two readings of the same object:
+
+     · the hero reel is CONTEMPORARY LUXURY: ink ground, champagne word-mark,
+       one micro line — "SWARNOVA / SIGNATURE";
+     · the Art of Gold film is ATELIER / HERITAGE: a warmer, deeper wine
+       ground and muted gold lettering — "THE ART OF GOLD / HERITAGE ·
+       REIMAGINED".
+
+   Both are the same rectangle, the same hairline, the same serif word-mark
+   over a rule over one tracked line: a printed credit in the corner of frame,
+   not a badge. No radius, no shadow, no fill glow — one 1px champagne
+   hairline is the whole treatment.
+
+   The plate also covers the generator's corner mark in the delivered footage,
+   which sits at a fixed fraction of the film frame — so it is anchored to the
+   mark *inside the rendered frame*, not to the section or the page.
+   `components/ui/FilmCredit.jsx` measures the frame and supplies `right`,
+   `bottom` and the min/max box; everything below is what the design system
+   owns: type scale, colour, hairline, spacing, and the responsive steps. The
+   geometry custom properties are read back by the component, so this block
+   stays the single source of truth for sizing.
+
+   Responsive steps — desktop keeps a comfortable editorial width, the tablet
+   step tightens it, and the phone step is compact with smaller type and
+   tighter tracking (never a shrunken desktop plate). The Art of Gold title is
+   a longer phrase than the hero word-mark, so it carries its own, smaller step
+   per breakpoint; its heritage line is a desktop/tablet grace note and is
+   dropped at phone width, where it would otherwise force the plate wider than
+   the frame can carry.
+   =========================================================================== */
+.film-credit {
+  /* --- geometry, read back by the component --- */
+  --fc-pad-x: 18px;
+  --fc-pad-y: 14px;
+  --fc-margin: 14px;
+  --fc-min-w: 168px;
+  --fc-min-h: 74px;
+
+  /* --- editorial treatment --- */
+  --fc-title: 1.0625rem; /* 17px */
+  --fc-caption: 0.5625rem; /* 9px */
+  --fc-track: 0.24em;
+  --fc-track-caption: 0.22em;
+  --fc-gap: 0.45rem;
+  --fc-rule-w: 2rem;
+  /* Opaque ink: nothing of the film — least of all the corner mark — may read
+     through the credit. Explicit rgba so it also renders on Safari < 16.2. */
+  --fc-surface: rgba(47, 42, 37, 0.96);
+  --fc-hairline: rgba(216, 191, 147, 0.34);
+  --fc-title-ink: var(--color-champagne);
+  --fc-caption-ink: rgba(248, 243, 234, 0.66);
+  --fc-rule: rgba(216, 191, 147, 0.5);
+
+  position: absolute;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--fc-gap);
+  padding: var(--fc-pad-y) var(--fc-pad-x);
+  min-width: var(--fc-min-w);
+  min-height: var(--fc-min-h);
+  background: var(--fc-surface);
+  border: 1px solid var(--fc-hairline);
+  /* Decorative and never a hit target: taps fall through to the film. */
+  pointer-events: none;
+  /* Invisible until the mark has been located in the rendered frame. */
+  visibility: hidden;
+}
+
+.film-credit[data-placed="true"] {
+  visibility: visible;
+}
+
+/* The Art of Gold reading of the same plate — warmer, deeper, heritage. */
+.film-credit[data-film-credit="art-of-gold"] {
+  --fc-title: 0.8125rem; /* 13px — a longer phrase than the hero word-mark */
+  --fc-track: 0.16em;
+  --fc-surface: rgba(58, 12, 23, 0.95); /* wine-deep */
+  --fc-hairline: rgba(216, 191, 147, 0.42);
+  --fc-title-ink: var(--color-gold-soft);
+  --fc-caption-ink: rgba(248, 243, 234, 0.7);
+  --fc-rule: rgba(198, 168, 111, 0.55);
+}
+
+/* "THE ART OF GOLD" is set as a two-line lockup — THE ART / OF GOLD — so the
+   plate reads as a printed credit block instead of a single long bar, and so a
+   fifteen-character phrase never sets the plate's width. */
+.film-credit[data-film-credit="art-of-gold"] .film-credit__title {
+  max-width: 7.5em;
+  line-height: 1.25;
+  white-space: normal;
+}
+
+.film-credit__title {
+  font-family: var(--font-serif);
+  font-size: var(--fc-title);
+  font-weight: 500;
+  line-height: 1.1;
+  letter-spacing: var(--fc-track);
+  text-transform: uppercase;
+  color: var(--fc-title-ink);
+  white-space: nowrap;
+}
+
+.film-credit__rule {
+  width: var(--fc-rule-w);
+  height: 1px;
+  background: var(--fc-rule);
+}
+
+.film-credit__caption {
+  font-family: var(--font-sans);
+  font-size: var(--fc-caption);
+  font-weight: 400;
+  line-height: 1.4;
+  letter-spacing: var(--fc-track-caption);
+  text-transform: uppercase;
+  color: var(--fc-caption-ink);
+  white-space: nowrap;
+}
+
+/* Tablet — slightly reduced width, padding and type. */
+@media (max-width: 1279px) {
+  .film-credit {
+    --fc-pad-x: 14px;
+    --fc-pad-y: 11px;
+    --fc-margin: 12px;
+    --fc-min-w: 148px;
+    --fc-min-h: 66px;
+    --fc-title: 0.9375rem; /* 15px */
+    --fc-caption: 0.5rem; /* 8px */
+    --fc-track: 0.22em;
+    --fc-track-caption: 0.2em;
+    --fc-gap: 0.4rem;
+    --fc-rule-w: 1.625rem;
+  }
+
+  .film-credit[data-film-credit="art-of-gold"] {
+    --fc-title: 0.75rem; /* 12px */
+    --fc-track: 0.14em;
+  }
+}
+
+/* Phone — compact: smaller type, tighter tracking, reduced padding. */
+@media (max-width: 767px) {
+  .film-credit {
+    --fc-pad-x: 10px;
+    --fc-pad-y: 8px;
+    --fc-margin: 10px;
+    --fc-min-w: 112px;
+    --fc-min-h: 46px;
+    --fc-title: 0.6875rem; /* 11px */
+    --fc-caption: 0.4375rem; /* 7px */
+    --fc-track: 0.18em;
+    --fc-track-caption: 0.16em;
+    --fc-gap: 0.3rem;
+    --fc-rule-w: 1.25rem;
+  }
+
+  .film-credit[data-film-credit="art-of-gold"] {
+    --fc-title: 0.625rem; /* 10px */
+    --fc-track: 0.1em;
+  }
+
+  /* "HERITAGE · REIMAGINED" is a grace note for the two larger steps: at phone
+     width it would set the plate's width, and the plate is a corner credit,
+     not a caption card. */
+  .film-credit[data-film-credit="art-of-gold"] .film-credit__caption {
+    display: none;
+  }
+}
+
+/* ===========================================================================
    MOTION UTILITIES & REDUCED MOTION  (Phase 14.4)
    ---------------------------------------------------------------------------
    All decorative motion lives behind the prefers-reduced-motion media query:

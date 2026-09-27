@@ -3,6 +3,7 @@ import PropTypes from "prop-types";
 import Section from "../../../../components/ui/Section.jsx";
 import Container from "../../../../components/ui/Container.jsx";
 import Eyebrow from "../../../../components/ui/Eyebrow.jsx";
+import FilmCredit from "../../../../components/ui/FilmCredit.jsx";
 import useIntersectionAware from "../../../../hooks/useIntersectionAware.js";
 import usePrefersReducedMotion from "../../../../hooks/usePrefersReducedMotion.js";
 import { cn } from "../../../../utils/cn.js";
@@ -37,6 +38,9 @@ import { cn } from "../../../../utils/cn.js";
 const PLAY_VISIBLE_RATIO = 0.5;
 export default function BrandFilmSection({ content }) {
   const videoRef = useRef(null);
+  /* The poster is a frame of the same film, so it carries the same corner
+     mark — the credit plate must cover it whether or not the film plays. */
+  const posterRef = useRef(null);
   const [playing, setPlaying] = useState(false);
   const [canPlay, setCanPlay] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -194,6 +198,7 @@ export default function BrandFilmSection({ content }) {
             {/* Poster frame — always present, fades when the film is playing and canPlay. */}
             {content.poster && (
               <img
+                ref={posterRef}
                 src={content.poster}
                 alt={content.video?.alt ?? content.title}
                 className={cn(
@@ -240,6 +245,20 @@ export default function BrandFilmSection({ content }) {
               className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink/40 via-transparent to-ink/10"
               aria-hidden="true"
             />
+
+            {/* Campaign credit — the editorial plate carried inside the film
+                frame. It covers the frame's corner mark, which the poster
+                carries too (it was extracted from this film), so unlike the
+                hero it is present whether or not the film is playing.
+                See components/ui/FilmCredit.jsx. */}
+            {hasVideo || Boolean(content.poster) ? (
+              <FilmCredit
+                title="The Art of Gold"
+                caption="Heritage · Reimagined"
+                placement="art-of-gold"
+                getMedia={() => videoRef.current ?? posterRef.current}
+              />
+            ) : null}
 
             {/* Play affordance — calm, gold, only when not playing: the fallback
                 when the browser refuses playback, and replay after the film

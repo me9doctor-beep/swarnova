@@ -293,8 +293,8 @@ The browser suite is separate from the dependency-free Node suite and does not a
 | User-approved 8-bit conversion and CapCut trim | Done |
 | Final MP4/H.264/yuv420p/CFR24/no audio/faststart | Pass |
 | Visual content reviewed | Done; craft-authenticity limits in §4 |
-| No watermark | **Waived by user; corner mark retained** |
-| New poster from supplied film | Integrated; same approved mark remains |
+| No watermark | **Later superseded — the corner mark is now covered by the responsive campaign credit plate (`components/ui/FilmCredit.jsx`); the film and poster are unmodified** |
+| New poster from supplied film | Integrated; the credit plate covers the mark on the poster as well |
 | Existing architecture and section design | Preserved |
 | Click-to-play / actual advancing frames | Pass |
 | Pause / resume / replay / natural completion/reset | Pass |
@@ -310,3 +310,25 @@ The browser suite is separate from the dependency-free Node suite and does not a
 | Phase 15 / backend / redesign | Not started |
 
 **Stop here.** Future watermark-free or more mechanically authentic footage can be a separately approved asset replacement; it was not fabricated during this integration.
+
+---
+
+## 12. Superseding note — the corner mark is now covered in the UI
+
+The waiver above applied to the *delivery*: the mark stayed in the film and in
+the poster extracted from it. It has since been superseded by a presentation
+change, not a media change:
+
+* one shared component, `components/ui/FilmCredit.jsx` (`FilmCredit`), renders
+  the campaign credit plate — word-mark, champagne hairline, one tracked line —
+  inside the film frame of both the hero reel and the Art of Gold film;
+* it is positioned from the **rendered** frame (`object-fit: cover` mapping,
+  `utils/filmFrameGeometry.js`), never from the page, section or viewport, and
+  it is clamped inside the frame, so it cannot overflow or cause a scrollbar;
+* responsive sizing lives in `index.css` (`.film-credit` and its
+  tablet/phone steps) — the component reads those custom properties back, so
+  the responsive system stays the single source of truth;
+* the media files themselves were not touched: no crop, no blur, no re-encode.
+
+Regression coverage: `src/__tests__/film-credit-geometry.test.mjs` (unit) and
+`src/__tests__/support/film-credit-browser.mjs` (optional real-Chromium run).
