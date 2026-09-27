@@ -240,6 +240,15 @@ export default function CinematicVideo({
   const objectFit = fit;
   const objectPosition = position;
   // The video is revealed only once the browser confirms it is advancing.
+  // With muted autoplay, Chromium fires `playing` in the same task as
+  // `loadeddata`/`canplay` — i.e. this IS the first-frame signal, and it still
+  // never fires when autoplay is refused, so the poster remains the fallback.
+  //
+  // The reveal is a short dissolve, not a long crossfade. A 700 ms fade here
+  // kept the poster on screen for ~0.8 s over a film that was already decoded
+  // and playing (the "poster → wait → video" start). It is not an instant cut
+  // because the Signature poster is not pixel-identical to the film's first
+  // frame (different aspect ratio and framing), so a hard swap reads as a jump.
   const videoRevealed = playing && !failed;
 
   return (
@@ -248,14 +257,17 @@ export default function CinematicVideo({
       data-playback-state={playbackState}
       className={cn("cinematic-media-wrap absolute inset-0 h-full w-full overflow-hidden", className)}
     >
-      {/* Poster — always rendered; the video fades in over it once playing. */}
+      {/* Poster — always rendered beneath the video: the fallback for reduced
+          motion, a refused autoplay or a media error, and the backdrop for
+          the moment before the first frame exists. It is never held over a
+          film that is already playing. */}
       {poster && (
         <img
           src={poster}
           alt={alt}
           aria-hidden="true"
           className={cn(
-            "cinematic-media transition-opacity duration-700",
+            "cinematic-media transition-opacity duration-200",
             videoRevealed ? "opacity-0" : "opacity-100"
           )}
           style={objectPosition ? { objectFit, objectPosition } : { objectFit }}
@@ -272,7 +284,7 @@ export default function CinematicVideo({
         <video
           ref={videoRef}
           className={cn(
-            "cinematic-media transition-opacity duration-700",
+            "cinematic-media transition-opacity duration-200",
             videoRevealed ? "opacity-100" : "opacity-0"
           )}
           style={objectPosition ? { objectFit, objectPosition } : { objectFit }}
@@ -331,7 +343,7 @@ CinematicVideo.propTypes = {
   src: PropTypes.string,
   /** Narrow-viewport video URL (mobile data saving). */
   mobileSrc: PropTypes.string,
-  /** Poster image URL — always shown first, and the fallback. */
+  /** Poster image URL — backdrop until the first frame, and the fallback. */
   poster: PropTypes.string.isRequired,
   /** Accessible alt text describing the film (applied to poster). */
   alt: PropTypes.string.isRequired,
