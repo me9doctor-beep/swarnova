@@ -255,7 +255,7 @@ export default function CinematicVideo({
           alt={alt}
           aria-hidden="true"
           className={cn(
-            "cinematic-media transition-opacity duration-700",
+            "cinematic-media transition-opacity duration-400",
             videoRevealed ? "opacity-0" : "opacity-100"
           )}
           style={objectPosition ? { objectFit, objectPosition } : { objectFit }}
@@ -272,7 +272,7 @@ export default function CinematicVideo({
         <video
           ref={videoRef}
           className={cn(
-            "cinematic-media transition-opacity duration-700",
+            "cinematic-media transition-opacity duration-400",
             videoRevealed ? "opacity-100" : "opacity-0"
           )}
           style={objectPosition ? { objectFit, objectPosition } : { objectFit }}

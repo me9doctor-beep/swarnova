@@ -394,6 +394,12 @@ img.hero__media {
     object-position: var(--hero-focal-desktop, 18% 30%);
   }
 
+  /* The seal follows the same focal point switch the film makes here. */
+  .hero__sticker-film {
+    --seal-focal-x: 18%;
+    --seal-focal-y: 30%;
+  }
+
   /* Clear the fixed header at desktop; smaller widths are handled by the
      max-width blocks above. */
   .hero__copy-inner {
@@ -646,5 +652,60 @@ button:hover .motion-zoom-subtle {
 }
 .cinematic-veil-loading[data-ready="true"] {
   opacity: 0;
+}
+
+/* ===========================================================================
+   MEDIA STICKER  (Phase 14.4D)
+   ---------------------------------------------------------------------------
+   The house seal pinned over a corner of a film. It exists because the
+   delivered footage carries a small Google AI star mark in that corner; the
+   sticker covers it instead of cropping or blurring the frame.
+
+   The seal is a static die-cut: a paper ring, a champagne-gold disc and the
+   faceted mark, tilted a few degrees so it reads as a sticker rather than a
+   UI badge. Fixed rotation, no animation — nothing here responds to scroll
+   or to a media event, so it adds no work to the playback path.
+   =========================================================================== */
+.media-sticker__seal {
+  transform: rotate(-8deg);
+  background:
+    radial-gradient(circle at 32% 26%, var(--color-champagne) 0%, var(--color-gold) 72%, var(--color-gold-deep) 100%);
+  box-shadow:
+    0 0 0 3px rgba(248, 243, 234, 0.94),
+    0 0 0 4px rgba(141, 108, 51, 0.5),
+    0 8px 20px rgba(47, 42, 37, 0.3);
+}
+
+/* The hero crops its film (`object-fit: cover` + a focal point), so the seal
+   cannot be pinned to the section — it would drift off the mark and into the
+   copy. These two boxes rebuild the film's own frame:
+
+     · the shell is a size container over the hero box;
+     · the frame is the cover box the 16:9 film is painted into — the same
+       `max()` the browser applies for `object-fit: cover`, offset by the same
+       focal point (percentage `left` + equal negative `translate` reproduces
+       `object-position: x% y%` exactly).
+
+   The seal then sits on the film's real bottom-right corner: it covers the
+   mark wherever the crop shows that corner, and is cropped away with it
+   wherever it does not — instead of floating over the headline or the trust
+   line. */
+.hero__sticker-shell {
+  position: absolute;
+  inset: 0;
+  container-type: size;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1;
+}
+.hero__sticker-film {
+  --seal-focal-x: 64%;
+  --seal-focal-y: 26%;
+  position: absolute;
+  width: max(100cqw, calc(100cqh * 16 / 9));
+  height: max(100cqh, calc(100cqw * 9 / 16));
+  left: var(--seal-focal-x);
+  top: var(--seal-focal-y);
+  transform: translate(calc(-1 * var(--seal-focal-x)), calc(-1 * var(--seal-focal-y)));
 }
 

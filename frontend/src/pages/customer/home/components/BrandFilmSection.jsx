@@ -3,30 +3,40 @@ import PropTypes from "prop-types";
 import Section from "../../../../components/ui/Section.jsx";
 import Container from "../../../../components/ui/Container.jsx";
 import Eyebrow from "../../../../components/ui/Eyebrow.jsx";
+import MediaSticker from "../../../../components/ui/MediaSticker.jsx";
 import useIntersectionAware from "../../../../hooks/useIntersectionAware.js";
 import usePrefersReducedMotion from "../../../../hooks/usePrefersReducedMotion.js";
 import { cn } from "../../../../utils/cn.js";
 
 /**
- * THE ART OF GOLD — the brand/craftsmanship film (Phase 14.4).
+ * THE ART OF GOLD — the brand/craftsmanship film (Phase 14.4 / 14.4D).
  *
  * A premium editorial video placement between the editorial storytelling and
- * the Why-Choose-Us block. Initial state shows the cinematic poster with a
- * restrained play affordance; pressing play begins the film in place, with
- * native controls kept minimal. No YouTube-style chrome, no auto-play with
- * sound, no decorative carousel. The film is a quiet invitation, not an
- * auto-starting billboard.
+ * the Why-Choose-Us block. The film begins by itself, muted, as the customer
+ * scrolls towards it: `preload` flips to "auto" and playback starts one
+ * viewport-margin (300px) before the frame is on screen, so what arrives in
+ * view is a film already running — never a poster waiting for a tap, and
+ * never a stall while the first frames buffer. Scrolling away pauses it;
+ * scrolling back resumes from the same frame.
  *
- * Accessibility: poster-first, labelled play button, muted, keyboard-
- * operable, reduced-motion shows poster only.
+ * The play affordance is no longer the way in — it is the fallback for the
+ * only case that needs one: a genuinely refused autoplay (low-power mode,
+ * data saver), or a replay after the film has ended. No player chrome: the
+ * delivery has no audio track, so there is nothing to control but the pause
+ * the scroll already does.
+ *
+ * Accessibility: poster-first, muted, inline, reduced-motion shows poster
+ * only, and the fallback button stays a labelled, keyboard-operable control.
  */
 export default function BrandFilmSection({ content }) {
   const videoRef = useRef(null);
   const [playing, setPlaying] = useState(false);
   const [canPlay, setCanPlay] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [needsTap, setNeedsTap] = useState(false);
+  const [ended, setEnded] = useState(false);
   const reducedMotion = usePrefersReducedMotion();
-  const [sentinelRef, inView] = useIntersectionAware({ threshold: 0.1, rootMargin: "100px 0px" });
+  const [sentinelRef, inView] = useIntersectionAware({ threshold: 0.1, rootMargin: "300px 0px" });
 
   const hasVideo = Boolean(content.video?.src) && !failed;
   // Poster visible until film is actually playing and canPlay, or when failed/reducedMotion
@@ -44,11 +54,50 @@ export default function BrandFilmSection({ content }) {
     setCanPlay(false);
     setPlaying(false);
     setFailed(false);
+    setNeedsTap(false);
+    setEnded(false);
   }, [content.video?.src]);
+
+  /* Autoplay: muted, inline, and only once the browser has parsed enough of
+     the file to advance frames. Starting it one margin ahead of the viewport
+     is what makes the arrival smooth — the film is already moving when the
+     customer gets there. A rejected play() means a real policy block, so we
+     surface the calm tap affordance rather than leave a paused frame. */
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !hasVideo || !inView || !canPlay || ended || reducedMotion) return undefined;
+    if (!video.paused) return undefined;
+    video.muted = true;
+    let cancelled = false;
+    const attempt = video.play();
+    if (attempt && typeof attempt.catch === "function") {
+      attempt.catch((err) => {
+        if (cancelled || err?.name === "AbortError") return;
+        setNeedsTap(true);
+      });
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [hasVideo, inView, canPlay, ended, reducedMotion]);
+
+  /* Pausing is this effect's only job; starting playback belongs to the one
+     above, so the two can never fight over the same element. Leaving the
+     section also re-arms the film, so a later scroll back replays it. */
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if ((!inView || reducedMotion || failed) && !video.paused) {
+      video.pause();
+    }
+    if (!inView) setEnded(false);
+  }, [inView, reducedMotion, failed]);
 
   const handlePlay = () => {
     const v = videoRef.current;
     if (!v) return;
+    setNeedsTap(false);
+    setEnded(false);
     // Ensure video is ready to play — if preload was none, this will trigger loading
     // Try unmuted first (user gesture allows sound), fallback to muted if blocked
     v.muted = false;
@@ -86,6 +135,7 @@ export default function BrandFilmSection({ content }) {
 
   const handleEnded = () => {
     setPlaying(false);
+    setEnded(true);
     if (videoRef.current) {
       try {
         videoRef.current.currentTime = 0;
@@ -156,9 +206,9 @@ export default function BrandFilmSection({ content }) {
                 )}
                 src={content.video.src}
                 poster={content.poster}
-                controls={playing}
                 playsInline
-                preload={inView ? "metadata" : "none"}
+                muted
+                preload={inView ? "auto" : "none"}
                 onCanPlay={handleCanPlay}
                 onLoadedData={handleCanPlay}
                 onLoadedMetadata={handleCanPlay}
@@ -182,9 +232,14 @@ export default function BrandFilmSection({ content }) {
               aria-hidden="true"
             />
 
-            {/* Play affordance — calm, gold, only when not playing. Replaced by
-                native controls once playback begins. */}
-            {!playing && !reducedMotion && hasVideo && (
+            {/* House seal over the film's corner — the delivered footage carries
+                a small star mark there. */}
+            {hasVideo ? <MediaSticker corner="bottom-right" size="sm" /> : null}
+
+            {/* Play affordance — a fallback, not the way in: shown only when a
+                real policy block refused autoplay, or to replay a finished
+                film. While the film runs there is no chrome of any kind. */}
+            {(needsTap || ended) && !playing && !reducedMotion && hasVideo && (
               <button
                 type="button"
                 onClick={handlePlay}

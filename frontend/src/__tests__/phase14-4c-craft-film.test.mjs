@@ -88,15 +88,19 @@ test("14.4C · real provider/service preserves section order and film contract",
   assert.deepEqual(doc.sections[i].content, record.content);
 });
 
-test("14.4C · initial markup is poster-first, click-to-play, inline and non-looping", () => {
+test("14.4C · initial markup is poster-first, inline, muted and non-looping", () => {
   const html = render(content);
   assert.match(html, /<video[^>]+src="\/test-craft\.mp4"/);
   assert.match(html, /playsInline=""/);
+  /* Off-screen on first paint: nothing is fetched until the section is within
+     the scroll margin, so the 9 MB film never competes with the hero. */
   assert.match(html, /preload="none"/);
   assert.match(html, /<img[^>]+opacity-100/);
   assert.match(html, /<video[^>]+opacity-0/);
+  /* Playback is started from the scroll effect, not by an autoplay attribute,
+     and there is no player chrome over an ambient film. */
   assert.doesNotMatch(html, /<video[^>]+(?:autoPlay|autoplay|loop|controls)=/);
-  assert.match(html, /aria-label="Play the art of gold film"/);
+  assert.match(html, /<video[^>]+muted=""/, "muted is what makes scroll-autoplay permitted");
 });
 
 test("14.4C · absent or empty video source retains poster without a dead play button", () => {
@@ -117,12 +121,19 @@ test("14.4C · reduced motion renders only the poster and no play affordance", (
   } finally { window.matchMedia = original; }
 });
 
-test("14.4C · labelled section, descriptive media and keyboard-operable native button", () => {
+test("14.4C · labelled section, descriptive media and keyboard-operable fallback button", () => {
   const html = render(content);
   assert.match(html, /aria-labelledby="brand-film-title"/);
   assert.match(html, /<h2 id="brand-film-title"/);
   assert.match(html, /alt="Goldsmith handwork and a finished gold necklace"/);
-  assert.match(html, /<button type="button"[^>]+aria-label="Play the art of gold film"/);
+  /* The play control is a fallback now, not the way in: it is absent while the
+     film can start by itself, and stays a real <button> when it is needed, so
+     it remains reachable by keyboard. */
+  assert.doesNotMatch(html, /<button/, "no play button while autoplay is untested");
+  const code = component();
+  assert.match(code, /<button\s+type="button"/);
+  assert.match(code, /onClick=\{handlePlay\}/);
+  assert.match(code, /aria-label=\{content\.playLabel \?\? "Play the art of gold film"\}/);
 });
 
 test("14.4C · pause and completion keep the existing poster/reset/replay wiring", () => {
@@ -131,10 +142,30 @@ test("14.4C · pause and completion keep the existing poster/reset/replay wiring
   assert.match(code, /onPause=\{handlePause\}/);
   assert.match(code, /onEnded=\{handleEnded\}/);
   assert.match(code, /videoRef\.current\.currentTime = 0;/);
-  assert.match(code, /controls=\{playing\}/);
-  assert.match(code, /!playing && !reducedMotion && hasVideo/);
   assert.match(code, /onClick=\{handlePlay\}/);
+  /* The button is the fallback: a refused autoplay, or a replay of a finished
+     film. Scrolling away and back re-arms it instead of looping. */
+  assert.match(code, /\(needsTap \|\| ended\) && !playing && !reducedMotion && hasVideo/);
+  assert.match(code, /if \(!inView\) setEnded\(false\);/);
   // Runtime play/pause/resume/replay is also exercised by support/phase14-4c-browser.mjs.
+});
+
+test("14.4C · the film starts by itself on scroll, muted, and pauses off-screen", () => {
+  const code = component();
+  /* Buffering and playback begin one margin ahead of the viewport, so the film
+     is already moving when the frame arrives — not stalling on a poster. */
+  assert.match(code, /rootMargin: "300px 0px"/);
+  assert.match(code, /preload=\{inView \? "auto" : "none"\}/);
+  assert.match(code, /video\.muted = true;/);
+  assert.match(code, /const attempt = video\.play\(\);/);
+  /* Start and pause are separate effects, so they can never fight: the pause
+     effect only ever pauses. */
+  assert.match(code, /if \(\(!inView \|\| reducedMotion \|\| failed\) && !video\.paused\)/);
+  assert.match(code, /if \(!video\.paused\) return undefined;/);
+  /* A refused autoplay falls back to the tap affordance; an AbortError is a
+     pause() racing a play(), not a policy block. */
+  assert.match(code, /err\?\.name === "AbortError"/);
+  assert.match(code, /setNeedsTap\(true\)/);
 });
 
 test("14.4C · rejected playback and media errors keep poster fallbacks", () => {
@@ -145,15 +176,30 @@ test("14.4C · rejected playback and media errors keep poster fallbacks", () => 
   assert.match(code, /const showPoster = !playing \|\| !canPlay \|\| failed \|\| reducedMotion/);
 });
 
-test("14.4C · media flow and restrained layout are preserved, no UI mock import or sticker", () => {
+test("14.4C · media flow and restrained layout are preserved, no UI mock import", () => {
   const code = component();
   assert.match(code, /src=\{content\.video\.src\}/);
   assert.match(code, /poster=\{content\.poster\}/);
-  assert.match(code, /preload=\{inView \? "metadata" : "none"\}/);
   assert.match(code, /aspect-\[16\/9\]/);
   assert.match(code, /max-w-5xl/);
   assert.match(code, /background="cream"/);
-  assert.doesNotMatch(code, /from ["'][^"']*mock|\.mp4|sticker|watermark|autoPlay\s*=|<canvas/i);
+  assert.doesNotMatch(code, /from ["'][^"']*mock|\.mp4|autoPlay\s*=|<canvas/i);
   assert.match(read("hooks/useHomepage.js"), /contentService\.getHomepage\(provider\)/);
   assert.match(read("pages/customer/home/HomePage.jsx"), /brand_film: BrandFilmSection/);
+});
+
+test("14.4C · the corner star mark is covered by the shared house sticker", () => {
+  const code = component();
+  const html = render(content);
+  /* The delivered footage keeps a small star mark in one corner (the waiver
+     recorded in PHASE_14_4C_RECONCILIATION.md). The film is not cropped,
+     blurred or re-encoded to hide it — the house seal simply sits on top. */
+  assert.match(code, /import MediaSticker from "\.\.\/\.\.\/\.\.\/\.\.\/components\/ui\/MediaSticker\.jsx"/);
+  assert.match(code, /\{hasVideo \? <MediaSticker corner="bottom-right" size="sm" \/> : null\}/);
+  assert.match(html, /data-media-sticker="bottom-right"/);
+  assert.match(html, /media-sticker__seal/);
+  /* Decorative and click-through: it must never swallow a tap meant for the
+     play fallback or the caption beneath it. */
+  assert.match(html, /data-media-sticker="bottom-right" class="media-sticker pointer-events-none/);
+  assert.match(html, /aria-hidden="true" data-media-sticker/);
 });

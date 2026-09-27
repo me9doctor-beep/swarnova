@@ -3,6 +3,7 @@ import PropTypes from "prop-types";
 import Button from "../../../../components/ui/Button.jsx";
 import Eyebrow from "../../../../components/ui/Eyebrow.jsx";
 import CinematicVideo from "../../../../components/ui/CinematicVideo.jsx";
+import MediaSticker from "../../../../components/ui/MediaSticker.jsx";
 import { useHeroReel } from "../../../../hooks/useHeroReel.js";
 import { cn } from "../../../../utils/cn.js";
 
@@ -230,10 +231,26 @@ export default function HeroSection({ content }) {
         </div>
       </div>
 
+      {/* House seal over the film's corner — the delivered footage carries a
+          small star mark there. The two wrappers are not decoration: the hero
+          crops its film, so the seal is pinned to the film's own frame (see
+          `.hero__sticker-film`) and travels with that corner — covering the
+          mark where the crop shows it, and cropped away with it where it does
+          not. Decorative and click-through, so it never blocks the tap-to-play
+          affordance. */}
+      {hasVideo ? (
+        <div className="hero__sticker-shell" aria-hidden="true">
+          <div className="hero__sticker-film">
+            <MediaSticker corner="bottom-right" size="lg" />
+          </div>
+        </div>
+      ) : null}
+
       {/* Reel position — four hairlines, deliberately faint and
-          non-interactive; present only while more than one film can play. */}
+          non-interactive; present only while more than one film can play.
+          Left of the seal so the two never overlap. */}
       {hasVideo && reel.rotates ? (
-        <div className="hero__reel-index pointer-events-none absolute bottom-6 right-6 z-[2] flex gap-2 sm:right-10" aria-hidden="true">
+        <div className="hero__reel-index pointer-events-none absolute bottom-6 left-6 z-[2] flex gap-2 sm:left-10" aria-hidden="true">
           {reel.playable.map((record, index) => (
             <span
               key={record.id}

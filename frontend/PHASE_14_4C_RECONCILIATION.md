@@ -8,6 +8,8 @@ Baseline: `fa3ee44bb5f002505ff51e7e2993fbf80744a14c`
 
 **Technical integration complete for the user's selected delivery: “8-bit + remove CapCut ending.”** The existing Art of Gold player now uses the supplied film and a poster extracted from that film. The small corner watermark remains visible by explicit user approval; no sticker, cover-up component, crop or redesign was added.
 
+> **Superseded in part by Phase 14.4D** (`PHASE_14_4D_MEDIA_DELIVERY.md`, same day, later request). The user then asked for the corner star mark to be covered and for the film to start on scroll instead of on a tap. The mark is now covered by the shared `MediaSticker` house seal (the footage, the poster and the encode are untouched — nothing was cropped, blurred or re-encoded), and playback begins by itself, muted, as the section approaches the viewport. The play button survives only as the fallback for a refused autoplay or a replay.
+
 This supersedes the earlier blocked review of the 852 × 480, 39.625-second file. The new upload is different footage and a different export. It should not be confused with the previous candidate.
 
 - Located upload `art-of-gold-web.mp4` in remote commit `949b47a` (`Add video again`).
@@ -108,7 +110,7 @@ The warm gold, bronze, charcoal, workbench setting and restrained editorial came
 
 **Do not overstate authenticity:** not every originally requested technique is distinctly demonstrated. A separate inspection/loupe beat and engraving stage are not clearly established. The tool-to-mounted-stone and buffing shots are stylized; their mechanical safety/accuracy and exact piece-by-piece continuity are not independently verified. No gross malformed-hand or broken-jewellery defect was obvious in the reviewed samples, but an exhaustive “no AI artefacts / all actions physically correct” claim would be unjustified. No shot was replaced to conceal these limitations.
 
-The small star mark is an **approved exception**, left visible in the footage and poster. No sticker has been introduced into the UI. This film should not be represented as documentary evidence of Swarnova's actual workshop or manufacturing process.
+The small star mark is an **approved exception**, left visible in the footage and poster. No sticker had been introduced into the UI at the time of this integration — that changed in Phase 14.4D, where the shared house sticker was placed over the corner; the delivery itself was still not altered. This film should not be represented as documentary evidence of Swarnova's actual workshop or manufacturing process.
 
 ## 5. Integration and unchanged design
 
@@ -293,10 +295,10 @@ The browser suite is separate from the dependency-free Node suite and does not a
 | User-approved 8-bit conversion and CapCut trim | Done |
 | Final MP4/H.264/yuv420p/CFR24/no audio/faststart | Pass |
 | Visual content reviewed | Done; craft-authenticity limits in §4 |
-| No watermark | **Waived by user; corner mark retained** |
+| No watermark | **Waived by user; corner mark retained** (later covered by the 14.4D sticker, delivery unchanged) |
 | New poster from supplied film | Integrated; same approved mark remains |
 | Existing architecture and section design | Preserved |
-| Click-to-play / actual advancing frames | Pass |
+| Click-to-play / actual advancing frames | Pass — later replaced by scroll-driven autoplay in 14.4D |
 | Pause / resume / replay / natural completion/reset | Pass |
 | Five viewport / mobile / reduced-motion checks | Pass |
 | Media and policy failure fallback | Pass |
