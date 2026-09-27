@@ -17,6 +17,7 @@ import { useCollections } from "../../../hooks/useCollections.js";
 import { useDocumentTitle } from "../../../hooks/useDocumentTitle.js";
 import { useProduct } from "../../../hooks/useProduct.js";
 import { useRelatedProducts } from "../../../hooks/useRelatedProducts.js";
+import { productGalleryImages } from "../../../services/productMediaService.js";
 
 /**
  * PRODUCT DETAIL — the individual piece, at `/product/:id`.
@@ -95,7 +96,9 @@ export default function ProductDetailPage() {
         <Breadcrumb category={category} name={product.name} />
 
         <div className="mt-8 grid gap-x-16 gap-y-12 lg:mt-10 lg:grid-cols-2">
-          <ProductGallery images={product.images ?? []} name={product.name} />
+          {/* Phase 14.4B: any multi-angle photographs join the gallery as
+              ordinary plates; the gallery's own selector is unchanged. */}
+          <ProductGallery images={productGalleryImages(product)} name={product.name} />
           <div className="space-y-6"><ProductSummary product={product} category={category} collection={collection} />
           <ContentLink className="inline-block underline underline-offset-4" href={intakeLink("custom", { productId: product.id })}>Enquire about a bespoke interpretation</ContentLink></div>
         </div>

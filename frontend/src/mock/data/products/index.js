@@ -24,6 +24,13 @@ import { media } from "../../assets/index.js";
  * product detail route in `app/router.jsx`. Every product card resolves
  * through it, so the route is never re-derived in the presentation layer.
  *
+ * `media.hoverFrames` (optional, Phase 14.4B) lists additional photographs of
+ * the SAME piece from the same shoot — slight left / slight right camera
+ * positions and a closer detail — in viewing order. The primary image stays
+ * `images[0]`; the catalogue service resolves both into
+ * `media: { primary, hoverFrames }`. Pieces without the field keep a single
+ * still, and a backend may return the resolved `media` object directly.
+ *
  * `description` is the piece's story, the copy the product detail screen
  * presents in its editorial band. It lives here, in the mock boundary, so the
  * screen stays provider-driven; the API provider returns the same field.
@@ -63,6 +70,22 @@ export const products = [
         alt: "22K gold necklace with an open teardrop diamond pendant on ivory fabric",
       },
     ],
+    media: {
+      hoverFrames: [
+        {
+          src: media.productPendantAngleLeft,
+          alt: "The same teardrop diamond pendant seen from a slight left angle",
+        },
+        {
+          src: media.productPendantAngleRight,
+          alt: "The same teardrop diamond pendant seen from a slight right angle",
+        },
+        {
+          src: media.productPendantDetail,
+          alt: "Close detail of the pendant’s pavé diamonds and diamond-set bail",
+        },
+      ],
+    },
     rating: { average: 4.9, count: 126 },
     tryOnAvailable: true,
     featured: true,
@@ -88,6 +111,18 @@ export const products = [
         alt: "Ornate 22K gold diamond halo ring displayed on warm ivory silk",
       },
     ],
+    media: {
+      hoverFrames: [
+        {
+          src: media.productSolitaireRingAngleLeft,
+          alt: "The same halo ring seen from a slight left angle, showing its pavé shoulder",
+        },
+        {
+          src: media.productSolitaireRingAngleRight,
+          alt: "The same halo ring seen from a slight right angle, showing its openwork gallery",
+        },
+      ],
+    },
     rating: { average: 5.0, count: 98 },
     tryOnAvailable: true,
     featured: true,
@@ -113,6 +148,18 @@ export const products = [
         alt: "Pair of matching 22K gold and diamond chandelier drop earrings",
       },
     ],
+    media: {
+      hoverFrames: [
+        {
+          src: media.productDropEarringsAngleLeft,
+          alt: "The same chandelier drop earrings seen from a slight left angle",
+        },
+        {
+          src: media.productDropEarringsAngleRight,
+          alt: "The same chandelier drop earrings seen from a slight right angle",
+        },
+      ],
+    },
     rating: { average: 4.9, count: 74 },
     tryOnAvailable: true,
     featured: true,

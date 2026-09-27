@@ -29,7 +29,10 @@ const paddings = {
   md: "p-panel sm:p-7",
 };
 
-function CardMedia({ ratio = "4/3", href, ariaLabel, overlay, className, children }) {
+/* Any further props (e.g. pointer handlers for a hover interaction, Phase
+   14.4B) land on the outermost element — the full image frame including its
+   overlay action. */
+function CardMedia({ ratio = "4/3", href, ariaLabel, overlay, className, children, ...rest }) {
   const aspect = ratios[ratio] ?? ratios["4/3"];
 
   /* Without an overlay action the frame itself is the link, so no wrapper is
@@ -40,18 +43,20 @@ function CardMedia({ ratio = "4/3", href, ariaLabel, overlay, className, childre
     const frame = cn("block overflow-hidden bg-surface-secondary", aspect, className);
 
     return href ? (
-      <ContentLink href={href} aria-label={ariaLabel} className={frame}>
+      <ContentLink href={href} aria-label={ariaLabel} className={frame} {...rest}>
         {children}
       </ContentLink>
     ) : (
-      <div className={frame}>{children}</div>
+      <div className={frame} {...rest}>
+        {children}
+      </div>
     );
   }
 
   const inner = cn("block overflow-hidden", aspect);
 
   return (
-    <div className={cn("relative overflow-hidden bg-surface-secondary", className)}>
+    <div className={cn("relative overflow-hidden bg-surface-secondary", className)} {...rest}>
       {href ? (
         <ContentLink href={href} aria-label={ariaLabel} className={inner}>
           {children}
