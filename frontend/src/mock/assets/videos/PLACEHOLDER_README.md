@@ -1,4 +1,11 @@
-# Swarnova Video Placeholders
+# Swarnova Video Placeholders — historical notes
+
+> **Phase 14.4C:** no diagnostic video placeholders remain. The craftsmanship
+> slot now uses `editorial/art-of-gold-web.mp4`, an 8-bit H.264 delivery of the
+> supplied film with the CapCut ending removed by user approval. The small
+> corner mark is retained by approval. See `frontend/PHASE_14_4C_RECONCILIATION.md`
+> for provenance, exact conversion, poster and validation. The notes below
+> describe the removed diagnostic assets, not the current shipped footage.
 
 > **Phase 14.4A:** the two homepage hero placeholders
 > (`homepage/hero-cinematic*.mp4`, an abstract champagne-gold wash) were

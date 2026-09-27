@@ -47,9 +47,10 @@ const heroReelContemporaryMobileVideo = null;
 import heroReelHeritageVideo from "./videos/homepage/hero-reel/heritage-statement.mp4";
 const heroReelHeritageMobileVideo = null;
 
-/* Brand film placeholder (Phase 14.4; unchanged in 14.4A — out of scope).
-   See mock/assets/videos/PLACEHOLDER_README.md. */
-import artOfGoldVideo from "./videos/editorial/art-of-gold.mp4";
+/* Phase 14.4C — supplied atelier footage, 8-bit web delivery.
+   Only the CapCut ending was trimmed; the approved corner mark is retained. */
+import artOfGoldVideo from "./videos/editorial/art-of-gold-web.mp4";
+import artOfGoldPoster from "./images/homepage/art-of-gold-poster.jpg";
 
 /* Collection discovery */
 import ringsCategory from "./images/categories/rings.jpg";
@@ -116,8 +117,9 @@ export const media = {
   heroReelHeritageVideo,
   heroReelHeritageMobileVideo,
 
-  /* Brand film placeholder (Phase 14.4) */
+  /* Craftsmanship film + frame extracted from the same footage (14.4C) */
   artOfGoldVideo,
+  artOfGoldPoster,
 
   /* Collection discovery */
   ringsCategory,
